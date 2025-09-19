@@ -296,6 +296,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sign raw transaction with DER R and S values
+  app.post('/api/sign-transaction-der', async (req, res) => {
+    try {
+      const { rawTransaction, rValue, sValue, sighashType, publicKey } = req.body;
+
+      if (!rawTransaction || !rValue || !sValue) {
+        return res.status(400).json({
+          error: 'rawTransaction, rValue, and sValue are required'
+        });
+      }
+
+      // Sign transaction using parsed R and S values
+      const result = await bitcoinService.signRawTransactionWithDER({
+        rawTransaction,
+        rValue,
+        sValue,
+        sighashType: sighashType || 0x01,
+        publicKey
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+
+    } catch (error) {
+      console.error('DER signing error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
+  });
+
   // Signature forgery endpoint for malleability demonstration
   app.post('/api/forge-signature', async (req, res) => {
     try {

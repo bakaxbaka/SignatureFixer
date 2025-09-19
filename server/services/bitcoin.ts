@@ -727,6 +727,117 @@ class BitcoinService {
     }
   }
 
+  // Sign raw transaction with parsed R and S values from DER signature
+  public async signRawTransactionWithDER(params: {
+    rawTransaction: string;
+    rValue: string;
+    sValue: string;
+    sighashType?: number;
+    publicKey?: string;
+  }): Promise<{ signedTransaction: string; txid: string; signature: { r: string; s: string; sighashType: number; derEncoded: string; publicKey?: string; }; educational: boolean; }> {
+    try {
+      const { rawTransaction, rValue, sValue, sighashType = 0x01, publicKey } = params;
+
+      // Validate R and S values
+      if (!/^[0-9a-fA-F]+$/.test(rValue) || !/^[0-9a-fA-F]+$/.test(sValue)) {
+        throw new Error('R and S values must be valid hex strings');
+      }
+
+      // Ensure canonical S value
+      const s = BigInt('0x' + sValue);
+      const curveOrder = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+      const canonicalS = s > curveOrder / 2n ? curveOrder - s : s;
+
+      // Create DER signature from R and S values
+      const rBytes = this.bigIntToBytes(BigInt('0x' + rValue));
+      const sBytes = this.bigIntToBytes(canonicalS);
+      const derSignature = this.encodeDER(rBytes, sBytes);
+
+      // Parse the raw transaction
+      const txBuffer = Buffer.from(rawTransaction, 'hex');
+      const decodedTx = await this.decodeTransaction(rawTransaction);
+
+      // Create signature script with DER encoding and SIGHASH type
+      let signatureScript = derSignature + sighashType.toString(16).padStart(2, '0');
+      
+      // Add public key if provided
+      if (publicKey && /^[0-9a-fA-F]{66}$/.test(publicKey)) {
+        const pubKeyLength = (publicKey.length / 2).toString(16).padStart(2, '0');
+        signatureScript += pubKeyLength + publicKey;
+      }
+
+      // Find the first input and update its script
+      const signedTxBuffer = Buffer.from(txBuffer);
+      const inputScriptStart = this.findInputScriptLocation(signedTxBuffer);
+      
+      if (inputScriptStart !== -1) {
+        // Replace the script with our signature
+        const newScriptBytes = Buffer.from(signatureScript, 'hex');
+        const scriptLengthBytes = Buffer.from([newScriptBytes.length]);
+        
+        // Create new transaction with signature
+        const beforeScript = signedTxBuffer.subarray(0, inputScriptStart);
+        const afterScript = signedTxBuffer.subarray(inputScriptStart + 1); // Skip original script length
+        
+        // Find where original script ends
+        const originalScriptLength = signedTxBuffer[inputScriptStart];
+        const afterOriginalScript = signedTxBuffer.subarray(inputScriptStart + 1 + originalScriptLength);
+        
+        // Combine parts
+        const finalTx = Buffer.concat([
+          beforeScript,
+          scriptLengthBytes,
+          newScriptBytes,
+          afterOriginalScript
+        ]);
+
+        const signedTransaction = finalTx.toString('hex');
+        const txid = this.calculateTxId(finalTx);
+
+        return {
+          signedTransaction,
+          txid,
+          signature: {
+            r: rValue,
+            s: canonicalS.toString(16).padStart(64, '0'),
+            sighashType,
+            derEncoded: derSignature,
+            publicKey
+          },
+          educational: true
+        };
+      } else {
+        throw new Error('Could not locate input script in transaction');
+      }
+    } catch (error) {
+      throw new Error(`Failed to sign transaction with DER: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private findInputScriptLocation(buffer: Buffer): number {
+    // Find the location of the first input's script length byte
+    // This is a simplified implementation for educational purposes
+    try {
+      let offset = 4; // Skip version
+
+      // Check for witness transactions
+      if (buffer.length > 4 && buffer[4] === 0x00 && buffer[5] === 0x01) {
+        offset = 6; // Skip witness marker and flag
+      }
+
+      // Skip input count (assuming 1 byte for simplicity)
+      offset += 1;
+
+      // Skip previous transaction hash (32 bytes) and output index (4 bytes)
+      offset += 36;
+
+      // This should be the script length byte
+      return offset;
+    } catch (error) {
+      return -1;
+    }
+  }
+
   async createMalleableSignature(params: {
     rawTransaction: string;
     malleabilityType: string;
