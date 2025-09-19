@@ -296,6 +296,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create unsigned raw transaction
+  app.post('/api/create-raw-transaction', async (req, res) => {
+    try {
+      const { version, inputs, outputs, locktime } = req.body;
+
+      if (!inputs || !Array.isArray(inputs) || inputs.length === 0) {
+        return res.status(400).json({
+          error: 'At least one input is required'
+        });
+      }
+
+      if (!outputs || !Array.isArray(outputs) || outputs.length === 0) {
+        return res.status(400).json({
+          error: 'At least one output is required'
+        });
+      }
+
+      // Create unsigned raw transaction
+      const result = await bitcoinService.createUnsignedRawTransaction({
+        version: parseInt(version) || 1,
+        inputs,
+        outputs,
+        locktime: parseInt(locktime) || 0
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+
+    } catch (error) {
+      console.error('Raw transaction creation error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
+  });
+
   // Sign raw transaction with DER R and S values
   app.post('/api/sign-transaction-der', async (req, res) => {
     try {

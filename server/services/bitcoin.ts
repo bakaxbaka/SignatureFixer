@@ -1099,6 +1099,173 @@ class BitcoinService {
     // For this educational example, we'll just use the DER encoded signature
     return derEncoded + '01'; // Append SIGHASH_ALL
   }
+
+  // Create unsigned raw transaction from structured inputs
+  public async createUnsignedRawTransaction(params: {
+    version: number;
+    inputs: Array<{
+      txid: string;
+      vout: string;
+      scriptSig?: string;
+      sequence?: string;
+    }>;
+    outputs: Array<{
+      value: string;
+      scriptPubKey: string;
+    }>;
+    locktime: number;
+  }): Promise<{
+    rawTransaction: string;
+    txid: string;
+    size: number;
+    inputs: number;
+    outputs: number;
+    educational: boolean;
+    analysis: {
+      totalOutputValue: number;
+      averageOutputValue: number;
+      hasCustomScripts: boolean;
+      estimatedFee: number;
+    };
+  }> {
+    try {
+      const { version, inputs, outputs, locktime } = params;
+
+      // Validate inputs
+      for (const input of inputs) {
+        if (!input.txid || !/^[0-9a-fA-F]{64}$/.test(input.txid)) {
+          throw new Error(`Invalid transaction ID: ${input.txid}`);
+        }
+        if (!input.vout || isNaN(parseInt(input.vout))) {
+          throw new Error(`Invalid output index: ${input.vout}`);
+        }
+      }
+
+      // Validate outputs
+      for (const output of outputs) {
+        if (!output.value || isNaN(parseInt(output.value))) {
+          throw new Error(`Invalid output value: ${output.value}`);
+        }
+        if (!output.scriptPubKey || !/^[0-9a-fA-F]*$/.test(output.scriptPubKey)) {
+          throw new Error(`Invalid script: ${output.scriptPubKey}`);
+        }
+      }
+
+      let rawTransaction = '';
+
+      // Version (4 bytes, little-endian)
+      rawTransaction += this.uint32ToHexLE(version);
+
+      // Input count (variable length integer)
+      rawTransaction += this.encodeVarInt(inputs.length);
+
+      // Inputs
+      for (const input of inputs) {
+        // Previous transaction hash (32 bytes, reversed)
+        const txidBytes = Buffer.from(input.txid, 'hex').reverse();
+        rawTransaction += txidBytes.toString('hex');
+
+        // Previous output index (4 bytes, little-endian)
+        rawTransaction += this.uint32ToHexLE(parseInt(input.vout));
+
+        // Script length and script
+        const scriptSig = input.scriptSig || '';
+        const scriptBytes = Buffer.from(scriptSig, 'hex');
+        rawTransaction += this.encodeVarInt(scriptBytes.length);
+        rawTransaction += scriptSig;
+
+        // Sequence (4 bytes, little-endian)
+        const sequence = input.sequence || 'ffffffff';
+        rawTransaction += this.uint32ToHexLE(parseInt(sequence, 16));
+      }
+
+      // Output count (variable length integer)
+      rawTransaction += this.encodeVarInt(outputs.length);
+
+      // Outputs
+      let totalOutputValue = 0;
+      for (const output of outputs) {
+        const value = parseInt(output.value);
+        totalOutputValue += value;
+
+        // Value (8 bytes, little-endian)
+        rawTransaction += this.uint64ToHexLE(value);
+
+        // Script length and script
+        const scriptBytes = Buffer.from(output.scriptPubKey, 'hex');
+        rawTransaction += this.encodeVarInt(scriptBytes.length);
+        rawTransaction += output.scriptPubKey;
+      }
+
+      // Locktime (4 bytes, little-endian)
+      rawTransaction += this.uint32ToHexLE(locktime);
+
+      // Calculate transaction ID (double SHA256 of the transaction)
+      const txBuffer = Buffer.from(rawTransaction, 'hex');
+      const hash1 = createHash('sha256').update(txBuffer).digest();
+      const hash2 = createHash('sha256').update(hash1).digest();
+      const txid = hash2.reverse().toString('hex');
+
+      // Analysis
+      const analysis = {
+        totalOutputValue,
+        averageOutputValue: Math.round(totalOutputValue / outputs.length),
+        hasCustomScripts: outputs.some(o => o.scriptPubKey.length > 50),
+        estimatedFee: this.estimateTransactionFee(txBuffer.length)
+      };
+
+      return {
+        rawTransaction,
+        txid,
+        size: txBuffer.length,
+        inputs: inputs.length,
+        outputs: outputs.length,
+        educational: true,
+        analysis
+      };
+    } catch (error) {
+      throw new Error(`Failed to create unsigned raw transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // Helper methods for transaction building
+  private uint32ToHexLE(value: number): string {
+    const buffer = Buffer.allocUnsafe(4);
+    buffer.writeUInt32LE(value, 0);
+    return buffer.toString('hex');
+  }
+
+  private uint64ToHexLE(value: number): string {
+    const buffer = Buffer.allocUnsafe(8);
+    buffer.writeBigUInt64LE(BigInt(value), 0);
+    return buffer.toString('hex');
+  }
+
+  private encodeVarInt(value: number): string {
+    if (value < 0xfd) {
+      return value.toString(16).padStart(2, '0');
+    } else if (value <= 0xffff) {
+      const buffer = Buffer.allocUnsafe(3);
+      buffer.writeUInt8(0xfd, 0);
+      buffer.writeUInt16LE(value, 1);
+      return buffer.toString('hex');
+    } else if (value <= 0xffffffff) {
+      const buffer = Buffer.allocUnsafe(5);
+      buffer.writeUInt8(0xfe, 0);
+      buffer.writeUInt32LE(value, 1);
+      return buffer.toString('hex');
+    } else {
+      const buffer = Buffer.allocUnsafe(9);
+      buffer.writeUInt8(0xff, 0);
+      buffer.writeBigUInt64LE(BigInt(value), 1);
+      return buffer.toString('hex');
+    }
+  }
+
+  private estimateTransactionFee(size: number): number {
+    // Estimate fee at 1 sat/byte (very low fee rate for educational purposes)
+    return size;
+  }
 }
 
 export const bitcoinService = new BitcoinService();
