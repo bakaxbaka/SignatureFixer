@@ -1,0 +1,72 @@
+# Overview
+
+This is a Bitcoin signature vulnerability analysis tool designed for cybersecurity education. The application allows users to enter Bitcoin addresses, fetch unspent transaction outputs (UTXOs), decode raw transactions, and demonstrate signature vulnerabilities in a controlled environment. The tool simulates vulnerabilities like DeserializeSignature flaws and SIGHASH_SINGLE bugs to help students and professionals understand Bitcoin security weaknesses without any risk to real funds.
+
+# User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+# System Architecture
+
+## Frontend Architecture
+The frontend is built with React and TypeScript using Vite as the build tool. It follows a component-based architecture with:
+
+- **UI Framework**: Radix UI components with shadcn/ui styling system
+- **Styling**: Tailwind CSS with CSS variables for theming
+- **State Management**: React hooks with TanStack Query for server state
+- **Routing**: Wouter for client-side routing
+- **Form Handling**: React Hook Form with Zod validation
+
+The application uses a dark theme by default and includes educational warnings to emphasize the tool's purpose as a learning resource.
+
+## Backend Architecture
+The backend is an Express.js server with TypeScript that provides REST API endpoints for:
+
+- **UTXO Fetching**: Retrieves unspent transaction outputs from Bitcoin addresses
+- **Transaction Decoding**: Parses raw Bitcoin transactions and extracts signature components
+- **Vulnerability Testing**: Simulates signature vulnerabilities for educational purposes
+
+The server uses a service-oriented architecture with separate modules for Bitcoin operations and signature analysis.
+
+## Data Storage Solutions
+The application uses a dual storage approach:
+
+- **Development**: In-memory storage with a simple Map-based implementation
+- **Production**: PostgreSQL database with Drizzle ORM for type-safe database operations
+- **Database Schema**: Single table for analysis results with JSONB fields for flexible data storage
+
+## Authentication and Authorization
+Currently, the application does not implement user authentication, operating as a single-user educational tool. Session management is handled through connect-pg-simple for PostgreSQL session storage when needed.
+
+## API Design
+The REST API follows standard HTTP conventions with three main endpoints:
+
+- `POST /api/utxos` - Fetches UTXOs for a given Bitcoin address
+- `POST /api/decode-transaction` - Decodes raw transaction hex data
+- `POST /api/vulnerability-test` - Runs vulnerability simulations
+
+All endpoints return JSON responses with consistent error handling and validation using Zod schemas.
+
+# External Dependencies
+
+## Third-party Services
+- **BlockCypher API**: Primary service for fetching Bitcoin UTXO data and transaction information
+- **Blockstream API**: Fallback service for Bitcoin blockchain data when BlockCypher is unavailable
+
+## Databases
+- **PostgreSQL**: Production database using Neon serverless PostgreSQL
+- **Drizzle ORM**: Type-safe database operations with schema management
+
+## Key Libraries
+- **Bitcoin Operations**: Custom Bitcoin utilities for address validation and transaction parsing
+- **UI Components**: Radix UI primitives with shadcn/ui component library
+- **Validation**: Zod for runtime type checking and schema validation
+- **HTTP Client**: Native fetch API with TanStack Query for caching and state management
+
+## Development Tools
+- **Vite**: Build tool and development server with React plugin
+- **TypeScript**: Type safety across the full stack
+- **Tailwind CSS**: Utility-first CSS framework
+- **ESBuild**: JavaScript bundler for production builds
+
+The application is designed to work in both development and production environments with proper fallback mechanisms for external API failures.
