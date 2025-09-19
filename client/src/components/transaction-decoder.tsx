@@ -17,7 +17,13 @@ const transactionSchema = z.object({
   rawTransaction: z.string().min(1, "Raw transaction hex is required").regex(/^[0-9a-fA-F]+$/, "Invalid hex format"),
 });
 
+const txidSchema = z.object({
+  txid: z.string().min(1, "Transaction ID is required").regex(/^[0-9a-fA-F]{64}$/, "Invalid transaction ID format"),
+  networkType: z.enum(["mainnet", "testnet"]).default("mainnet"),
+});
+
 type TransactionForm = z.infer<typeof transactionSchema>;
+type TxidForm = z.infer<typeof txidSchema>;
 
 interface DecodedSignature {
   inputIndex: number;
@@ -49,10 +55,42 @@ interface DecodedTransaction {
 
 export function TransactionDecoder() {
   const [decodedResult, setDecodedResult] = useState<DecodedTransaction | null>(null);
+  const [inputMode, setInputMode] = useState<'raw' | 'txid'>('raw');
+  const [rawTxResult, setRawTxResult] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<TransactionForm>({
     resolver: zodResolver(transactionSchema),
+  });
+
+  const txidForm = useForm<TxidForm>({
+    resolver: zodResolver(txidSchema),
+    defaultValues: {
+      networkType: "mainnet",
+    },
+  });
+
+  const getRawTransaction = useMutation({
+    mutationFn: async (data: TxidForm) => {
+      const response = await apiRequest('POST', '/api/get-raw-transaction', data);
+      return response.json();
+    },
+    onSuccess: (result) => {
+      setRawTxResult(result.data.rawTransaction);
+      // Auto-populate the raw transaction field
+      form.setValue('rawTransaction', result.data.rawTransaction);
+      toast({
+        title: "Raw Transaction Retrieved",
+        description: `Transaction ${result.data.txid} retrieved successfully`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Get Raw Transaction",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const decodeTransaction = useMutation({
@@ -80,6 +118,10 @@ export function TransactionDecoder() {
 
   const onSubmit = (data: TransactionForm) => {
     decodeTransaction.mutate(data);
+  };
+
+  const onTxidSubmit = (data: TxidForm) => {
+    getRawTransaction.mutate(data);
   };
 
   const copyToClipboard = (text: string) => {
@@ -123,32 +165,120 @@ export function TransactionDecoder() {
       </CardHeader>
       
       <CardContent className="space-y-6">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="rawTransaction">Raw Transaction Hex</Label>
-            <Textarea
-              id="rawTransaction"
-              placeholder="0100000001aabbccdd..."
-              rows={4}
-              className="font-mono text-sm resize-none"
-              data-testid="textarea-raw-transaction"
-              {...form.register("rawTransaction")}
-            />
-            {form.formState.errors.rawTransaction && (
-              <p className="text-sm text-destructive">{form.formState.errors.rawTransaction.message}</p>
-            )}
-          </div>
-          
+        {/* Input Mode Selector */}
+        <div className="flex gap-2 p-1 bg-muted rounded-lg">
           <Button
-            type="submit"
-            className="w-full"
-            disabled={decodeTransaction.isPending}
-            data-testid="button-decode-transaction"
+            type="button"
+            variant={inputMode === 'raw' ? 'default' : 'ghost'}
+            size="sm"
+            className="flex-1"
+            onClick={() => setInputMode('raw')}
           >
-            <Zap className="w-4 h-4 mr-2" />
-            {decodeTransaction.isPending ? 'Decoding...' : 'Decode & Analyze Signatures'}
+            Raw Transaction
           </Button>
-        </form>
+          <Button
+            type="button"
+            variant={inputMode === 'txid' ? 'default' : 'ghost'}
+            size="sm"
+            className="flex-1"
+            onClick={() => setInputMode('txid')}
+          >
+            Transaction ID
+          </Button>
+        </div>
+
+        {/* Transaction ID Form */}
+        {inputMode === 'txid' && (
+          <form onSubmit={txidForm.handleSubmit(onTxidSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="txid">Transaction ID</Label>
+              <Textarea
+                id="txid"
+                placeholder="Enter 64-character transaction ID..."
+                rows={2}
+                className="font-mono text-sm resize-none"
+                {...txidForm.register("txid")}
+              />
+              {txidForm.formState.errors.txid && (
+                <p className="text-sm text-destructive">{txidForm.formState.errors.txid.message}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="networkType">Network</Label>
+              <select
+                id="networkType"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                {...txidForm.register("networkType")}
+              >
+                <option value="mainnet">Mainnet</option>
+                <option value="testnet">Testnet</option>
+              </select>
+            </div>
+            
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={getRawTransaction.isPending}
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              {getRawTransaction.isPending ? 'Fetching...' : 'Get Raw Transaction'}
+            </Button>
+          </form>
+        )}
+
+        {/* Raw Transaction Form */}
+        {inputMode === 'raw' && (
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="rawTransaction">Raw Transaction Hex</Label>
+              <Textarea
+                id="rawTransaction"
+                placeholder="0100000001aabbccdd..."
+                rows={4}
+                className="font-mono text-sm resize-none"
+                data-testid="textarea-raw-transaction"
+                {...form.register("rawTransaction")}
+              />
+              {form.formState.errors.rawTransaction && (
+                <p className="text-sm text-destructive">{form.formState.errors.rawTransaction.message}</p>
+              )}
+            </div>
+            
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={decodeTransaction.isPending}
+              data-testid="button-decode-transaction"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              {decodeTransaction.isPending ? 'Decoding...' : 'Decode & Analyze Signatures'}
+            </Button>
+          </form>
+        )}
+
+        {/* Raw Transaction Display */}
+        {rawTxResult && (
+          <div className="space-y-2">
+            <Label>Retrieved Raw Transaction</Label>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Raw Transaction Hex</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard(rawTxResult)}
+                >
+                  <Copy className="w-3 h-3 mr-1" />
+                  Copy
+                </Button>
+              </div>
+              <p className="font-mono text-xs text-foreground break-all">
+                {rawTxResult}
+              </p>
+            </div>
+          </div>
+        )}
 
         <Separator />
 

@@ -236,13 +236,23 @@ class BitcoinService {
   }
 
   private readVarInt(buffer: Buffer, offset: number): { value: number; offset: number } {
+    if (offset >= buffer.length) {
+      throw new Error(`VarInt read offset ${offset} exceeds buffer length ${buffer.length}`);
+    }
+    
     const first = buffer.readUInt8(offset);
     
     if (first < 0xfd) {
       return { value: first, offset: offset + 1 };
     } else if (first === 0xfd) {
+      if (offset + 2 >= buffer.length) {
+        throw new Error(`VarInt read would exceed buffer bounds`);
+      }
       return { value: buffer.readUInt16LE(offset + 1), offset: offset + 3 };
     } else if (first === 0xfe) {
+      if (offset + 4 >= buffer.length) {
+        throw new Error(`VarInt read would exceed buffer bounds`);
+      }
       return { value: buffer.readUInt32LE(offset + 1), offset: offset + 5 };
     } else {
       // For simplicity, assuming we won't encounter 8-byte integers
@@ -255,6 +265,10 @@ class BitcoinService {
     signature?: any;
     offset: number;
   } {
+    if (offset + 36 > buffer.length) {
+      throw new Error(`Input parse would exceed buffer bounds: offset ${offset + 36} > length ${buffer.length}`);
+    }
+    
     const txid = buffer.subarray(offset, offset + 32).reverse().toString('hex');
     const vout = buffer.readUInt32LE(offset + 32);
     offset += 36;
@@ -262,8 +276,16 @@ class BitcoinService {
     const scriptLength = this.readVarInt(buffer, offset);
     offset = scriptLength.offset;
 
+    if (offset + scriptLength.value > buffer.length) {
+      throw new Error(`Script read would exceed buffer bounds: offset ${offset + scriptLength.value} > length ${buffer.length}`);
+    }
+
     const script = buffer.subarray(offset, offset + scriptLength.value).toString('hex');
     offset += scriptLength.value;
+
+    if (offset + 4 > buffer.length) {
+      throw new Error(`Sequence read would exceed buffer bounds: offset ${offset + 4} > length ${buffer.length}`);
+    }
 
     const sequence = buffer.readUInt32LE(offset);
     offset += 4;
@@ -293,11 +315,19 @@ class BitcoinService {
     output: any;
     offset: number;
   } {
+    if (offset + 8 > buffer.length) {
+      throw new Error(`Output value read would exceed buffer bounds: offset ${offset + 8} > length ${buffer.length}`);
+    }
+    
     const value = buffer.readBigUInt64LE(offset);
     offset += 8;
 
     const scriptLength = this.readVarInt(buffer, offset);
     offset = scriptLength.offset;
+
+    if (offset + scriptLength.value > buffer.length) {
+      throw new Error(`Output script read would exceed buffer bounds: offset ${offset + scriptLength.value} > length ${buffer.length}`);
+    }
 
     const script = buffer.subarray(offset, offset + scriptLength.value).toString('hex');
     offset += scriptLength.value;
@@ -401,6 +431,36 @@ class BitcoinService {
     const hash = crypto.createHash('sha256').update(buffer).digest();
     const txid = crypto.createHash('sha256').update(hash).digest();
     return txid.reverse().toString('hex');
+  }
+
+  async getRawTransaction(txid: string, networkType: string = 'mainnet'): Promise<string> {
+    try {
+      // Try Blockstream first for raw transaction hex
+      const baseUrl = networkType === 'testnet' 
+        ? 'https://blockstream.info/testnet/api'
+        : this.BLOCKSTREAM_API;
+      
+      const response = await fetch(`${baseUrl}/tx/${txid}/hex`);
+      
+      if (response.ok) {
+        return await response.text();
+      }
+    } catch (error) {
+      console.warn('Blockstream raw tx API failed, trying Blockchain.com');
+    }
+
+    try {
+      // Fallback to Blockchain.com
+      const response = await fetch(`${this.BLOCKCHAIN_API}/rawtx/${txid}?format=hex`);
+      
+      if (response.ok) {
+        return await response.text();
+      }
+    } catch (error) {
+      console.warn('Blockchain.com raw tx API failed');
+    }
+
+    throw new Error('Failed to fetch raw transaction from all APIs');
   }
 
   async getTransactionDetails(txid: string, networkType: string = 'mainnet'): Promise<any> {

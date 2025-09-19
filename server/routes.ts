@@ -106,6 +106,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Raw Transaction endpoint
+  app.post('/api/get-raw-transaction', async (req, res) => {
+    try {
+      const { txid, networkType = 'mainnet' } = req.body;
+      
+      if (!txid) {
+        return res.status(400).json({ error: 'Transaction ID is required' });
+      }
+
+      const startTime = Date.now();
+      const rawTransaction = await bitcoinService.getRawTransaction(txid, networkType);
+      const responseTime = Date.now() - startTime;
+
+      res.json({
+        success: true,
+        data: {
+          txid,
+          rawTransaction,
+          networkType,
+        },
+        responseTime,
+      });
+    } catch (error) {
+      console.error('Get raw transaction error:', error);
+      res.status(500).json({ 
+        error: 'Failed to get raw transaction',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Transaction Decoder endpoint
   app.post('/api/decode-transaction', async (req, res) => {
     try {
