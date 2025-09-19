@@ -15,7 +15,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   wss.on('connection', (ws) => {
     console.log('WebSocket client connected');
-    
+
     ws.on('message', (message) => {
       try {
         const data = JSON.parse(message.toString());
@@ -43,7 +43,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/utxos', async (req, res) => {
     try {
       const { address, networkType = 'mainnet' } = req.body;
-      
+
       if (!address) {
         return res.status(400).json({ error: 'Bitcoin address is required' });
       }
@@ -88,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('UTXO analysis error:', error);
-      
+
       // Record error metric
       await storage.recordApiMetric({
         apiProvider: 'multiple',
@@ -110,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/get-raw-transaction', async (req, res) => {
     try {
       const { txid, networkType = 'mainnet' } = req.body;
-      
+
       if (!txid) {
         return res.status(400).json({ error: 'Transaction ID is required' });
       }
@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/decode-transaction', async (req, res) => {
     try {
       const { rawTransaction } = req.body;
-      
+
       if (!rawTransaction) {
         return res.status(400).json({ error: 'Raw transaction hex is required' });
       }
@@ -170,75 +170,125 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Vulnerability Test endpoint
+  // Vulnerability testing endpoint
   app.post('/api/vulnerability-test', async (req, res) => {
     try {
       const { address, analysisId } = req.body;
-      
+
       if (!address) {
-        return res.status(400).json({ error: 'Address is required for vulnerability testing' });
+        return res.status(400).json({
+          error: 'Bitcoin address is required'
+        });
       }
 
-      const startTime = Date.now();
-      
-      // Get existing analysis or create new one
-      let analysisResult;
+      // Get analysis result or fetch new data
+      let utxoData;
       if (analysisId) {
-        analysisResult = await storage.getAnalysisResult(analysisId);
+        const existingResult = await storage.getAnalysisResult(analysisId);
+        if (existingResult) {
+          utxoData = existingResult.utxoData;
+        }
       }
 
-      if (!analysisResult) {
-        return res.status(404).json({ error: 'Analysis result not found' });
+      if (!utxoData) {
+        const networkType = address.startsWith('bc1') || address.startsWith('1') || address.startsWith('3') ? 'mainnet' : 'testnet';
+        utxoData = await bitcoinService.fetchUTXOs(address, networkType);
       }
 
       // Perform comprehensive vulnerability analysis
-      const vulnerabilities = await vulnerabilityService.comprehensiveAnalysis(
-        address,
-        analysisResult.utxoData
-      );
-
-      // Update analysis result with vulnerability data
-      const updatedResult = await storage.saveAnalysisResult({
-        bitcoinAddress: address,
-        networkType: analysisResult.networkType,
-        utxoData: analysisResult.utxoData,
-        vulnerabilities: JSON.parse(JSON.stringify(vulnerabilities.vulnerabilities)),
-        signatureAnalysis: vulnerabilities.signatureAnalysis,
-        nonceReuse: vulnerabilities.nonceReuse,
-        recoveredKeys: vulnerabilities.recoveredKeys,
-      });
-
-      const responseTime = Date.now() - startTime;
-
-      // Broadcast vulnerability update
-      broadcast({
-        type: 'vulnerability_analysis',
-        address,
-        vulnerabilityCount: vulnerabilities.vulnerabilities?.length || 0,
-        criticalIssues: vulnerabilities.vulnerabilities?.filter((v: any) => v.severity === 'critical').length || 0,
-      });
+      const vulnerabilityResult = await vulnerabilityService.comprehensiveAnalysis(address, utxoData);
 
       res.json({
         success: true,
-        data: vulnerabilities,
-        analysisId: updatedResult.id,
-        responseTime,
+        data: vulnerabilityResult
       });
+
     } catch (error) {
       console.error('Vulnerability test error:', error);
-      res.status(500).json({ 
-        error: 'Failed to perform vulnerability analysis',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     }
   });
+
+  // Signature forgery demonstration endpoint
+  app.post('/api/forge-signature', async (req, res) => {
+    try {
+      const { signature, type = 'malleability' } = req.body;
+
+      if (!signature || !signature.r || !signature.s) {
+        return res.status(400).json({
+          error: 'Valid signature with r and s values is required'
+        });
+      }
+
+      let result;
+
+      switch (type) {
+        case 'malleability':
+          result = bitcoinService.demonstrateSignatureForgery(signature);
+          break;
+
+        case 'deserialize':
+          result = {
+            original: signature,
+            deserialized: {
+              derEncoded: signature.derEncoded,
+              rHex: signature.r,
+              sHex: signature.s,
+              rDecimal: BigInt('0x' + signature.r).toString(),
+              sDecimal: BigInt('0x' + signature.s).toString(),
+              sighashType: signature.sighashType,
+              sighashName: getSighashTypeName(signature.sighashType)
+            },
+            educational: true
+          };
+          break;
+
+        default:
+          return res.status(400).json({
+            error: 'Invalid forgery type. Use "malleability" or "deserialize"'
+          });
+      }
+
+      res.json({
+        success: true,
+        data: result
+      });
+
+    } catch (error) {
+      console.error('Signature forgery error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
+  });
+
+  // Helper method for SIGHASH type names
+  function getSighashTypeName(type: number): string {
+    const baseType = type & 0x1f;
+    let name = "";
+
+    switch (baseType) {
+      case 0x01: name = "SIGHASH_ALL"; break;
+      case 0x02: name = "SIGHASH_NONE"; break;
+      case 0x03: name = "SIGHASH_SINGLE"; break;
+      default: name = "UNKNOWN";
+    }
+
+    if (type & 0x80) {
+      name += " | SIGHASH_ANYONECANPAY";
+    }
+
+    return `${name} (0x${type.toString(16).padStart(2, '0')})`;
+  }
 
   // API Status endpoint
   app.get('/api/status', async (req, res) => {
     try {
       const apiStatus = await storage.getApiStatus();
       const stats = await storage.getVulnerabilityStats();
-      
+
       res.json({
         success: true,
         data: {
@@ -260,12 +310,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/batch-analysis', async (req, res) => {
     try {
       const batchData = insertBatchAnalysisSchema.parse(req.body);
-      
+
       const batchAnalysis = await storage.createBatchAnalysis(batchData);
-      
+
       // Start batch processing (this would be done in background)
       vulnerabilityService.processBatchAnalysis(batchAnalysis.id, broadcast);
-      
+
       res.json({
         success: true,
         data: batchAnalysis,
@@ -283,11 +333,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const batchAnalysis = await storage.getBatchAnalysis(id);
-      
+
       if (!batchAnalysis) {
         return res.status(404).json({ error: 'Batch analysis not found' });
       }
-      
+
       res.json({
         success: true,
         data: batchAnalysis,
@@ -305,14 +355,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/educational-content', async (req, res) => {
     try {
       const { category } = req.query;
-      
+
       let content;
       if (category && typeof category === 'string') {
         content = await storage.getEducationalContentByCategory(category);
       } else {
         content = await storage.getEducationalContent();
       }
-      
+
       res.json({
         success: true,
         data: content,
@@ -330,7 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       await storage.incrementContentView(id);
-      
+
       res.json({
         success: true,
         message: 'View count incremented',
@@ -348,14 +398,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/analysis-history', async (req, res) => {
     try {
       const { address, limit = 50 } = req.query;
-      
+
       let results;
       if (address && typeof address === 'string') {
         results = await storage.getAnalysisResultsByAddress(address);
       } else {
         results = await storage.getRecentAnalysisResults(Number(limit));
       }
-      
+
       res.json({
         success: true,
         data: results,
@@ -373,14 +423,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/vulnerability-patterns', async (req, res) => {
     try {
       const { type } = req.query;
-      
+
       let patterns;
       if (type && typeof type === 'string') {
         patterns = await storage.getVulnerabilityPatternsByType(type);
       } else {
         patterns = await storage.getVulnerabilityPatterns();
       }
-      
+
       res.json({
         success: true,
         data: patterns,

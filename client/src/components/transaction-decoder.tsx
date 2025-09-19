@@ -57,6 +57,7 @@ export function TransactionDecoder() {
   const [decodedResult, setDecodedResult] = useState<DecodedTransaction | null>(null);
   const [inputMode, setInputMode] = useState<'raw' | 'txid'>('raw');
   const [rawTxResult, setRawTxResult] = useState<string | null>(null);
+  const [forgedResults, setForgedResults] = useState<Map<number, any>>(new Map());
   const { toast } = useToast();
 
   const form = useForm<TransactionForm>({
@@ -102,6 +103,7 @@ export function TransactionDecoder() {
     },
     onSuccess: (result) => {
       setDecodedResult(result.data);
+      setForgedResults(new Map()); // Clear previous forge results
       toast({
         title: "Transaction Decoded",
         description: `Found ${result.data.signatures?.length || 0} signatures for analysis`,
@@ -110,6 +112,36 @@ export function TransactionDecoder() {
     onError: (error) => {
       toast({
         title: "Decode Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const forgeSignature = useMutation({
+    mutationFn: async ({ signature, type }: { signature: any; type: string }) => {
+      const response = await apiRequest('POST', '/api/forge-signature', {
+        signature,
+        type,
+      });
+      return response.json();
+    },
+    onSuccess: (result, variables) => {
+      const { signature } = variables;
+      const signatureIndex = decodedResult?.signatures.findIndex(s => s.r === signature.r && s.s === signature.s) ?? -1;
+      
+      if (signatureIndex >= 0) {
+        setForgedResults(prev => new Map(prev.set(signatureIndex, result.data)));
+      }
+      
+      toast({
+        title: "Signature Forged",
+        description: `${variables.type === 'malleability' ? 'Malleable signature created' : 'Signature deserialized'} successfully`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Forge Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -152,6 +184,10 @@ export function TransactionDecoder() {
 
   const formatBTC = (satoshis: number) => {
     return (satoshis / 100000000).toFixed(8);
+  };
+
+  const handleForgeSignature = (signature: any, type: string) => {
+    forgeSignature.mutate({ signature, type });
   };
 
   return (
@@ -385,7 +421,92 @@ export function TransactionDecoder() {
                           <Copy className="w-3 h-3 mr-1" />
                           Copy DER
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleForgeSignature(signature, 'malleability')}
+                          data-testid={`button-forge-malleability-${index}`}
+                        >
+                          <Zap className="w-3 h-3 mr-1" />
+                          Forge Malleable
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleForgeSignature(signature, 'deserialize')}
+                          data-testid={`button-deserialize-${index}`}
+                        >
+                          <Code className="w-3 h-3 mr-1" />
+                          Deserialize
+                        </Button>
                       </div>
+                      
+                      {/* Forged Signature Results */}
+                      {forgedResults.has(index) && (
+                        <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Zap className="w-4 h-4 text-yellow-500" />
+                            <span className="text-sm font-medium text-yellow-500">Educational Demonstration</span>
+                            <Badge className="bg-yellow-500 text-yellow-900">
+                              {forgedResults.get(index)?.deserialized ? 'Deserialized' : 'Malleable Signature'}
+                            </Badge>
+                          </div>
+                          
+                          {forgedResults.get(index)?.malleable && (
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-sm text-muted-foreground">Original S:</span>
+                                <p className="font-mono text-xs text-foreground break-all">
+                                  {forgedResults.get(index).original.s}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-muted-foreground">Malleable S:</span>
+                                <p className="font-mono text-xs text-destructive break-all">
+                                  {forgedResults.get(index).malleable.s}
+                                </p>
+                              </div>
+                              <p className="text-xs text-yellow-600">
+                                Both signatures are mathematically valid but have different transaction IDs
+                              </p>
+                            </div>
+                          )}
+                          
+                          {forgedResults.get(index)?.deserialized && (
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-sm text-muted-foreground">R (Decimal):</span>
+                                <p className="font-mono text-xs text-foreground break-all">
+                                  {forgedResults.get(index).deserialized.rDecimal}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-muted-foreground">S (Decimal):</span>
+                                <p className="font-mono text-xs text-foreground break-all">
+                                  {forgedResults.get(index).deserialized.sDecimal}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-muted-foreground">SIGHASH Details:</span>
+                                <p className="font-mono text-xs text-foreground">
+                                  {forgedResults.get(index).deserialized.sighashName}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="flex gap-2 mt-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(JSON.stringify(forgedResults.get(index), null, 2))}
+                            >
+                              <Copy className="w-3 h-3 mr-1" />
+                              Copy Analysis
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

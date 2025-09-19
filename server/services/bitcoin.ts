@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createHash } from "crypto";
 
 interface UTXOData {
   utxos: Array<{
@@ -42,7 +43,27 @@ interface DecodedTransaction {
     sighashType: number;
     publicKey: string;
     derEncoded: string;
+    messageHash?: string;
   }>;
+  vulnerabilityAnalysis?: {
+    summary: {
+      totalSignatures: number;
+      vulnerableSignatures: number;
+      riskLevel: string;
+    };
+    patterns: Array<{
+      type: string;
+      description: string;
+      severity: string;
+      count: number;
+    }>;
+    nonceReuse: Array<{
+      rValue: string;
+      affectedSignatures: any[];
+      isVulnerable: boolean;
+      method: string;
+    }>;
+  };
 }
 
 class BitcoinService {
@@ -176,14 +197,20 @@ class BitcoinService {
   }
 
   async decodeTransaction(rawTx: string): Promise<DecodedTransaction> {
-    // This is a simplified transaction decoder
-    // In a real implementation, you would use a proper Bitcoin library
+    // Enhanced transaction decoder with vulnerability analysis
     try {
       const buffer = Buffer.from(rawTx, 'hex');
       
-      // Basic transaction parsing (simplified)
+      // Basic transaction parsing
       const version = buffer.readUInt32LE(0);
       let offset = 4;
+
+      // Check for witness transactions (SegWit)
+      let hasWitness = false;
+      if (buffer.length > 4 && buffer[4] === 0x00 && buffer[5] === 0x01) {
+        hasWitness = true;
+        offset = 6; // Skip witness marker and flag
+      }
 
       // Parse inputs
       const inputCount = this.readVarInt(buffer, offset);
@@ -197,8 +224,11 @@ class BitcoinService {
         inputs.push(input.input);
         
         if (input.signature) {
+          // Add message hash for vulnerability analysis
+          const messageHash = this.generateMessageHash(buffer, i, input.signature.sighashType);
           signatures.push({
             inputIndex: i,
+            messageHash,
             ...input.signature
           });
         }
@@ -217,10 +247,26 @@ class BitcoinService {
         offset = output.offset;
       }
 
+      // Skip witness data if present
+      if (hasWitness) {
+        for (let i = 0; i < inputCount.value; i++) {
+          const witnessCount = this.readVarInt(buffer, offset);
+          offset = witnessCount.offset;
+          
+          for (let j = 0; j < witnessCount.value; j++) {
+            const witnessLength = this.readVarInt(buffer, offset);
+            offset = witnessLength.offset + witnessLength.value;
+          }
+        }
+      }
+
       const locktime = buffer.readUInt32LE(offset);
 
-      // Calculate transaction ID (simplified)
+      // Calculate transaction ID
       const txid = this.calculateTxId(buffer);
+
+      // Perform vulnerability analysis
+      const vulnerabilityAnalysis = await this.analyzeSignatureVulnerabilities(signatures);
 
       return {
         txid,
@@ -228,7 +274,8 @@ class BitcoinService {
         inputs,
         outputs,
         locktime,
-        signatures
+        signatures,
+        vulnerabilityAnalysis
       };
     } catch (error) {
       throw new Error(`Failed to decode transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -427,9 +474,8 @@ class BitcoinService {
   private calculateTxId(buffer: Buffer): string {
     // Simplified txid calculation
     // In reality, this would be a double SHA256 of the transaction
-    const crypto = require('crypto');
-    const hash = crypto.createHash('sha256').update(buffer).digest();
-    const txid = crypto.createHash('sha256').update(hash).digest();
+    const hash = createHash('sha256').update(buffer).digest();
+    const txid = createHash('sha256').update(hash).digest();
     return txid.reverse().toString('hex');
   }
 
@@ -491,6 +537,130 @@ class BitcoinService {
     }
 
     throw new Error('Failed to fetch transaction details from all APIs');
+  }
+
+  private generateMessageHash(txBuffer: Buffer, inputIndex: number, sighashType: number): string {
+    // Simplified message hash generation for educational purposes
+    // In reality, this would follow BIP 143 for SegWit or legacy signing
+    const data = `${txBuffer.toString('hex')}-${inputIndex}-${sighashType}`;
+    const hash = createHash('sha256').update(data).digest();
+    return createHash('sha256').update(hash).digest('hex');
+  }
+
+  private async analyzeSignatureVulnerabilities(signatures: any[]): Promise<any> {
+    if (signatures.length === 0) {
+      return {
+        summary: {
+          totalSignatures: 0,
+          vulnerableSignatures: 0,
+          riskLevel: 'low'
+        },
+        patterns: [],
+        nonceReuse: []
+      };
+    }
+
+    const patterns = [];
+    const nonceReuse = [];
+    let vulnerableCount = 0;
+
+    // Check for nonce reuse
+    const rValueMap = new Map();
+    for (const sig of signatures) {
+      if (!rValueMap.has(sig.r)) {
+        rValueMap.set(sig.r, []);
+      }
+      rValueMap.get(sig.r).push(sig);
+    }
+
+    // Detect nonce reuse vulnerabilities
+    for (const [rValue, sigs] of rValueMap) {
+      if (sigs.length > 1) {
+        vulnerableCount += sigs.length;
+        nonceReuse.push({
+          rValue,
+          affectedSignatures: sigs,
+          isVulnerable: true,
+          method: 'nonce_reuse_attack'
+        });
+        
+        patterns.push({
+          type: 'nonce_reuse',
+          description: 'Multiple signatures using same nonce detected',
+          severity: 'critical',
+          count: sigs.length
+        });
+      }
+    }
+
+    // Check for SIGHASH vulnerabilities
+    const sighashSingle = signatures.filter(s => (s.sighashType & 0x1f) === 0x03);
+    if (sighashSingle.length > 0) {
+      patterns.push({
+        type: 'sighash_single',
+        description: 'SIGHASH_SINGLE signatures detected - potential malleability',
+        severity: 'medium',
+        count: sighashSingle.length
+      });
+    }
+
+    // Check for signature malleability
+    const malleable = signatures.filter(s => {
+      const sValue = BigInt('0x' + s.s);
+      const curveOrder = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+      return sValue > curveOrder / 2n;
+    });
+
+    if (malleable.length > 0) {
+      patterns.push({
+        type: 'signature_malleability',
+        description: 'High S-value signatures detected - malleable',
+        severity: 'low',
+        count: malleable.length
+      });
+    }
+
+    const riskLevel = vulnerableCount > 0 ? 'critical' : 
+                     patterns.some(p => p.severity === 'high') ? 'high' :
+                     patterns.length > 0 ? 'medium' : 'low';
+
+    return {
+      summary: {
+        totalSignatures: signatures.length,
+        vulnerableSignatures: vulnerableCount,
+        riskLevel
+      },
+      patterns,
+      nonceReuse
+    };
+  }
+
+  // Educational signature forgery demonstration
+  public demonstrateSignatureForgery(originalSig: any): any {
+    try {
+      const s = BigInt('0x' + originalSig.s);
+      const curveOrder = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+      
+      // Create malleable signature by flipping S value
+      const malleableS = curveOrder - s;
+      
+      return {
+        original: {
+          r: originalSig.r,
+          s: originalSig.s,
+          sighashType: originalSig.sighashType
+        },
+        malleable: {
+          r: originalSig.r,
+          s: malleableS.toString(16).padStart(64, '0'),
+          sighashType: originalSig.sighashType
+        },
+        educational: true,
+        warning: 'This demonstrates signature malleability for educational purposes only'
+      };
+    } catch (error) {
+      throw new Error('Failed to demonstrate signature malleability');
+    }
   }
 }
 
