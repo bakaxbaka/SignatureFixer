@@ -662,6 +662,250 @@ class BitcoinService {
       throw new Error('Failed to demonstrate signature malleability');
     }
   }
+
+  // Educational transaction creation with DER signing
+  public async createEducationalTransaction(params: {
+    fromAddress: string;
+    toAddress: string;
+    amount: number;
+    privateKey: string;
+  }): Promise<any> {
+    try {
+      const { fromAddress, toAddress, amount, privateKey } = params;
+
+      // Validate private key format
+      if (!/^[0-9a-fA-F]{64}$/.test(privateKey)) {
+        throw new Error('Invalid private key format. Must be 64 character hex string.');
+      }
+
+      // Create a mock UTXO for the from address
+      const mockUTXO = {
+        txid: this.generateMockTxId(),
+        vout: 0,
+        value: amount + 10000, // Add some extra for fees
+        script: this.createMockScript(fromAddress)
+      };
+
+      // Create transaction structure
+      const transaction = this.buildTransaction(mockUTXO, toAddress, amount);
+
+      // Generate message hash for signing
+      const messageHash = this.generateTransactionHash(transaction);
+
+      // Create DER signature using educational implementation
+      const signature = this.createDERSignature(messageHash, privateKey);
+
+      // Add signature to transaction
+      const signedTransaction = this.addSignatureToTransaction(transaction, signature);
+
+      // Convert to raw hex
+      const rawTransaction = this.serializeTransaction(signedTransaction);
+
+      return {
+        rawTransaction,
+        txid: this.calculateTxId(Buffer.from(rawTransaction, 'hex')),
+        from: fromAddress,
+        to: toAddress,
+        amount,
+        fee: 10000,
+        signature: {
+          r: signature.r,
+          s: signature.s,
+          sighashType: signature.sighashType,
+          derEncoded: signature.derEncoded
+        },
+        educational: true,
+        warning: 'This is an educational demonstration only. Do not broadcast this transaction.',
+        verification: {
+          messageHash,
+          validDER: true,
+          canonicalS: BigInt('0x' + signature.s) <= BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141') / 2n
+        }
+      };
+    } catch (error) {
+      throw new Error(`Transaction creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private generateMockTxId(): string {
+    const randomBytes = Array.from({ length: 32 }, () => 
+      Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
+    ).join('');
+    return randomBytes;
+  }
+
+  private createMockScript(address: string): string {
+    // Simplified P2PKH script creation
+    return `76a914${createHash('ripemd160').update(createHash('sha256').update(address).digest()).digest('hex')}88ac`;
+  }
+
+  private buildTransaction(utxo: any, toAddress: string, amount: number): any {
+    return {
+      version: 1,
+      inputs: [{
+        txid: utxo.txid,
+        vout: utxo.vout,
+        script: '',
+        sequence: 0xffffffff
+      }],
+      outputs: [{
+        value: amount,
+        script: this.createMockScript(toAddress)
+      }],
+      locktime: 0
+    };
+  }
+
+  private generateTransactionHash(transaction: any): string {
+    // Simplified transaction hash for educational purposes
+    const data = JSON.stringify(transaction);
+    const hash = createHash('sha256').update(data).digest();
+    return createHash('sha256').update(hash).digest('hex');
+  }
+
+  private createDERSignature(messageHash: string, privateKeyHex: string): any {
+    try {
+      // This is a simplified educational implementation
+      // In real Bitcoin, you would use proper ECDSA signing with secp256k1
+      
+      const privateKey = BigInt('0x' + privateKeyHex);
+      const messageNum = BigInt('0x' + messageHash);
+      const curveOrder = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+
+      // Generate deterministic nonce (simplified RFC 6979)
+      const nonce = this.generateDeterministicNonce(privateKey, messageNum);
+
+      // Calculate signature values (simplified)
+      const r = this.modMul(nonce, 7n, curveOrder); // Simplified point multiplication
+      const rInv = this.modInverse(nonce, curveOrder);
+      const s = this.modMul(rInv, this.modAdd(messageNum, this.modMul(r, privateKey, curveOrder), curveOrder), curveOrder);
+
+      // Ensure canonical S value
+      const canonicalS = s > curveOrder / 2n ? curveOrder - s : s;
+
+      // Create DER encoding
+      const rBytes = this.bigIntToBytes(r);
+      const sBytes = this.bigIntToBytes(canonicalS);
+      const derSignature = this.encodeDER(rBytes, sBytes);
+
+      return {
+        r: r.toString(16).padStart(64, '0'),
+        s: canonicalS.toString(16).padStart(64, '0'),
+        sighashType: 0x01, // SIGHASH_ALL
+        derEncoded: derSignature,
+        messageHash
+      };
+    } catch (error) {
+      throw new Error('DER signature creation failed');
+    }
+  }
+
+  private generateDeterministicNonce(privateKey: bigint, message: bigint): bigint {
+    // Simplified deterministic nonce generation
+    const combined = (privateKey + message) % BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
+    return combined === 0n ? 1n : combined;
+  }
+
+  private modAdd(a: bigint, b: bigint, mod: bigint): bigint {
+    return ((a + b) % mod + mod) % mod;
+  }
+
+  private modMul(a: bigint, b: bigint, mod: bigint): bigint {
+    return ((a * b) % mod + mod) % mod;
+  }
+
+  private modInverse(a: bigint, mod: bigint): bigint {
+    let [old_r, r] = [a, mod];
+    let [old_s, s] = [1n, 0n];
+
+    while (r !== 0n) {
+      const quotient = old_r / r;
+      [old_r, r] = [r, old_r - quotient * r];
+      [old_s, s] = [s, old_s - quotient * s];
+    }
+
+    return old_s < 0n ? old_s + mod : old_s;
+  }
+
+  private bigIntToBytes(value: bigint): number[] {
+    const hex = value.toString(16);
+    const paddedHex = hex.length % 2 === 0 ? hex : '0' + hex;
+    const bytes = [];
+    
+    for (let i = 0; i < paddedHex.length; i += 2) {
+      bytes.push(parseInt(paddedHex.substr(i, 2), 16));
+    }
+    
+    // Add padding byte if first byte >= 0x80
+    if (bytes.length > 0 && bytes[0] >= 0x80) {
+      bytes.unshift(0x00);
+    }
+    
+    return bytes;
+  }
+
+  private encodeDER(rBytes: number[], sBytes: number[]): string {
+    const derR = [0x02, rBytes.length, ...rBytes];
+    const derS = [0x02, sBytes.length, ...sBytes];
+    const sequence = [...derR, ...derS];
+    const derSignature = [0x30, sequence.length, ...sequence];
+    
+    return derSignature.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  private addSignatureToTransaction(transaction: any, signature: any): any {
+    // Add signature to the first input's script
+    const signatureScript = signature.derEncoded + '01'; // Add SIGHASH_ALL flag
+    transaction.inputs[0].script = signatureScript;
+    return transaction;
+  }
+
+  private serializeTransaction(transaction: any): string {
+    // Simplified transaction serialization for educational purposes
+    let hex = '';
+    
+    // Version (4 bytes, little-endian)
+    hex += this.uint32ToHex(transaction.version);
+    
+    // Input count (1 byte for simplicity)
+    hex += '01';
+    
+    // Input
+    hex += transaction.inputs[0].txid;
+    hex += this.uint32ToHex(transaction.inputs[0].vout);
+    hex += this.varIntToHex(transaction.inputs[0].script.length / 2);
+    hex += transaction.inputs[0].script;
+    hex += this.uint32ToHex(transaction.inputs[0].sequence);
+    
+    // Output count (1 byte for simplicity)
+    hex += '01';
+    
+    // Output
+    hex += this.uint64ToHex(transaction.outputs[0].value);
+    hex += this.varIntToHex(transaction.outputs[0].script.length / 2);
+    hex += transaction.outputs[0].script;
+    
+    // Locktime (4 bytes)
+    hex += this.uint32ToHex(transaction.locktime);
+    
+    return hex;
+  }
+
+  private uint32ToHex(value: number): string {
+    return value.toString(16).padStart(8, '0').match(/.{2}/g)!.reverse().join('');
+  }
+
+  private uint64ToHex(value: number): string {
+    return value.toString(16).padStart(16, '0').match(/.{2}/g)!.reverse().join('');
+  }
+
+  private varIntToHex(value: number): string {
+    if (value < 0xfd) {
+      return value.toString(16).padStart(2, '0');
+    }
+    // For simplicity, only handle values < 253
+    return value.toString(16).padStart(2, '0');
+  }
 }
 
 export const bitcoinService = new BitcoinService();

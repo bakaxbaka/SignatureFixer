@@ -155,9 +155,20 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Analysis Tools */}
           <div className="lg:col-span-2 space-y-6">
-            <AddressAnalyzer />
-            <TransactionDecoder />
-            <VulnerabilityScanner />
+            {/* Address Analyzer */}
+            <section>
+              <AddressAnalyzer />
+            </section>
+
+            {/* Vulnerability Scanner */}
+            <section>
+              <VulnerabilityScanner />
+            </section>
+
+            {/* Transaction Decoder */}
+            <section>
+              <TransactionDecoder />
+            </section>
           </div>
 
           {/* Right Column: Dashboard & Analytics */}
@@ -165,7 +176,7 @@ export default function Home() {
             <ApiStatus />
             <AnalyticsDashboard />
             <EducationalResources />
-            
+
             {/* Batch Analysis Queue */}
             <Card>
               <CardHeader>
@@ -185,7 +196,7 @@ export default function Home() {
                   <p className="text-sm text-muted-foreground" data-testid="batch-status">
                     No batch operations running
                   </p>
-                  <Button className="mt-2" size="sm" data-testid="button-start-batch">
+                  <Button className="mt-2" data-testid="button-start-batch">
                     Start Batch Scan
                   </Button>
                 </div>
@@ -209,7 +220,7 @@ export default function Home() {
                 Comprehensive analysis of Bitcoin signature vulnerabilities and attack patterns
               </p>
             </CardHeader>
-            
+
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Vulnerability Distribution */}

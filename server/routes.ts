@@ -264,6 +264,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Transaction creation endpoint
+  app.post('/api/create-transaction', async (req, res) => {
+    try {
+      const { fromAddress, toAddress, amount, privateKey } = req.body;
+
+      if (!fromAddress || !toAddress || !amount || !privateKey) {
+        return res.status(400).json({
+          error: 'All fields are required: fromAddress, toAddress, amount, privateKey'
+        });
+      }
+
+      // Create a mock transaction for educational purposes
+      const result = await bitcoinService.createEducationalTransaction({
+        fromAddress,
+        toAddress,
+        amount: parseInt(amount),
+        privateKey
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+
+    } catch (error) {
+      console.error('Transaction creation error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
+  });
+
   // Helper method for SIGHASH type names
   function getSighashTypeName(type: number): string {
     const baseType = type & 0x1f;
