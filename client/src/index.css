@@ -1,0 +1,314 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(15, 23%, 4%);
+  --foreground: hsl(248, 250%, 92%);
+  --card: hsl(15, 23%, 4%);
+  --card-foreground: hsl(248, 250%, 92%);
+  --popover: hsl(15, 23%, 4%);
+  --popover-foreground: hsl(248, 250%, 92%);
+  --primary: hsl(59, 130%, 46%);
+  --primary-foreground: hsl(248, 250%, 92%);
+  --secondary: hsl(51, 65%, 18.5%);
+  --secondary-foreground: hsl(248, 250%, 92%);
+  --muted: hsl(51, 65%, 18.5%);
+  --muted-foreground: hsl(148, 163%, 64%);
+  --accent: hsl(30, 41%, 13%);
+  --accent-foreground: hsl(248, 250%, 92%);
+  --destructive: hsl(239, 68%, 68%);
+  --destructive-foreground: hsl(248, 250%, 92%);
+  --border: hsl(51, 65%, 18.5%);
+  --input: hsl(30, 41%, 13%);
+  --ring: hsl(59, 130%, 46%);
+  --chart-1: hsl(59, 130%, 46%);
+  --chart-2: hsl(159, 100%, 36%);
+  --chart-3: hsl(42, 92%, 56%);
+  --chart-4: hsl(147, 78%, 42%);
+  --chart-5: hsl(341, 75%, 51%);
+  --sidebar-background: hsl(15, 23%, 4%);
+  --sidebar-foreground: hsl(248, 250%, 92%);
+  --sidebar-primary: hsl(59, 130%, 46%);
+  --sidebar-primary-foreground: hsl(248, 250%, 92%);
+  --sidebar-accent: hsl(30, 41%, 13%);
+  --sidebar-accent-foreground: hsl(59, 130%, 46%);
+  --sidebar-border: hsl(51, 65%, 18.5%);
+  --sidebar-ring: hsl(59, 130%, 46%);
+  --radius: 0.5rem;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  .gradient-border {
+    background: linear-gradient(45deg, hsl(var(--primary)), hsl(var(--chart-2)));
+    padding: 1px;
+    border-radius: var(--radius);
+  }
+
+  .gradient-border-content {
+    background-color: hsl(var(--card));
+    border-radius: calc(var(--radius) - 1px);
+  }
+
+  .code-block {
+    background-color: hsl(15, 23%, 4%);
+    border: 1px solid hsl(var(--border));
+    font-family: var(--font-mono);
+  }
+
+  .vulnerability-glow {
+    box-shadow: 0 0 20px hsl(var(--destructive) / 0.3);
+  }
+
+  .success-glow {
+    box-shadow: 0 0 20px hsl(var(--chart-2) / 0.3);
+  }
+
+  .pulse-dot {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Custom scrollbar styles */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--foreground));
+  }
+
+  /* Enhanced focus styles for accessibility */
+  .focus-visible:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Animation classes */
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-in {
+    animation: slide-in 0.5s ease-out;
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Bitcoin-specific styling */
+  .bitcoin-address {
+    font-family: var(--font-mono);
+    word-break: break-all;
+    background: hsl(var(--muted));
+    padding: 0.25rem 0.5rem;
+    border-radius: calc(var(--radius) / 2);
+    border: 1px solid hsl(var(--border));
+  }
+
+  .signature-box {
+    font-family: var(--font-mono);
+    background: hsl(var(--muted) / 0.5);
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+
+  .vulnerability-critical {
+    background: hsl(var(--destructive) / 0.1);
+    border: 1px solid hsl(var(--destructive) / 0.3);
+    color: hsl(var(--destructive));
+  }
+
+  .vulnerability-high {
+    background: hsl(42, 92%, 56% / 0.1);
+    border: 1px solid hsl(42, 92%, 56% / 0.3);
+    color: hsl(42, 92%, 56%);
+  }
+
+  .vulnerability-medium {
+    background: hsl(341, 75%, 51% / 0.1);
+    border: 1px solid hsl(341, 75%, 51% / 0.3);
+    color: hsl(341, 75%, 51%);
+  }
+
+  .vulnerability-low {
+    background: hsl(var(--chart-2) / 0.1);
+    border: 1px solid hsl(var(--chart-2) / 0.3);
+    color: hsl(var(--chart-2));
+  }
+
+  /* Loading states */
+  .loading-shimmer {
+    background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted-foreground) / 0.2) 50%, hsl(var(--muted)) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Status indicators */
+  .status-online {
+    color: hsl(var(--chart-2));
+  }
+
+  .status-offline {
+    color: hsl(var(--destructive));
+  }
+
+  .status-warning {
+    color: hsl(42, 92%, 56%);
+  }
+
+  /* Educational content styling */
+  .educational-banner {
+    background: hsl(var(--destructive) / 0.1);
+    border: 1px solid hsl(var(--destructive) / 0.2);
+    color: hsl(var(--destructive));
+  }
+
+  .educational-content {
+    background: hsl(var(--primary) / 0.05);
+    border: 1px solid hsl(var(--primary) / 0.2);
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+
+  /* Dark theme specific adjustments */
+  .dark {
+    color-scheme: dark;
+  }
+
+  .dark .bg-background {
+    background-color: hsl(15, 23%, 4%);
+  }
+
+  .dark .text-foreground {
+    color: hsl(248, 250%, 92%);
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    :root {
+      --border: hsl(248, 250%, 92%);
+      --input: hsl(0, 0%, 10%);
+      --muted: hsl(0, 0%, 20%);
+      --muted-foreground: hsl(248, 250%, 80%);
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .pulse-dot,
+    .loading-shimmer,
+    .animate-fade-in,
+    .animate-slide-in {
+      animation: none;
+    }
+
+    * {
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Print styles */
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+
+    body {
+      background: white !important;
+      color: black !important;
+    }
+
+    .bg-background,
+    .bg-card,
+    .bg-muted {
+      background: white !important;
+    }
+
+    .text-foreground,
+    .text-muted-foreground {
+      color: black !important;
+    }
+  }
+}
