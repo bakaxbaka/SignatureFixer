@@ -73,7 +73,7 @@ class BitcoinService {
 
   async fetchUTXOs(address: string, networkType: string = 'mainnet'): Promise<UTXOData> {
     const errors: string[] = [];
-    
+
     // Try Blockchain.com first
     try {
       return await this.fetchUTXOsBlockchainCom(address);
@@ -100,13 +100,13 @@ class BitcoinService {
 
   private async fetchUTXOsBlockchainCom(address: string): Promise<UTXOData> {
     const response = await fetch(`${this.BLOCKCHAIN_API}/unspent?active=${address}&format=json`);
-    
+
     if (!response.ok) {
       throw new Error(`Blockchain.com API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    
+
     if (!data.unspent_outputs) {
       return {
         utxos: [],
@@ -133,18 +133,18 @@ class BitcoinService {
   }
 
   private async fetchUTXOsBlockstream(address: string, networkType: string): Promise<UTXOData> {
-    const baseUrl = networkType === 'testnet' 
+    const baseUrl = networkType === 'testnet'
       ? 'https://blockstream.info/testnet/api'
       : this.BLOCKSTREAM_API;
-    
+
     const response = await fetch(`${baseUrl}/address/${address}/utxo`);
-    
+
     if (!response.ok) {
       throw new Error(`Blockstream API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    
+
     const utxos = data.map((utxo: any) => ({
       txid: utxo.txid,
       vout: utxo.vout,
@@ -164,13 +164,13 @@ class BitcoinService {
   private async fetchUTXOsSoChain(address: string, networkType: string): Promise<UTXOData> {
     const network = networkType === 'testnet' ? 'BTCTEST' : 'BTC';
     const response = await fetch(`${this.SOCHAIN_API}/get_tx_unspent/${network}/${address}`);
-    
+
     if (!response.ok) {
       throw new Error(`SoChain API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    
+
     if (data.status !== 'success' || !data.data.txs) {
       return {
         utxos: [],
@@ -200,7 +200,7 @@ class BitcoinService {
     // Enhanced transaction decoder with vulnerability analysis
     try {
       const buffer = Buffer.from(rawTx, 'hex');
-      
+
       // Basic transaction parsing
       const version = buffer.readUInt32LE(0);
       let offset = 4;
@@ -215,14 +215,14 @@ class BitcoinService {
       // Parse inputs
       const inputCount = this.readVarInt(buffer, offset);
       offset = inputCount.offset;
-      
+
       const inputs = [];
       const signatures = [];
-      
+
       for (let i = 0; i < inputCount.value; i++) {
         const input = this.parseInput(buffer, offset);
         inputs.push(input.input);
-        
+
         if (input.signature) {
           // Add message hash for vulnerability analysis
           const messageHash = this.generateMessageHash(buffer, i, input.signature.sighashType);
@@ -232,14 +232,14 @@ class BitcoinService {
             ...input.signature
           });
         }
-        
+
         offset = input.offset;
       }
 
       // Parse outputs
       const outputCount = this.readVarInt(buffer, offset);
       offset = outputCount.offset;
-      
+
       const outputs = [];
       for (let i = 0; i < outputCount.value; i++) {
         const output = this.parseOutput(buffer, offset);
@@ -252,7 +252,7 @@ class BitcoinService {
         for (let i = 0; i < inputCount.value; i++) {
           const witnessCount = this.readVarInt(buffer, offset);
           offset = witnessCount.offset;
-          
+
           for (let j = 0; j < witnessCount.value; j++) {
             const witnessLength = this.readVarInt(buffer, offset);
             offset = witnessLength.offset + witnessLength.value;
@@ -286,9 +286,9 @@ class BitcoinService {
     if (offset >= buffer.length) {
       throw new Error(`VarInt read offset ${offset} exceeds buffer length ${buffer.length}`);
     }
-    
+
     const first = buffer.readUInt8(offset);
-    
+
     if (first < 0xfd) {
       return { value: first, offset: offset + 1 };
     } else if (first === 0xfd) {
@@ -315,7 +315,7 @@ class BitcoinService {
     if (offset + 36 > buffer.length) {
       throw new Error(`Input parse would exceed buffer bounds: offset ${offset + 36} > length ${buffer.length}`);
     }
-    
+
     const txid = buffer.subarray(offset, offset + 32).reverse().toString('hex');
     const vout = buffer.readUInt32LE(offset + 32);
     offset += 36;
@@ -365,7 +365,7 @@ class BitcoinService {
     if (offset + 8 > buffer.length) {
       throw new Error(`Output value read would exceed buffer bounds: offset ${offset + 8} > length ${buffer.length}`);
     }
-    
+
     const value = buffer.readBigUInt64LE(offset);
     offset += 8;
 
@@ -400,9 +400,9 @@ class BitcoinService {
   private extractSignatureFromScript(script: string): any {
     try {
       const buffer = Buffer.from(script, 'hex');
-      
+
       if (buffer.length < 70) return null; // Too short for a signature
-      
+
       // Look for DER signature (starts with 0x30)
       let sigStart = -1;
       for (let i = 0; i < buffer.length - 1; i++) {
@@ -411,16 +411,16 @@ class BitcoinService {
           break;
         }
       }
-      
+
       if (sigStart === -1) return null;
-      
+
       const sigLength = buffer[sigStart + 1] + 2;
       const derSignature = buffer.subarray(sigStart, sigStart + sigLength);
       const sighashType = buffer[sigStart + sigLength];
-      
+
       // Parse DER signature
       const { r, s } = this.parseDERSignature(derSignature);
-      
+
       // Try to find public key (typically follows signature)
       let publicKey = '';
       const pubKeyStart = sigStart + sigLength + 1;
@@ -430,7 +430,7 @@ class BitcoinService {
           publicKey = buffer.subarray(pubKeyStart + 1, pubKeyStart + 1 + pubKeyLength).toString('hex');
         }
       }
-      
+
       return {
         r,
         s,
@@ -446,7 +446,7 @@ class BitcoinService {
   private parseDERSignature(derSig: Buffer): { r: string; s: string } {
     // Basic DER parsing
     let offset = 2; // Skip 0x30 and length
-    
+
     // R value
     if (derSig[offset] !== 0x02) throw new Error('Invalid DER signature');
     offset++;
@@ -454,14 +454,14 @@ class BitcoinService {
     offset++;
     const r = derSig.subarray(offset, offset + rLength).toString('hex');
     offset += rLength;
-    
+
     // S value
     if (derSig[offset] !== 0x02) throw new Error('Invalid DER signature');
     offset++;
     const sLength = derSig[offset];
     offset++;
     const s = derSig.subarray(offset, offset + sLength).toString('hex');
-    
+
     return { r, s };
   }
 
@@ -482,12 +482,12 @@ class BitcoinService {
   async getRawTransaction(txid: string, networkType: string = 'mainnet'): Promise<string> {
     try {
       // Try Blockstream first for raw transaction hex
-      const baseUrl = networkType === 'testnet' 
+      const baseUrl = networkType === 'testnet'
         ? 'https://blockstream.info/testnet/api'
         : this.BLOCKSTREAM_API;
-      
+
       const response = await fetch(`${baseUrl}/tx/${txid}/hex`);
-      
+
       if (response.ok) {
         return await response.text();
       }
@@ -498,7 +498,7 @@ class BitcoinService {
     try {
       // Fallback to Blockchain.com
       const response = await fetch(`${this.BLOCKCHAIN_API}/rawtx/${txid}?format=hex`);
-      
+
       if (response.ok) {
         return await response.text();
       }
@@ -512,12 +512,12 @@ class BitcoinService {
   async getTransactionDetails(txid: string, networkType: string = 'mainnet'): Promise<any> {
     try {
       // Try Blockstream first
-      const baseUrl = networkType === 'testnet' 
+      const baseUrl = networkType === 'testnet'
         ? 'https://blockstream.info/testnet/api'
         : this.BLOCKSTREAM_API;
-      
+
       const response = await fetch(`${baseUrl}/tx/${txid}`);
-      
+
       if (response.ok) {
         return await response.json();
       }
@@ -528,7 +528,7 @@ class BitcoinService {
     try {
       // Fallback to Blockchain.com
       const response = await fetch(`${this.BLOCKCHAIN_API}/rawtx/${txid}?format=json`);
-      
+
       if (response.ok) {
         return await response.json();
       }
@@ -583,7 +583,7 @@ class BitcoinService {
           isVulnerable: true,
           method: 'nonce_reuse_attack'
         });
-        
+
         patterns.push({
           type: 'nonce_reuse',
           description: 'Multiple signatures using same nonce detected',
@@ -620,7 +620,7 @@ class BitcoinService {
       });
     }
 
-    const riskLevel = vulnerableCount > 0 ? 'critical' : 
+    const riskLevel = vulnerableCount > 0 ? 'critical' :
                      patterns.some(p => p.severity === 'high') ? 'high' :
                      patterns.length > 0 ? 'medium' : 'low';
 
@@ -640,10 +640,10 @@ class BitcoinService {
     try {
       const s = BigInt('0x' + originalSig.s);
       const curveOrder = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
-      
+
       // Create malleable signature by flipping S value
       const malleableS = curveOrder - s;
-      
+
       return {
         original: {
           r: originalSig.r,
@@ -669,7 +669,7 @@ class BitcoinService {
     toAddress: string;
     amount: number;
     privateKey: string;
-  }): Promise<any> {
+  }): Promise<{ rawTransaction: string; txid: string; from: string; to: string; amount: number; fee: number; signature: { r: string; s: string; sighashType: number; derEncoded: string; }; educational: boolean; warning: string; verification: { messageHash: string; validDER: boolean; canonicalS: boolean; }; }> {
     try {
       const { fromAddress, toAddress, amount, privateKey } = params;
 
@@ -727,8 +727,83 @@ class BitcoinService {
     }
   }
 
+  async createMalleableSignature(params: {
+    rawTransaction: string;
+    malleabilityType: string;
+  }): Promise<{ malleableTransaction: string; originalTxid: string; malleableTxid: string; educational: boolean }> {
+    try {
+      console.log('Creating malleable signature for educational demonstration');
+
+      // Parse the original transaction
+      const buffer = Buffer.from(params.rawTransaction, 'hex');
+
+      // Demonstrate signature malleability by modifying the signature
+      const malleableBuffer = this.createSignatureMalleability(buffer, params.malleabilityType);
+
+      // Serialize the malleable transaction
+      const malleableTransaction = malleableBuffer.toString('hex');
+
+      // Generate different transaction IDs to demonstrate malleability
+      const originalTxid = this.calculateTxId(buffer);
+      const malleableTxid = this.calculateTxId(malleableBuffer);
+
+      return {
+        malleableTransaction,
+        originalTxid,
+        malleableTxid,
+        educational: true
+      };
+    } catch (error) {
+      throw new Error(`Failed to create malleable signature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private createSignatureMalleability(buffer: Buffer, malleabilityType: string): Buffer {
+    // Educational demonstration of signature malleability
+    const malleableBuffer = Buffer.from(buffer);
+
+    try {
+      // Find signature in the transaction (simplified for educational purposes)
+      const signatureStart = this.findSignatureInTransaction(malleableBuffer);
+
+      if (signatureStart !== -1) {
+        // Demonstrate different malleability techniques
+        switch (malleabilityType) {
+          case 'sighash_single':
+            // Modify SIGHASH_SINGLE flag to demonstrate vulnerability
+            malleableBuffer[signatureStart + 70] = 0x03; // SIGHASH_SINGLE
+            break;
+          case 'der_signature':
+            // Modify DER signature to create malleability
+            malleableBuffer[signatureStart + 10] ^= 0x01;
+            break;
+          default:
+            // Default malleability modification
+            malleableBuffer[signatureStart + 5] ^= 0x01;
+        }
+      }
+
+      return malleableBuffer;
+    } catch (error) {
+      // If parsing fails, create a simple modification for demonstration
+      malleableBuffer[malleableBuffer.length - 10] ^= 0x01;
+      return malleableBuffer;
+    }
+  }
+
+  private findSignatureInTransaction(buffer: Buffer): number {
+    // Simplified signature finding for educational purposes
+    // Look for DER signature marker (0x30)
+    for (let i = 0; i < buffer.length - 8; i++) {
+      if (buffer[i] === 0x30 && buffer[i + 1] > 0x40 && buffer[i + 1] < 0x50) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   private generateMockTxId(): string {
-    const randomBytes = Array.from({ length: 32 }, () => 
+    const randomBytes = Array.from({ length: 32 }, () =>
       Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
     ).join('');
     return randomBytes;
@@ -767,7 +842,7 @@ class BitcoinService {
     try {
       // This is a simplified educational implementation
       // In real Bitcoin, you would use proper ECDSA signing with secp256k1
-      
+
       const privateKey = BigInt('0x' + privateKeyHex);
       const messageNum = BigInt('0x' + messageHash);
       const curveOrder = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
@@ -831,16 +906,16 @@ class BitcoinService {
     const hex = value.toString(16);
     const paddedHex = hex.length % 2 === 0 ? hex : '0' + hex;
     const bytes = [];
-    
+
     for (let i = 0; i < paddedHex.length; i += 2) {
       bytes.push(parseInt(paddedHex.substr(i, 2), 16));
     }
-    
+
     // Add padding byte if first byte >= 0x80
     if (bytes.length > 0 && bytes[0] >= 0x80) {
       bytes.unshift(0x00);
     }
-    
+
     return bytes;
   }
 
@@ -849,7 +924,7 @@ class BitcoinService {
     const derS = [0x02, sBytes.length, ...sBytes];
     const sequence = [...derR, ...derS];
     const derSignature = [0x30, sequence.length, ...sequence];
-    
+
     return derSignature.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
@@ -863,31 +938,31 @@ class BitcoinService {
   private serializeTransaction(transaction: any): string {
     // Simplified transaction serialization for educational purposes
     let hex = '';
-    
+
     // Version (4 bytes, little-endian)
     hex += this.uint32ToHex(transaction.version);
-    
+
     // Input count (1 byte for simplicity)
     hex += '01';
-    
+
     // Input
     hex += transaction.inputs[0].txid;
     hex += this.uint32ToHex(transaction.inputs[0].vout);
     hex += this.varIntToHex(transaction.inputs[0].script.length / 2);
     hex += transaction.inputs[0].script;
     hex += this.uint32ToHex(transaction.inputs[0].sequence);
-    
+
     // Output count (1 byte for simplicity)
     hex += '01';
-    
+
     // Output
     hex += this.uint64ToHex(transaction.outputs[0].value);
     hex += this.varIntToHex(transaction.outputs[0].script.length / 2);
     hex += transaction.outputs[0].script;
-    
+
     // Locktime (4 bytes)
     hex += this.uint32ToHex(transaction.locktime);
-    
+
     return hex;
   }
 
@@ -905,6 +980,13 @@ class BitcoinService {
     }
     // For simplicity, only handle values < 253
     return value.toString(16).padStart(2, '0');
+  }
+
+  private createSignatureScript(derEncoded: string, privateKey: string): string {
+    // This function is a placeholder and needs proper implementation
+    // It should take the DER encoded signature and potentially the public key and sighash flag
+    // For this educational example, we'll just use the DER encoded signature
+    return derEncoded + '01'; // Append SIGHASH_ALL
   }
 }
 

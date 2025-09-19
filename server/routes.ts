@@ -296,6 +296,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Signature forgery endpoint for malleability demonstration
+  app.post('/api/forge-signature', async (req, res) => {
+    try {
+      const { rawTransaction, malleabilityType } = req.body;
+
+      if (!rawTransaction) {
+        return res.status(400).json({
+          error: 'Raw transaction is required'
+        });
+      }
+
+      // Create malleable signature for educational purposes
+      const result = await bitcoinService.createMalleableSignature({
+        rawTransaction,
+        malleabilityType: malleabilityType || 'sighash_single'
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+
+    } catch (error) {
+      console.error('Signature forgery error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
+  });
+
   // Helper method for SIGHASH type names
   function getSighashTypeName(type: number): string {
     const baseType = type & 0x1f;
