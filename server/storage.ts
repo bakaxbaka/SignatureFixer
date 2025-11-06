@@ -1,10 +1,4 @@
 import { 
-  users, 
-  analysisResults, 
-  vulnerabilityPatterns, 
-  apiMetrics, 
-  batchAnalysis, 
-  educationalContent,
   type User, 
   type InsertUser,
   type AnalysisResult,
@@ -17,8 +11,6 @@ import {
   type EducationalContent,
   type InsertEducationalContent
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, desc, and, gte, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -64,107 +56,113 @@ export interface IStorage {
   }>;
 }
 
-export class DatabaseStorage implements IStorage {
+export class MemStorage implements IStorage {
+  private users: Map<string, User> = new Map();
+  private analysisResults: Map<string, AnalysisResult> = new Map();
+  private vulnerabilityPatterns: Map<string, VulnerabilityPattern> = new Map();
+  private apiMetrics: ApiMetric[] = [];
+  private batchAnalyses: Map<string, BatchAnalysis> = new Map();
+  private educationalContents: Map<string, EducationalContent> = new Map();
+
+  private generateId(): string {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }
+
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return this.users.get(id);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    return Array.from(this.users.values()).find(u => u.username === username);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
+    const user: User = {
+      id: this.generateId(),
+      ...insertUser,
+      createdAt: new Date(),
+    };
+    this.users.set(user.id, user);
     return user;
   }
 
   async saveAnalysisResult(result: InsertAnalysisResult): Promise<AnalysisResult> {
-    const [analysisResult] = await db
-      .insert(analysisResults)
-      .values(result)
-      .returning();
+    const analysisResult: AnalysisResult = {
+      id: this.generateId(),
+      networkType: result.networkType || "mainnet",
+      bitcoinAddress: result.bitcoinAddress,
+      utxoData: result.utxoData || null,
+      vulnerabilities: result.vulnerabilities || null,
+      signatureAnalysis: result.signatureAnalysis || null,
+      nonceReuse: result.nonceReuse || null,
+      recoveredKeys: result.recoveredKeys || null,
+      analysisTimestamp: new Date(),
+      isEducational: true,
+    };
+    this.analysisResults.set(analysisResult.id, analysisResult);
     return analysisResult;
   }
 
   async getAnalysisResult(id: string): Promise<AnalysisResult | undefined> {
-    const [result] = await db
-      .select()
-      .from(analysisResults)
-      .where(eq(analysisResults.id, id));
-    return result || undefined;
+    return this.analysisResults.get(id);
   }
 
   async getAnalysisResultsByAddress(address: string): Promise<AnalysisResult[]> {
-    return await db
-      .select()
-      .from(analysisResults)
-      .where(eq(analysisResults.bitcoinAddress, address))
-      .orderBy(desc(analysisResults.analysisTimestamp));
+    return Array.from(this.analysisResults.values())
+      .filter(r => r.bitcoinAddress === address)
+      .sort((a, b) => (b.analysisTimestamp?.getTime() || 0) - (a.analysisTimestamp?.getTime() || 0));
   }
 
   async getRecentAnalysisResults(limit: number = 50): Promise<AnalysisResult[]> {
-    return await db
-      .select()
-      .from(analysisResults)
-      .orderBy(desc(analysisResults.analysisTimestamp))
-      .limit(limit);
+    return Array.from(this.analysisResults.values())
+      .sort((a, b) => (b.analysisTimestamp?.getTime() || 0) - (a.analysisTimestamp?.getTime() || 0))
+      .slice(0, limit);
   }
 
   async saveVulnerabilityPattern(pattern: InsertVulnerabilityPattern): Promise<VulnerabilityPattern> {
-    const [vulnPattern] = await db
-      .insert(vulnerabilityPatterns)
-      .values(pattern)
-      .returning();
+    const vulnPattern: VulnerabilityPattern = {
+      id: this.generateId(),
+      patternType: pattern.patternType,
+      severity: pattern.severity,
+      description: pattern.description,
+      detectionCriteria: pattern.detectionCriteria || null,
+      exampleTransactions: pattern.exampleTransactions || null,
+      educationalContent: pattern.educationalContent || null,
+      discoveredAt: new Date(),
+    };
+    this.vulnerabilityPatterns.set(vulnPattern.id, vulnPattern);
     return vulnPattern;
   }
 
   async getVulnerabilityPatterns(): Promise<VulnerabilityPattern[]> {
-    return await db
-      .select()
-      .from(vulnerabilityPatterns)
-      .orderBy(desc(vulnerabilityPatterns.discoveredAt));
+    return Array.from(this.vulnerabilityPatterns.values())
+      .sort((a, b) => (b.discoveredAt?.getTime() || 0) - (a.discoveredAt?.getTime() || 0));
   }
 
   async getVulnerabilityPatternsByType(type: string): Promise<VulnerabilityPattern[]> {
-    return await db
-      .select()
-      .from(vulnerabilityPatterns)
-      .where(eq(vulnerabilityPatterns.patternType, type))
-      .orderBy(desc(vulnerabilityPatterns.discoveredAt));
+    return Array.from(this.vulnerabilityPatterns.values())
+      .filter(p => p.patternType === type)
+      .sort((a, b) => (b.discoveredAt?.getTime() || 0) - (a.discoveredAt?.getTime() || 0));
   }
 
   async recordApiMetric(metric: Omit<ApiMetric, 'id' | 'timestamp'>): Promise<void> {
-    await db.insert(apiMetrics).values({
+    const apiMetric: ApiMetric = {
+      id: this.generateId(),
       ...metric,
       timestamp: new Date(),
-    });
+    };
+    this.apiMetrics.push(apiMetric);
   }
 
   async getApiMetrics(provider?: string, hours: number = 24): Promise<ApiMetric[]> {
     const hoursAgo = new Date(Date.now() - hours * 60 * 60 * 1000);
+    let metrics = this.apiMetrics.filter(m => (m.timestamp?.getTime() || 0) >= hoursAgo.getTime());
     
-    let query = db
-      .select()
-      .from(apiMetrics)
-      .where(gte(apiMetrics.timestamp, hoursAgo));
-
     if (provider) {
-      return await db
-        .select()
-        .from(apiMetrics)
-        .where(and(
-          gte(apiMetrics.timestamp, hoursAgo),
-          eq(apiMetrics.apiProvider, provider)
-        ))
-        .orderBy(desc(apiMetrics.timestamp));
+      metrics = metrics.filter(m => m.apiProvider === provider);
     }
-
-    return await query.orderBy(desc(apiMetrics.timestamp));
+    
+    return metrics.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
   }
 
   async getApiStatus(): Promise<{ provider: string; status: string; responseTime: number; }[]> {
@@ -172,13 +170,12 @@ export class DatabaseStorage implements IStorage {
     const results = [];
 
     for (const provider of providers) {
-      const [metric] = await db
-        .select()
-        .from(apiMetrics)
-        .where(eq(apiMetrics.apiProvider, provider))
-        .orderBy(desc(apiMetrics.timestamp))
-        .limit(1);
-
+      const providerMetrics = this.apiMetrics
+        .filter(m => m.apiProvider === provider)
+        .sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
+      
+      const metric = providerMetrics[0];
+      
       if (metric) {
         results.push({
           provider,
@@ -198,62 +195,58 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBatchAnalysis(batch: InsertBatchAnalysis): Promise<BatchAnalysis> {
-    const [batchResult] = await db
-      .insert(batchAnalysis)
-      .values(batch)
-      .returning();
+    const batchResult: BatchAnalysis = {
+      id: this.generateId(),
+      ...batch,
+      status: 'pending',
+      progress: 0,
+      processedAddresses: 0,
+      vulnerabilitiesFound: 0,
+      startedAt: null,
+      completedAt: null,
+      createdAt: new Date(),
+    };
+    this.batchAnalyses.set(batchResult.id, batchResult);
     return batchResult;
   }
 
   async updateBatchAnalysis(id: string, updates: Partial<BatchAnalysis>): Promise<BatchAnalysis> {
-    const [updated] = await db
-      .update(batchAnalysis)
-      .set(updates)
-      .where(eq(batchAnalysis.id, id))
-      .returning();
+    const existing = this.batchAnalyses.get(id);
+    if (!existing) {
+      throw new Error('Batch analysis not found');
+    }
+    const updated = { ...existing, ...updates };
+    this.batchAnalyses.set(id, updated);
     return updated;
   }
 
   async getBatchAnalysis(id: string): Promise<BatchAnalysis | undefined> {
-    const [batch] = await db
-      .select()
-      .from(batchAnalysis)
-      .where(eq(batchAnalysis.id, id));
-    return batch || undefined;
+    return this.batchAnalyses.get(id);
   }
 
   async getActiveBatchAnalyses(): Promise<BatchAnalysis[]> {
-    return await db
-      .select()
-      .from(batchAnalysis)
-      .where(
-        sql`${batchAnalysis.status} IN ('pending', 'running')`
-      )
-      .orderBy(desc(batchAnalysis.createdAt));
+    return Array.from(this.batchAnalyses.values())
+      .filter(b => b.status === 'pending' || b.status === 'running')
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
   }
 
   async getEducationalContent(): Promise<EducationalContent[]> {
-    return await db
-      .select()
-      .from(educationalContent)
-      .orderBy(desc(educationalContent.viewCount));
+    return Array.from(this.educationalContents.values())
+      .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
   }
 
   async getEducationalContentByCategory(category: string): Promise<EducationalContent[]> {
-    return await db
-      .select()
-      .from(educationalContent)
-      .where(eq(educationalContent.category, category))
-      .orderBy(desc(educationalContent.viewCount));
+    return Array.from(this.educationalContents.values())
+      .filter(c => c.category === category)
+      .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
   }
 
   async incrementContentView(id: string): Promise<void> {
-    await db
-      .update(educationalContent)
-      .set({
-        viewCount: sql`${educationalContent.viewCount} + 1`,
-      })
-      .where(eq(educationalContent.id, id));
+    const content = this.educationalContents.get(id);
+    if (content) {
+      content.viewCount = (content.viewCount || 0) + 1;
+      this.educationalContents.set(id, content);
+    }
   }
 
   async getVulnerabilityStats(): Promise<{
@@ -264,37 +257,21 @@ export class DatabaseStorage implements IStorage {
     highVulns: number;
     mediumVulns: number;
   }> {
-    const [totalScanned] = await db
-      .select({ count: count() })
-      .from(analysisResults);
-
-    const [criticalVulns] = await db
-      .select({ count: count() })
-      .from(vulnerabilityPatterns)
-      .where(eq(vulnerabilityPatterns.severity, 'critical'));
-
-    const [highVulns] = await db
-      .select({ count: count() })
-      .from(vulnerabilityPatterns)
-      .where(eq(vulnerabilityPatterns.severity, 'high'));
-
-    const [mediumVulns] = await db
-      .select({ count: count() })
-      .from(vulnerabilityPatterns)
-      .where(eq(vulnerabilityPatterns.severity, 'medium'));
-
-    // Count nonce reuse and recovered keys from analysis results
-    const analysisData = await db
-      .select({
-        nonceReuse: analysisResults.nonceReuse,
-        recoveredKeys: analysisResults.recoveredKeys,
-      })
-      .from(analysisResults);
+    const totalScanned = this.analysisResults.size;
+    
+    const criticalVulns = Array.from(this.vulnerabilityPatterns.values())
+      .filter(p => p.severity === 'critical').length;
+    
+    const highVulns = Array.from(this.vulnerabilityPatterns.values())
+      .filter(p => p.severity === 'high').length;
+    
+    const mediumVulns = Array.from(this.vulnerabilityPatterns.values())
+      .filter(p => p.severity === 'medium').length;
 
     let nonceReuseFound = 0;
     let keysRecovered = 0;
 
-    for (const result of analysisData) {
+    for (const result of this.analysisResults.values()) {
       if (result.nonceReuse && Array.isArray(result.nonceReuse)) {
         nonceReuseFound += result.nonceReuse.length;
       }
@@ -304,14 +281,14 @@ export class DatabaseStorage implements IStorage {
     }
 
     return {
-      totalScanned: totalScanned.count,
+      totalScanned,
       nonceReuseFound,
       keysRecovered,
-      criticalVulns: criticalVulns.count,
-      highVulns: highVulns.count,
-      mediumVulns: mediumVulns.count,
+      criticalVulns,
+      highVulns,
+      mediumVulns,
     };
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();
