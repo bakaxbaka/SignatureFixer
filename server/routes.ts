@@ -962,32 +962,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Comprehensive address transaction scanner - analyzes ALL transactions
+  // Comprehensive address transaction scanner - analyzes up to 1000 transactions with cross-comparison
   app.post('/api/scan-address-transactions', async (req, res) => {
     try {
-      const { address, networkType = 'mainnet', limit = 100 } = req.body;
+      const { address, networkType = 'mainnet', limit = 1000 } = req.body;
 
       if (!address) {
         return res.status(400).json({ error: 'Bitcoin address required' });
       }
 
-      // Fetch ALL transactions for address (with pagination)
-      const txids = await bitcoinService.fetchAddressTransactions(address, networkType, limit);
+      // Fetch up to 1000 transactions for address (with pagination)
+      const txids = await bitcoinService.fetchAddressTransactions(address, networkType, Math.min(limit, 1000));
 
       if (txids.length === 0) {
-        return res.json({ success: true, data: { address, transactions: [], vulnerabilities: [], totalScanned: 0 } });
+        return res.json({ success: true, data: { address, totalScanned: 0, nonceReuseVulnerabilities: [], statistics: {} } });
       }
 
-      const vulnerabilities = [];
-      const rValueMap = new Map<string, Array<{ txid: string; signature: any }>>();
+      // Store all signatures from all transactions for cross-comparison
+      const allSignatures: Array<{ txid: string; inputIndex: number; r: string; s: string; publicKey?: string }> = [];
+      const rValueMap = new Map<string, Array<{ txid: string; inputIndex: number; r: string; s: string }>>();
 
-      // Analyze each transaction
+      // Step 1: Extract all signatures from all transactions
       for (const txid of txids) {
         try {
           const tx = await bitcoinService.getTransactionDetails(txid, networkType);
           if (!tx || !tx.vin) continue;
 
-          for (const input of tx.vin) {
+          for (let inputIdx = 0; inputIdx < tx.vin.length; inputIdx++) {
+            const input = tx.vin[inputIdx];
             if (!input.scriptSig) continue;
 
             // Extract signature from script
@@ -995,24 +997,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const sig = cryptoAnalysis.validateDERSignature(derHex);
             
             if (sig.isValid && sig.r && sig.s) {
-              const rValue = sig.r;
-              
-              // Track for nonce reuse detection
-              const existing = rValueMap.get(rValue) || [];
-              existing.push({ txid, signature: { r: sig.r, s: sig.s } });
-              rValueMap.set(rValue, existing);
+              allSignatures.push({
+                txid,
+                inputIndex: inputIdx,
+                r: sig.r,
+                s: sig.s,
+                publicKey: input.prevout?.scriptpubkey || ''
+              });
 
-              // Check for nonce reuse (same R value = potential private key recovery)
-              if (existing.length >= 2) {
-                vulnerabilities.push({
-                  type: 'nonce_reuse',
-                  txid,
-                  address,
-                  severity: 'critical',
-                  relatedTransactions: existing.map(e => e.txid),
-                  details: `Nonce reuse detected: R value ${rValue.substring(0, 16)}... appears in ${existing.length} transactions`
-                });
-              }
+              // Index by R value for nonce reuse detection
+              const rValue = sig.r;
+              const existing = rValueMap.get(rValue) || [];
+              existing.push({ txid, inputIndex: inputIdx, r: sig.r, s: sig.s });
+              rValueMap.set(rValue, existing);
             }
           }
         } catch (error) {
@@ -1020,18 +1017,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Step 2: Find all nonce reuses (same R value across different transactions)
+      const nonceReuseVulnerabilities: any[] = [];
+      const processedGroups = new Set<string>();
+
+      for (const [rValue, signatures] of rValueMap.entries()) {
+        if (signatures.length >= 2) {
+          // Sort by txid to create consistent group key
+          const groupKey = signatures.map(s => s.txid).sort().join('|');
+          
+          if (!processedGroups.has(groupKey)) {
+            processedGroups.add(groupKey);
+            
+            nonceReuseVulnerabilities.push({
+              rValue,
+              count: signatures.length,
+              severity: 'critical',
+              transactions: signatures.map(s => ({
+                txid: s.txid,
+                inputIndex: s.inputIndex,
+                s: s.s
+              })),
+              details: `Nonce reuse: R value ${rValue.substring(0, 16)}... used in ${signatures.length} transactions. Private key recovery possible using formula: k = (s1-s2)/(z1-z2) mod n`
+            });
+          }
+        }
+      }
+
+      const statistics = {
+        totalTransactionsScanned: txids.length,
+        totalSignaturesExtracted: allSignatures.length,
+        uniqueRValues: rValueMap.size,
+        nonceReuseGroupsFound: nonceReuseVulnerabilities.length,
+        totalVulnerableSignatures: Array.from(rValueMap.values()).reduce((sum, sigs) => sum + (sigs.length >= 2 ? sigs.length : 0), 0)
+      };
+
       res.json({
         success: true,
         data: {
           address,
-          totalScanned: txids.length,
-          vulnerabilities: vulnerabilities.slice(0, 100),
-          nonceReuseGroups: Array.from(rValueMap.entries())
-            .filter(([_, sigs]) => sigs.length >= 2)
+          statistics,
+          nonceReuseVulnerabilities: nonceReuseVulnerabilities.sort((a, b) => b.count - a.count),
+          allSignaturesExtracted: allSignatures.length,
+          rValueDistribution: Array.from(rValueMap.entries())
+            .sort((a, b) => b[1].length - a[1].length)
+            .slice(0, 20) // Top 20 most reused R values
             .map(([rValue, sigs]) => ({
-              rValue,
+              rValue: rValue.substring(0, 16) + '...',
               count: sigs.length,
-              transactions: sigs.map(s => s.txid)
+              transactionIds: sigs.map(s => s.txid)
             }))
         }
       });
