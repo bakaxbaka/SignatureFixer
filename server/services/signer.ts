@@ -1,5 +1,5 @@
-// Bitcoin transaction signing using bitcoinjs-lib
 import * as bitcoin from "bitcoinjs-lib";
+import { generateAllMutations, type MutationResult } from "./derMutator";
 
 export interface SigningParams {
   wif: string;
@@ -14,6 +14,8 @@ export interface SigningParams {
 export interface SigningResult {
   txHex: string;
   txId: string;
+  signatures?: Array<{ index: number; signature: string; pubkey: string }>;
+  mutations?: MutationResult[];
   error?: string;
 }
 
@@ -24,7 +26,6 @@ export function buildAndSignTx(params: SigningParams): SigningResult {
     
     const psbt = new bitcoin.Psbt({ network });
 
-    // Add input (SegWit P2WPKH or legacy)
     psbt.addInput({
       hash: params.prevTxId,
       index: params.prevVout,
@@ -34,16 +35,13 @@ export function buildAndSignTx(params: SigningParams): SigningResult {
       },
     });
 
-    // Add output
     psbt.addOutput({
       value: params.destValue,
       script: Buffer.from(params.destScriptHex, "hex"),
     });
 
-    // Sign input 0
     psbt.signInput(0, keyPair);
 
-    // Validate and finalize
     try {
       psbt.validateSignaturesOfInput(0);
     } catch (e) {
@@ -52,12 +50,25 @@ export function buildAndSignTx(params: SigningParams): SigningResult {
     
     psbt.finalizeAllInputs();
 
-    // Extract final transaction
     const tx = psbt.extractTransaction();
     const txHex = tx.toHex();
     const txId = tx.getId();
 
-    return { txHex, txId };
+    // Extract signatures from the transaction
+    const signatures = extractSignaturesFromTxHex(txHex);
+
+    // Generate DER malleability mutations for the first signature
+    let mutations: MutationResult[] = [];
+    if (signatures.length > 0) {
+      const firstSig = signatures[0].signature;
+      // Ensure signature has sighash byte
+      const sigWithSighash = firstSig.length % 2 === 0 && !firstSig.endsWith("01") 
+        ? firstSig + "01" 
+        : firstSig;
+      mutations = generateAllMutations(sigWithSighash);
+    }
+
+    return { txHex, txId, signatures, mutations };
   } catch (e) {
     return {
       txHex: "",
@@ -67,7 +78,6 @@ export function buildAndSignTx(params: SigningParams): SigningResult {
   }
 }
 
-// Extract signatures from a signed transaction hex
 export function extractSignaturesFromTxHex(txHex: string): Array<{
   index: number;
   signature: string;
@@ -79,14 +89,12 @@ export function extractSignaturesFromTxHex(txHex: string): Array<{
 
     tx.ins.forEach((input, idx) => {
       if (input.witness && input.witness.length > 0) {
-        // SegWit witness format: [signature, pubkey, ...]
         signatures.push({
           index: idx,
           signature: input.witness[0].toString("hex"),
           pubkey: input.witness[1]?.toString("hex") || "",
         });
       } else if (input.script && input.script.length > 0) {
-        // Legacy scriptSig format (harder to parse, simple approach)
         signatures.push({
           index: idx,
           signature: input.script.toString("hex"),

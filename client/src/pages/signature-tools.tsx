@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Download } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Copy } from "lucide-react";
 
 export default function SignatureTools() {
   const { toast } = useToast();
@@ -33,7 +34,6 @@ export default function SignatureTools() {
   const [builtTx, setBuiltTx] = useState<any>(null);
   const [buildLoading, setBuildLoading] = useState(false);
 
-  // Fetch TX Hex
   const fetchTxHex = async () => {
     if (!txidInput.trim()) {
       toast({ title: "Error", description: "Enter a transaction ID", variant: "destructive" });
@@ -57,7 +57,6 @@ export default function SignatureTools() {
     }
   };
 
-  // Extract Signatures
   const extractSignatures = async () => {
     if (!txHexInput.trim()) {
       toast({ title: "Error", description: "Paste transaction hex", variant: "destructive" });
@@ -81,7 +80,6 @@ export default function SignatureTools() {
     }
   };
 
-  // Build and Sign
   const buildAndSign = async () => {
     if (!builderData.wif || !builderData.prevTxId || !builderData.prevValue || !builderData.destValue) {
       toast({ title: "Error", description: "Fill all required fields", variant: "destructive" });
@@ -97,7 +95,7 @@ export default function SignatureTools() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       setBuiltTx(data.data);
-      toast({ title: "Success", description: "Transaction signed" });
+      toast({ title: "Success", description: "Transaction signed with DER mutations generated" });
     } catch (e) {
       toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
     } finally {
@@ -115,7 +113,7 @@ export default function SignatureTools() {
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold">Signature Tools</h1>
-          <p className="text-muted-foreground mt-2">Fetch transaction hex, extract signatures, and build signed transactions</p>
+          <p className="text-muted-foreground mt-2">Fetch transaction hex, extract signatures, and build signed transactions with DER malleability variants</p>
         </div>
 
         <Tabs defaultValue="fetch-hex" className="w-full">
@@ -130,15 +128,10 @@ export default function SignatureTools() {
             <Card>
               <CardHeader>
                 <CardTitle>Fetch Transaction Hex</CardTitle>
-                <CardDescription>Get raw transaction hex from blockchain APIs (Blockstream, Mempool, BlockCypher)</CardDescription>
+                <CardDescription>Get raw transaction hex from blockchain APIs</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Input
-                  placeholder="Transaction ID (TXID)"
-                  value={txidInput}
-                  onChange={(e) => setTxidInput(e.target.value)}
-                  data-testid="input-txid"
-                />
+                <Input placeholder="Transaction ID" value={txidInput} onChange={(e) => setTxidInput(e.target.value)} data-testid="input-txid" />
                 <Button onClick={fetchTxHex} disabled={hexLoading} className="w-full">
                   {hexLoading ? "Fetching..." : "Fetch Hex"}
                 </Button>
@@ -147,14 +140,8 @@ export default function SignatureTools() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <label className="text-sm font-medium">Transaction Hex:</label>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => copyToClipboard(txHexResult)}
-                        data-testid="button-copy-hex"
-                      >
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy
+                      <Button size="sm" variant="outline" onClick={() => copyToClipboard(txHexResult)} data-testid="button-copy-hex">
+                        <Copy className="w-4 h-4 mr-2" /> Copy
                       </Button>
                     </div>
                     <Textarea value={txHexResult} readOnly rows={6} className="font-mono text-xs" />
@@ -169,17 +156,10 @@ export default function SignatureTools() {
             <Card>
               <CardHeader>
                 <CardTitle>Extract Signatures</CardTitle>
-                <CardDescription>Parse signatures and public keys from a transaction hex</CardDescription>
+                <CardDescription>Parse signatures and public keys from transaction hex</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Textarea
-                  placeholder="Paste transaction hex here..."
-                  value={txHexInput}
-                  onChange={(e) => setTxHexInput(e.target.value)}
-                  rows={6}
-                  className="font-mono text-xs"
-                  data-testid="textarea-tx-hex"
-                />
+                <Textarea placeholder="Paste transaction hex..." value={txHexInput} onChange={(e) => setTxHexInput(e.target.value)} rows={6} className="font-mono text-xs" data-testid="textarea-tx-hex" />
                 <Button onClick={extractSignatures} disabled={sigLoading} className="w-full">
                   {sigLoading ? "Extracting..." : "Extract Signatures"}
                 </Button>
@@ -194,16 +174,12 @@ export default function SignatureTools() {
                         <p className="text-sm font-medium">Input #{sig.index}</p>
                         <div>
                           <label className="text-xs text-muted-foreground">Signature (DER):</label>
-                          <div className="font-mono text-xs break-all bg-muted p-2 rounded mt-1">
-                            {sig.signature}
-                          </div>
+                          <div className="font-mono text-xs break-all bg-muted p-2 rounded mt-1">{sig.signature}</div>
                         </div>
                         {sig.pubkey && (
                           <div>
                             <label className="text-xs text-muted-foreground">Public Key:</label>
-                            <div className="font-mono text-xs break-all bg-muted p-2 rounded mt-1">
-                              {sig.pubkey}
-                            </div>
+                            <div className="font-mono text-xs break-all bg-muted p-2 rounded mt-1">{sig.pubkey}</div>
                           </div>
                         )}
                       </div>
@@ -219,95 +195,73 @@ export default function SignatureTools() {
             <Card>
               <CardHeader>
                 <CardTitle>Build & Sign Transaction</CardTitle>
-                <CardDescription>Create and sign a new transaction using bitcoinjs-lib PSBT</CardDescription>
+                <CardDescription>Create and sign transaction with automatic DER malleability variants</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    placeholder="Private Key (WIF)"
-                    type="password"
-                    value={builderData.wif}
-                    onChange={(e) => setBuilderData({ ...builderData, wif: e.target.value })}
-                    data-testid="input-wif"
-                  />
-                  <Input
-                    placeholder="Previous TX ID"
-                    value={builderData.prevTxId}
-                    onChange={(e) => setBuilderData({ ...builderData, prevTxId: e.target.value })}
-                    data-testid="input-prev-txid"
-                  />
-                  <Input
-                    placeholder="Previous Output Index"
-                    type="number"
-                    value={builderData.prevVout}
-                    onChange={(e) => setBuilderData({ ...builderData, prevVout: e.target.value })}
-                    data-testid="input-prev-vout"
-                  />
-                  <Input
-                    placeholder="Previous Value (sats)"
-                    type="number"
-                    value={builderData.prevValue}
-                    onChange={(e) => setBuilderData({ ...builderData, prevValue: e.target.value })}
-                    data-testid="input-prev-value"
-                  />
-                  <Input
-                    placeholder="Previous Script (hex)"
-                    value={builderData.prevScriptHex}
-                    onChange={(e) => setBuilderData({ ...builderData, prevScriptHex: e.target.value })}
-                    data-testid="input-prev-script"
-                  />
-                  <Input
-                    placeholder="Destination Value (sats)"
-                    type="number"
-                    value={builderData.destValue}
-                    onChange={(e) => setBuilderData({ ...builderData, destValue: e.target.value })}
-                    data-testid="input-dest-value"
-                  />
+                  <Input placeholder="Private Key (WIF)" type="password" value={builderData.wif} onChange={(e) => setBuilderData({ ...builderData, wif: e.target.value })} data-testid="input-wif" />
+                  <Input placeholder="Previous TX ID" value={builderData.prevTxId} onChange={(e) => setBuilderData({ ...builderData, prevTxId: e.target.value })} data-testid="input-prev-txid" />
+                  <Input placeholder="Previous Output Index" type="number" value={builderData.prevVout} onChange={(e) => setBuilderData({ ...builderData, prevVout: e.target.value })} data-testid="input-prev-vout" />
+                  <Input placeholder="Previous Value (sats)" type="number" value={builderData.prevValue} onChange={(e) => setBuilderData({ ...builderData, prevValue: e.target.value })} data-testid="input-prev-value" />
+                  <Input placeholder="Previous Script (hex)" value={builderData.prevScriptHex} onChange={(e) => setBuilderData({ ...builderData, prevScriptHex: e.target.value })} data-testid="input-prev-script" />
+                  <Input placeholder="Destination Value (sats)" type="number" value={builderData.destValue} onChange={(e) => setBuilderData({ ...builderData, destValue: e.target.value })} data-testid="input-dest-value" />
                 </div>
-                <Input
-                  placeholder="Destination Script (hex)"
-                  value={builderData.destScriptHex}
-                  onChange={(e) => setBuilderData({ ...builderData, destScriptHex: e.target.value })}
-                  data-testid="input-dest-script"
-                />
+                <Input placeholder="Destination Script (hex)" value={builderData.destScriptHex} onChange={(e) => setBuilderData({ ...builderData, destScriptHex: e.target.value })} data-testid="input-dest-script" />
                 <Button onClick={buildAndSign} disabled={buildLoading} className="w-full">
                   {buildLoading ? "Building..." : "Build & Sign Transaction"}
                 </Button>
 
                 {builtTx && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <label className="text-sm font-medium">Transaction ID:</label>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(builtTx.txId)}
-                          data-testid="button-copy-txid"
-                        >
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copy
+                  <div className="space-y-6">
+                    {/* Original Transaction */}
+                    <div className="space-y-2 border-t pt-6">
+                      <h4 className="font-semibold text-sm">Original Signed Transaction</h4>
+                      <div>
+                        <label className="text-xs text-muted-foreground">Transaction ID:</label>
+                        <Button size="sm" variant="outline" onClick={() => copyToClipboard(builtTx.txId)} data-testid="button-copy-txid" className="ml-2 mb-2">
+                          <Copy className="w-4 h-4 mr-2" /> Copy
                         </Button>
+                        <code className="block bg-muted p-2 rounded font-mono text-xs break-all">{builtTx.txId}</code>
                       </div>
-                      <code className="block bg-muted p-2 rounded font-mono text-xs break-all">
-                        {builtTx.txId}
-                      </code>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <label className="text-sm font-medium">Signed Transaction Hex:</label>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(builtTx.txHex)}
-                          data-testid="button-copy-signed-hex"
-                        >
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copy
+                      <div className="mt-2">
+                        <label className="text-xs text-muted-foreground">Transaction Hex:</label>
+                        <Button size="sm" variant="outline" onClick={() => copyToClipboard(builtTx.txHex)} data-testid="button-copy-signed-hex" className="ml-2 mb-2">
+                          <Copy className="w-4 h-4 mr-2" /> Copy
                         </Button>
+                        <Textarea value={builtTx.txHex} readOnly rows={4} className="font-mono text-xs" />
                       </div>
-                      <Textarea value={builtTx.txHex} readOnly rows={6} className="font-mono text-xs" />
                     </div>
+
+                    {/* DER Malleability Variants */}
+                    {builtTx.mutations && builtTx.mutations.length > 0 && (
+                      <div className="space-y-4 border-t pt-6">
+                        <div>
+                          <h4 className="font-semibold text-sm mb-4">DER Malleability Variants ({builtTx.mutations.length})</h4>
+                          <p className="text-xs text-muted-foreground mb-4">These are signature variants that maintain cryptographic validity but demonstrate malleability vulnerabilities:</p>
+                        </div>
+                        {builtTx.mutations.map((mut: any, idx: number) => (
+                          <div key={idx} className="border rounded p-3 space-y-2 bg-card/50">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge variant={mut.isValid ? "default" : "destructive"}>{mut.mutation}</Badge>
+                                <span className="text-xs text-muted-foreground">{mut.description}</span>
+                              </div>
+                              <Button size="sm" variant="outline" onClick={() => copyToClipboard(mut.mutated)}>
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs text-muted-foreground block">Original:</label>
+                              <code className="block bg-muted p-2 rounded font-mono text-xs break-all leading-tight">{mut.original}</code>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs text-muted-foreground block">Mutated:</label>
+                              <code className="block bg-muted p-2 rounded font-mono text-xs break-all leading-tight">{mut.mutated}</code>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
