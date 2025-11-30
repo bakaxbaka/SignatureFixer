@@ -7,6 +7,7 @@ import { vulnerabilityService } from "./services/vulnerability";
 import { ecdsaRecovery, cryptoAnalysis } from "./services/crypto";
 import { blockScanner } from "./services/scanner";
 import { fetchAddressDataWithTor, clearCache, clearAllCache } from "./services/networking/torFetcher";
+import { getTxHex } from "./services/explorers/txHexFetcher";
 import { generateAllMutations } from "./services/derMutator";
 import { insertAnalysisResultSchema, insertBatchAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
@@ -1729,5 +1730,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Get raw transaction hex from any blockchain API
+  app.post('/api/get-tx-hex', async (req, res) => {
+    try {
+      const { txid } = req.body;
+      if (!txid || typeof txid !== 'string') {
+        return res.status(400).json({ error: 'Transaction ID (txid) required' });
+      }
+      const hex = await getTxHex(txid);
+      res.json({ success: true, data: { txid, hex } });
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Failed to fetch transaction hex',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
   return httpServer;
 }
