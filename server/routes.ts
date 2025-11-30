@@ -995,48 +995,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Analyze each transaction for signatures and vulnerabilities
+      // Analyze each transaction directly from blockchain.info rawaddr response (NO individual API calls!)
       console.log(`\n========== ANALYZING ${transactions.length} TRANSACTIONS FOR ADDRESS: ${address} ==========`);
+      console.log(`✓ All transaction data already fetched from blockchain.info/rawaddr (single API call)\n`);
       
       const rValueMap = new Map<string, Array<{ txid: string; inputIndex: number; r: string; s: string; input_index: number }>>();
       const allSignatures: any[] = [];
       const weakSignatures: any[] = [];
       let totalExtracted = 0;
 
+      // Process transactions from the rawaddr response directly (no additional API calls needed!)
       for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
         const tx = transactions[txIndex];
-        console.log(`\n[${txIndex + 1}/${transactions.length}] Processing transaction: ${tx.hash}`);
+        console.log(`[${txIndex + 1}/${transactions.length}] TX: ${tx.hash}`);
         
         try {
-          // Fetch full transaction details to extract signatures from blockchain.info
-          console.log(`  └─ Fetching transaction details from blockchain.info...`);
-          const fullTx = await bitcoinService.getTransactionDetails(tx.hash, 'mainnet');
-          
-          if (!fullTx || !fullTx.inputs) {
-            console.log(`  └─ ✗ No inputs found or transaction unavailable`);
+          // Use inputs directly from blockchain.info rawaddr response
+          if (!tx.inputs || tx.inputs.length === 0) {
+            console.log(`  └─ ✗ No inputs found`);
             continue;
           }
 
-          console.log(`  └─ ✓ Found ${fullTx.inputs.length} input(s)`);
+          console.log(`  └─ Found ${tx.inputs.length} input(s) - extracting signatures...`);
 
-          for (let inputIdx = 0; inputIdx < fullTx.inputs.length; inputIdx++) {
-            const input = fullTx.inputs[inputIdx];
-            console.log(`    Input ${inputIdx}: Extracting signature...`);
+          for (let inputIdx = 0; inputIdx < tx.inputs.length; inputIdx++) {
+            const input = tx.inputs[inputIdx];
             
-            if (!input.script) {
-              console.log(`    └─ ✗ No script found`);
+            // blockchain.info provides script field
+            const script = input.script || input.scriptSig || '';
+            if (!script) {
               continue;
             }
 
             try {
               // Extract signature from script
-              const sig = cryptoAnalysis.validateDERSignature(input.script);
+              const sig = cryptoAnalysis.validateDERSignature(script);
               
               if (sig.isValid && sig.r && sig.s) {
                 totalExtracted++;
-                console.log(`    └─ ✓ Signature extracted`);
-                console.log(`       R: ${sig.r.substring(0, 20)}...`);
-                console.log(`       S: ${sig.s.substring(0, 20)}...`);
+                console.log(`    ✓ Input ${inputIdx}: R=${sig.r.substring(0, 16)}... S=${sig.s.substring(0, 16)}...`);
                 
                 allSignatures.push({
                   txid: tx.hash,
@@ -1055,7 +1052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }]);
 
                 if (malleability.hasMalleability) {
-                  console.log(`    └─ ⚠ BIP62 Malleability violation detected (S > n/2)`);
+                  console.log(`      ⚠ BIP62 Malleability detected`);
                   weakSignatures.push({
                     txid: tx.hash,
                     inputIndex: inputIdx,
@@ -1077,16 +1074,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   input_index: inputIdx
                 });
                 rValueMap.set(rValue, existing);
-              } else {
-                console.log(`    └─ ✗ Invalid DER signature`);
               }
             } catch (sigErr) {
-              console.log(`    └─ ✗ Error extracting signature: ${sigErr instanceof Error ? sigErr.message : String(sigErr)}`);
               continue;
             }
           }
         } catch (txErr) {
-          console.log(`  └─ ✗ Error processing transaction: ${txErr instanceof Error ? txErr.message : String(txErr)}`);
           continue;
         }
       }
