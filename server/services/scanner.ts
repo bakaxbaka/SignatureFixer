@@ -105,7 +105,8 @@ export class BlockScanner {
       const block = await bitcoinService.getBlock(blockHash, networkType);
       if (!block || !block.tx) return results;
 
-      for (const txid of block.tx.slice(0, 50)) {
+      // Scan ALL transactions in block (removed 50 tx limit)
+      for (const txid of block.tx) {
         try {
           const txResult = await this.analyzeTxSignatures(txid, networkType, blockHeight);
           if (txResult) {

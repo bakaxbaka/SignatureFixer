@@ -962,6 +962,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Comprehensive address transaction scanner - analyzes ALL transactions
+  app.post('/api/scan-address-transactions', async (req, res) => {
+    try {
+      const { address, networkType = 'mainnet', limit = 100 } = req.body;
+
+      if (!address) {
+        return res.status(400).json({ error: 'Bitcoin address required' });
+      }
+
+      // Fetch ALL transactions for address (with pagination)
+      const txids = await bitcoinService.fetchAddressTransactions(address, networkType, limit);
+
+      if (txids.length === 0) {
+        return res.json({ success: true, data: { address, transactions: [], vulnerabilities: [], totalScanned: 0 } });
+      }
+
+      const vulnerabilities = [];
+      const rValueMap = new Map<string, Array<{ txid: string; signature: any }>>();
+
+      // Analyze each transaction
+      for (const txid of txids) {
+        try {
+          const tx = await bitcoinService.getTransactionDetails(txid, networkType);
+          if (!tx || !tx.vin) continue;
+
+          for (const input of tx.vin) {
+            if (!input.scriptSig) continue;
+
+            // Extract signature from script
+            const derHex = input.scriptSig.hex || '';
+            const sig = cryptoAnalysis.validateDERSignature(derHex);
+            
+            if (sig.isValid && sig.r && sig.s) {
+              const rValue = sig.r;
+              
+              // Track for nonce reuse detection
+              const existing = rValueMap.get(rValue) || [];
+              existing.push({ txid, signature: { r: sig.r, s: sig.s } });
+              rValueMap.set(rValue, existing);
+
+              // Check for nonce reuse (same R value = potential private key recovery)
+              if (existing.length >= 2) {
+                vulnerabilities.push({
+                  type: 'nonce_reuse',
+                  txid,
+                  address,
+                  severity: 'critical',
+                  relatedTransactions: existing.map(e => e.txid),
+                  details: `Nonce reuse detected: R value ${rValue.substring(0, 16)}... appears in ${existing.length} transactions`
+                });
+              }
+            }
+          }
+        } catch (error) {
+          continue; // Skip transactions that fail to parse
+        }
+      }
+
+      res.json({
+        success: true,
+        data: {
+          address,
+          totalScanned: txids.length,
+          vulnerabilities: vulnerabilities.slice(0, 100),
+          nonceReuseGroups: Array.from(rValueMap.entries())
+            .filter(([_, sigs]) => sigs.length >= 2)
+            .map(([rValue, sigs]) => ({
+              rValue,
+              count: sigs.length,
+              transactions: sigs.map(s => s.txid)
+            }))
+        }
+      });
+
+    } catch (error) {
+      console.error('Address transaction scan error:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Scan failed' });
+    }
+  });
+
   // Address vulnerability summary endpoint
   app.get('/api/address-vulnerability-summary', async (req, res) => {
     try {

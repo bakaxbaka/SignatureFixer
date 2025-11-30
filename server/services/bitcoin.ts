@@ -1312,6 +1312,60 @@ class BitcoinService {
     }
   }
 
+  async fetchAddressTransactions(address: string, networkType: string = 'mainnet', limit: number = 100): Promise<string[]> {
+    const txids: Set<string> = new Set();
+    try {
+      const baseUrl = networkType === 'testnet'
+        ? 'https://blockstream.info/testnet/api'
+        : this.BLOCKSTREAM_API;
+
+      // Fetch address details with transactions
+      const response = await fetch(`${baseUrl}/address/${address}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch address: ${response.status}`);
+      }
+
+      const addressData = await response.json();
+      
+      // Get transactions from address object
+      if (addressData.chain_stats && addressData.chain_stats.tx_count > 0) {
+        // Fetch all transactions (paginated)
+        const txCount = Math.min(addressData.chain_stats.tx_count, limit);
+        const pageSize = 50; // Blockstream API limit
+        const pages = Math.ceil(txCount / pageSize);
+        
+        for (let page = 0; page < pages; page++) {
+          const pageResponse = await fetch(`${baseUrl}/address/${address}/txs/chain?start_index=${page * pageSize}`);
+          if (pageResponse.ok) {
+            const pageTxs = await pageResponse.json();
+            for (const tx of pageTxs) {
+              if (tx.txid) txids.add(tx.txid);
+              if (txids.size >= limit) break;
+            }
+          }
+        }
+      }
+
+      // Also check mempool transactions
+      if (addressData.mempool_stats && addressData.mempool_stats.tx_count > 0) {
+        const mempoolResponse = await fetch(`${baseUrl}/address/${address}/txs/mempool`);
+        if (mempoolResponse.ok) {
+          const mempoolTxs = await mempoolResponse.json();
+          for (const tx of mempoolTxs) {
+            if (tx.txid && txids.size < limit) {
+              txids.add(tx.txid);
+            }
+          }
+        }
+      }
+
+      return Array.from(txids);
+    } catch (error) {
+      console.error(`Error fetching address transactions for ${address}:`, error);
+      return [];
+    }
+  }
+
   async getMempoolTxids(networkType: string = 'mainnet'): Promise<string[]> {
     try {
       const baseUrl = networkType === 'testnet'
