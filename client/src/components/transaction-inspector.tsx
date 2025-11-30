@@ -4,11 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle, Copy, Zap } from "lucide-react";
-import { parseRawTx, calculateWeight, analyzeDERSignatures, generateTags, parseInputs, parseOutputs, getPubkeyMap, getRValueMap } from "@/lib/transaction-analyzer";
+import { AlertTriangle, CheckCircle, Copy, Zap, Beaker, Share2, Download } from "lucide-react";
+import { parseRawTx, calculateWeight, analyzeDERSignatures, generateTags, parseInputs, parseOutputs, getPubkeyMap, getRValueMap, TransactionInput } from "@/lib/transaction-analyzer";
 import { truncateString, formatBTC } from "@/lib/bitcoin-utils";
 import { useToast } from "@/hooks/use-toast";
 import { DERMalleabilityModal } from "@/components/der-malleability-modal";
+import { CVETestModal } from "@/components/cve-test-modal";
+import { SignatureComparisonModal } from "@/components/signature-comparison-modal";
+import { downloadFile, toCSV, toJSON, toLatticeFormat, ExportableSignature } from "@/lib/signature-export";
 
 interface TransactionInspectorProps {
   txHex: string;
@@ -20,6 +23,13 @@ export function TransactionInspector({ txHex, txid }: TransactionInspectorProps)
   const [malleabilityOpen, setMalleabilityOpen] = useState(false);
   const [malleabilityDER, setMalleabilityDER] = useState("");
   const [malleabilitySighash, setMalleabilitySighash] = useState(0);
+  const [cveTestOpen, setCveTestOpen] = useState(false);
+  const [cveTestDER, setCveTestDER] = useState("");
+  const [cveTestPubkey, setCveTestPubkey] = useState("");
+  const [cveTestIndex, setCveTestIndex] = useState<number>();
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [comparisonPubkey, setComparisonPubkey] = useState("");
+  const [comparisonSigs, setComparisonSigs] = useState<(TransactionInput & { txid?: string })[]>([]);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -338,7 +348,7 @@ export function TransactionInspector({ txHex, txid }: TransactionInspectorProps)
                         )}
 
                         {/* Action Buttons */}
-                        <div className="flex gap-2 pt-2">
+                        <div className="flex flex-wrap gap-2 pt-2">
                           <Button
                             onClick={() => {
                               setMalleabilityDER(input.signature!.der);
@@ -351,6 +361,66 @@ export function TransactionInspector({ txHex, txid }: TransactionInspectorProps)
                           >
                             <Zap className="w-3 h-3" />
                             Forge Malleable
+                          </Button>
+
+                          <Button
+                            onClick={() => {
+                              setCveTestDER(input.signature!.der);
+                              setCveTestPubkey(input.pubkey || "");
+                              setCveTestIndex(input.index);
+                              setCveTestOpen(true);
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="gap-2 text-xs"
+                          >
+                            <Beaker className="w-3 h-3" />
+                            CVE-42461
+                          </Button>
+
+                          <Button
+                            onClick={() => {
+                              if (input.pubkey) {
+                                const samePubkeyInputs = inputs.filter(i => i.pubkey === input.pubkey).map(i => ({ ...i, txid }));
+                                setComparisonPubkey(input.pubkey);
+                                setComparisonSigs(samePubkeyInputs);
+                                setComparisonOpen(true);
+                              }
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="gap-2 text-xs"
+                            disabled={!input.pubkey}
+                          >
+                            <Share2 className="w-3 h-3" />
+                            Compare
+                          </Button>
+
+                          <Button
+                            onClick={() => {
+                              const exportData: ExportableSignature[] = [{
+                                txid,
+                                index: input.index,
+                                r: input.signature!.r,
+                                s: input.signature!.s,
+                                zHash: input.signature!.zHash,
+                                pubkey: input.pubkey,
+                                sighash: input.signature!.sighashType,
+                                sighashByte: input.signature!.sighashByte,
+                                isHighS: input.signature!.isHighS,
+                                isCanonical: input.signature!.isCanonical,
+                              }];
+                              
+                              const csv = toCSV(exportData);
+                              downloadFile(csv, `sig-${input.index}.csv`, 'text/csv');
+                              toast({ description: 'Signature exported as CSV' });
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="gap-2 text-xs"
+                          >
+                            <Download className="w-3 h-3" />
+                            Export
                           </Button>
                         </div>
                       </CardContent>
@@ -368,6 +438,24 @@ export function TransactionInspector({ txHex, txid }: TransactionInspectorProps)
           onOpenChange={setMalleabilityOpen}
           originalDER={malleabilityDER}
           sighashByte={malleabilitySighash}
+        />
+
+        {/* CVE-42461 Test Modal */}
+        <CVETestModal
+          open={cveTestOpen}
+          onOpenChange={setCveTestOpen}
+          der={cveTestDER}
+          pubkey={cveTestPubkey}
+          txid={txid}
+          index={cveTestIndex}
+        />
+
+        {/* Signature Comparison Modal */}
+        <SignatureComparisonModal
+          open={comparisonOpen}
+          onOpenChange={setComparisonOpen}
+          pubkey={comparisonPubkey}
+          signatures={comparisonSigs}
         />
       </div>
     );
