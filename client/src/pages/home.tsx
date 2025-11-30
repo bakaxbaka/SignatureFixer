@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AddressAnalyzer } from "@/components/address-analyzer";
 import { TransactionDecoder } from "@/components/transaction-decoder";
 import { VulnerabilityScanner } from "@/components/vulnerability-scanner";
+import { QuickTxBuilder } from "@/components/quick-tx-builder";
 import { ApiStatus } from "@/components/api-status";
 import { AnalyticsDashboard } from "@/components/analytics-dashboard";
 import { EducationalResources } from "@/components/educational-resources";
@@ -198,6 +199,7 @@ export default function Home() {
 
           {/* Right Column: Dashboard & Analytics */}
           <div className="space-y-6">
+            <QuickTxBuilder />
             <ApiStatus />
             <AnalyticsDashboard />
             <EducationalResources />
