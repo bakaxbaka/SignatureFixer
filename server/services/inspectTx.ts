@@ -1,14 +1,11 @@
-/**
- * Transaction Inspection Service
- * Main orchestrator for end-to-end TX analysis
- */
-
 import type { InspectTxRequest, InspectTxResponse } from "../../client/src/types/txInspector";
 import { decodeRawTx } from "../lib/txDecode";
+import { fetchPrevTx, buildPrevOutput } from "./utxoFetcher";
 import { classifyScriptPubKey, decodeAddressFromScript } from "../lib/scriptAnalyzer";
-import { extractInputSignature } from "../lib/signatureAnalyzer";
+import { extractInputSignature } from "./signature";
 import { computeSighashZ } from "../lib/sighashCompute";
 import { analyzeDerSignature } from "../lib/derAnalyzer";
+import { NETWORK } from "../config/network";
 import { getTxHex } from "./explorers/txHexFetcher";
 
 export async function inspectTx(req: InspectTxRequest): Promise<InspectTxResponse> {
@@ -17,83 +14,96 @@ export async function inspectTx(req: InspectTxRequest): Promise<InspectTxRespons
       return { ok: false, error: "txid or rawTxHex is required" };
     }
 
-    // Normalize input
-    let rawTxHex = req.rawTxHex?.trim().toLowerCase();
-    
+    let rawTxHex = req.rawTxHex?.trim();
     if (!rawTxHex && req.txid) {
       rawTxHex = await getTxHex(req.txid);
       if (!rawTxHex) {
         return { ok: false, error: "Could not fetch transaction by txid" };
       }
     }
-
     if (!rawTxHex) {
       return { ok: false, error: "Empty rawTxHex after fetch" };
     }
 
-    // Decode TX
     const decoded = decodeRawTx(rawTxHex);
 
-    // Enrich inputs with UTXO data
-    const enrichedInputs = decoded.inputs.map((inp) => {
-      const scriptType = classifyScriptPubKey(inp.scriptSig || "");
-      const address = decodeAddressFromScript(inp.scriptSig || "");
+    const enrichedInputs = await Promise.all(
+      decoded.inputs.map(async (inp) => {
+        if (inp.isCoinbase) return inp;
 
-      return {
-        ...inp,
-        scriptType,
-        address,
-        valueSats: undefined, // Would fetch from previous TX in production
-      };
-    });
+        const prevTx = await fetchPrevTx(inp.prevTxid);
+        if (!prevTx) return inp;
 
-    // Extract and analyze signatures
-    const signatureAnalyses = enrichedInputs.map((inp, index) => {
-      if (inp.isCoinbase) return null;
+        const prevOut = buildPrevOutput(prevTx, inp.prevVout);
+        if (!prevOut) return inp;
 
-      const sigInfo = extractInputSignature(inp);
-      if (!sigInfo) return null;
+        const scriptType = classifyScriptPubKey(prevOut.scriptPubKeyHex);
+        const address = decodeAddressFromScript(prevOut.scriptPubKeyHex);
 
-      const { derHex, pubkeyHex, sighashType } = sigInfo;
+        return {
+          ...inp,
+          valueSats: prevOut.valueSats,
+          scriptType,
+          address,
+          prevOutputScriptHex: prevOut.scriptPubKeyHex,
+        } as any;
+      })
+    );
 
-      // Compute sighash preimage z
-      const zHex = computeSighashZ({
-        rawTxHex,
-        decodedTx: decoded,
-        inputIndex: index,
-        sighashType,
-        prevOutputScriptHex: inp.scriptSig,
-        prevOutputValueSats: inp.valueSats,
-      });
+    const signatureAnalyses = await Promise.all(
+      enrichedInputs.map(async (inp: any, index) => {
+        if (inp.isCoinbase) return null;
 
-      // Analyze DER signature
-      const derAnalysis = analyzeDerSignature(derHex, sighashType);
+        const sigInfo = extractInputSignature(inp);
+        if (!sigInfo) return null;
 
-      return {
-        derHex,
-        rHex: derAnalysis.rHex,
-        sHex: derAnalysis.sHex,
-        zHex,
-        sighashType,
-        sighashName: derAnalysis.sighashName,
-        pubkeyHex,
-        isHighS: derAnalysis.isHighS,
-        isCanonicalDer: derAnalysis.isCanonical,
-        rangeValid: derAnalysis.rangeValid,
-        derIssues: derAnalysis.derIssues,
-        warnings: derAnalysis.warnings,
-      };
-    });
+        const { derHex, pubkeyHex, sighashType } = sigInfo;
 
-    // Stitch signature info back into inputs
-    const finalInputs = enrichedInputs.map((inp, i) => ({
+        const zHex = computeSighashZ({
+          rawTxHex,
+          decodedTx: decoded,
+          inputIndex: index,
+          sighashType,
+          prevOutputScriptHex: sigInfo.prevOutputScriptHex || inp.prevOutputScriptHex || "",
+          prevOutputValueSats: sigInfo.prevOutputValueSats ?? inp.valueSats ?? 0,
+        });
+
+        const derAnalysis = analyzeDerSignature(derHex, sighashType);
+
+        return {
+          derHex,
+          rHex: derAnalysis.rHex,
+          sHex: derAnalysis.sHex,
+          zHex,
+          sighashType,
+          sighashName: derAnalysis.sighashName,
+          pubkeyHex,
+          isHighS: derAnalysis.isHighS,
+          isCanonicalDer: derAnalysis.isCanonical,
+          rangeValid: derAnalysis.rangeValid,
+          derIssues: derAnalysis.derIssues,
+          warnings: derAnalysis.warnings,
+        };
+      })
+    );
+
+    const finalInputs = enrichedInputs.map((inp: any, i: number) => ({
       ...inp,
       signature: signatureAnalyses[i],
     }));
 
-    // Compute summary flags
-    const totalInputSats = finalInputs.reduce((sum, i) => sum + (i.valueSats ?? 0), 0);
-    const totalOutputSats = decoded.outputs.reduce((sum, o) => sum + o.valueSats, 0);
+    const finalOutputs = decoded.outputs.map((out) => {
+      const scriptType = classifyScriptPubKey(out.scriptPubKeyHex);
+      const address = decodeAddressFromScript(out.scriptPubKeyHex);
+      return {
+        ...out,
+        scriptType,
+        address,
+      };
+    });
+
+    const totalInputSats = finalInputs.map((i: any) => i.valueSats ?? 0).reduce((a: number, b: number) => a + b, 0);
+    const totalOutputSats = finalOutputs.map((o) => o.valueSats).reduce((a: number, b: number) => a + b, 0);
     const feeSats = totalInputSats > 0 && totalOutputSats >= 0 ? totalInputSats - totalOutputSats : undefined;
     const feeRateSatPerVbyte = feeSats != null && decoded.vsizeBytes ? Math.round(feeSats / decoded.vsizeBytes) : undefined;
 
@@ -108,7 +118,7 @@ export async function inspectTx(req: InspectTxRequest): Promise<InspectTxRespons
 
     return {
       ok: true,
-      network: "mainnet",
+      network: NETWORK,
       txid: decoded.txid,
       rawTxHex,
       version: decoded.version,
@@ -120,8 +130,8 @@ export async function inspectTx(req: InspectTxRequest): Promise<InspectTxRespons
       totalOutputSats,
       feeSats,
       feeRateSatPerVbyte,
-      inputs: finalInputs as any,
-      outputs: decoded.outputs as any,
+      inputs: finalInputs,
+      outputs: finalOutputs,
       summaryFlags,
     };
   } catch (err: any) {

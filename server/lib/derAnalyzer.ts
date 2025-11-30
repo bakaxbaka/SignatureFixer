@@ -1,12 +1,7 @@
-/**
- * DER Analyzer
- * Analyzes DER signatures for canonical encoding and range validity
- */
-
 import type { SignatureDerIssue, SighashTypeName } from "../../client/src/types/txInspector";
 
-const SECP256K1_ORDER = BigInt("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
-const HALF_ORDER = SECP256K1_ORDER >> BigInt(1);
+const curveN = BigInt("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+const halfN = curveN >> 1n;
 
 export interface DerAnalysisResult {
   rHex: string;
@@ -19,11 +14,10 @@ export interface DerAnalysisResult {
   warnings: string[];
 }
 
-export function analyzeDerSignature(derHex: string, sighashByte: number): DerAnalysisResult {
+export function analyzeDerSignature(derHex: string, sighashType?: number): DerAnalysisResult {
   const issues: SignatureDerIssue[] = [];
   const warnings: string[] = [];
-  
-  const der = Buffer.from(derHex, "hex");
+
   let rHex = "";
   let sHex = "";
   let isCanonical = true;
@@ -31,94 +25,139 @@ export function analyzeDerSignature(derHex: string, sighashByte: number): DerAna
   let isHighS = false;
 
   try {
-    // Remove sighash byte
-    const derNoSighash = der.slice(0, der.length - 1);
+    const buf = Buffer.from(derHex, "hex");
 
-    // Check sequence tag
-    if (derNoSighash[0] !== 0x30) {
-      issues.push({ code: "BAD_SEQ_TAG", message: "Expected 0x30 sequence tag" });
-      isCanonical = false;
+    let sig = buf;
+    if (sighashType === undefined && buf.length > 0) {
+      sighashType = buf[buf.length - 1];
+      sig = buf.slice(0, -1);
+    } else if (sighashType !== undefined && buf.length > 0) {
+      sig = buf.slice(0, -1);
     }
 
-    // Parse R
+    if (sig[0] !== 0x30) {
+      isCanonical = false;
+      issues.push({
+        code: "BAD_SEQ_TAG",
+        message: "Signature does not start with SEQUENCE (0x30)",
+      });
+    }
+
+    const totalLen = sig[1];
+    if (totalLen + 2 !== sig.length) {
+      isCanonical = false;
+      issues.push({
+        code: "BAD_LENGTH",
+        message: "SEQUENCE length does not match actual length",
+      });
+    }
+
     let offset = 2;
-    const rLen = derNoSighash[offset];
+    if (sig[offset] !== 0x02) {
+      isCanonical = false;
+      issues.push({
+        code: "BAD_LENGTH",
+        message: "R integer does not start with 0x02",
+      });
+    }
     offset++;
-    
-    if (derNoSighash[offset] === 0x00 && rLen > 1) {
-      issues.push({ code: "EXTRA_PADDING_R", message: "Extra leading zero in R" });
+    const lenR = sig[offset++];
+    const rBytes = sig.slice(offset, offset + lenR);
+    offset += lenR;
+
+    if (sig[offset] !== 0x02) {
       isCanonical = false;
+      issues.push({
+        code: "BAD_LENGTH",
+        message: "S integer does not start with 0x02",
+      });
     }
-
-    rHex = derNoSighash.slice(offset, offset + rLen).toString("hex");
-    const rValue = BigInt("0x" + rHex);
-
-    if (rValue === BigInt(0) || rValue >= SECP256K1_ORDER) {
-      issues.push({ code: "OUT_OF_RANGE_R", message: "R out of valid range" });
-      rangeValid = false;
-    }
-
-    offset += rLen;
-
-    // Parse S
-    const sLen = derNoSighash[offset];
     offset++;
+    const lenS = sig[offset++];
+    const sBytes = sig.slice(offset, offset + lenS);
+    offset += lenS;
 
-    if (derNoSighash[offset] === 0x00 && sLen > 1) {
-      issues.push({ code: "EXTRA_PADDING_S", message: "Extra leading zero in S" });
+    if (offset !== sig.length) {
       isCanonical = false;
+      issues.push({
+        code: "TRAILING_GARBAGE",
+        message: "Extra data after S integer",
+      });
     }
 
-    sHex = derNoSighash.slice(offset, offset + sLen).toString("hex");
-    const sValue = BigInt("0x" + sHex);
+    if (rBytes.length === 0 || (rBytes[0] === 0x00 && rBytes.length === 1)) {
+      isCanonical = false;
+    }
+    if (rBytes.length > 1 && rBytes[0] === 0x00 && (rBytes[1] & 0x80) === 0) {
+      isCanonical = false;
+      issues.push({
+        code: "EXTRA_PADDING_R",
+        message: "Unnecessary leading zero in R",
+      });
+    }
 
-    if (sValue === BigInt(0) || sValue >= SECP256K1_ORDER) {
-      issues.push({ code: "OUT_OF_RANGE_S", message: "S out of valid range" });
+    if (sBytes.length === 0 || (sBytes[0] === 0x00 && sBytes.length === 1)) {
+      isCanonical = false;
+    }
+    if (sBytes.length > 1 && sBytes[0] === 0x00 && (sBytes[1] & 0x80) === 0) {
+      isCanonical = false;
+      issues.push({
+        code: "EXTRA_PADDING_S",
+        message: "Unnecessary leading zero in S",
+      });
+    }
+
+    rHex = rBytes.toString("hex");
+    sHex = sBytes.toString("hex");
+
+    const r = BigInt("0x" + rHex);
+    const s = BigInt("0x" + sHex);
+
+    if (r <= 0n || r >= curveN) {
       rangeValid = false;
+      issues.push({
+        code: "OUT_OF_RANGE_R",
+        message: "R not in [1, n-1]",
+      });
+    }
+    if (s <= 0n || s >= curveN) {
+      rangeValid = false;
+      issues.push({
+        code: "OUT_OF_RANGE_S",
+        message: "S not in [1, n-1]",
+      });
     }
 
-    if (sValue > HALF_ORDER) {
-      isHighS = true;
-      warnings.push("High S value - not strictly canonical");
+    isHighS = s > halfN;
+    if (isHighS) {
+      warnings.push("High-S signature (non-canonical under BIP62 conventions)");
     }
-
-    offset += sLen;
-
-    // Check for trailing garbage
-    if (offset !== derNoSighash.length) {
-      issues.push({ code: "TRAILING_GARBAGE", message: "Trailing garbage after signature" });
-      isCanonical = false;
-    }
-  } catch (e) {
-    issues.push({ code: "BAD_LENGTH", message: (e as Error).message });
+  } catch (e: any) {
     isCanonical = false;
+    warnings.push("Error parsing DER signature: " + e.message);
   }
-
-  const sighashName = getSighashName(sighashByte);
 
   return {
     rHex,
     sHex,
-    sighashName,
+    sighashName: classifySighashType(sighashType ?? 0x01),
     isHighS,
-    isCanonical: isCanonical && !isHighS,
+    isCanonical,
     rangeValid,
     derIssues: issues,
     warnings,
   };
 }
 
-function getSighashName(byte: number): SighashTypeName {
-  const base = byte & 0x1f;
-  const anyonecanpay = (byte & 0x80) !== 0;
+export function classifySighashType(type: number): SighashTypeName {
+  const base = type & 0x1f;
+  const acp = (type & 0x80) !== 0;
 
-  let name: "SIGHASH_ALL" | "SIGHASH_NONE" | "SIGHASH_SINGLE" = "SIGHASH_ALL";
-  if (base === 0x00 || base === 0x01) name = "SIGHASH_ALL";
-  else if (base === 0x02) name = "SIGHASH_NONE";
-  else if (base === 0x03) name = "SIGHASH_SINGLE";
-
-  if (anyonecanpay) {
-    return (name + "|ANYONECANPAY") as SighashTypeName;
-  }
-  return name;
+  if (base === 0x01 && !acp) return "SIGHASH_ALL";
+  if (base === 0x02 && !acp) return "SIGHASH_NONE";
+  if (base === 0x03 && !acp) return "SIGHASH_SINGLE";
+  if (base === 0x01 && acp) return "SIGHASH_ALL|ANYONECANPAY";
+  if (base === 0x02 && acp) return "SIGHASH_NONE|ANYONECANPAY";
+  if (base === 0x03 && acp) return "SIGHASH_SINGLE|ANYONECANPAY";
+  return "UNKNOWN";
 }
