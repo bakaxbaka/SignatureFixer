@@ -230,6 +230,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`  ✓ 2.1 P2WPKH (SegWit) witness detection`);
       console.log(`  ✓ 8 comprehensive vulnerability checks\n`);
       
+      // Debug first transaction structure
+      if (transactions.length > 0) {
+        const firstTx = transactions[0];
+        console.log(`📋 First TX structure:`, JSON.stringify({
+          hash: firstTx.hash,
+          hasInputs: !!firstTx.inputs,
+          inputCount: firstTx.inputs?.length || 0,
+          inputsSample: firstTx.inputs?.[0] ? JSON.stringify({
+            script: (firstTx.inputs[0].script || '').substring(0, 40),
+            witness: firstTx.inputs[0].witness?.length || 0
+          }) : 'none'
+        }, null, 2));
+      }
+      
       for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
         const tx = transactions[txIndex];
         console.log(`[${txIndex + 1}/${transactions.length}] TX: ${tx.hash}`);
