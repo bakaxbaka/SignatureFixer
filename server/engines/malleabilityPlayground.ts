@@ -1,13 +1,5 @@
 import { analyzeDerStrict } from "../crypto/derStrict";
-
-export type CveEncodingType =
-  | "canonical"
-  | "BER-padding-r"
-  | "BER-padding-s"
-  | "BER-padding-both"
-  | "BER-length-mismatch"
-  | "wrong-seq-tag"
-  | "trailing-garbage";
+import type { CveEncodingType } from "./cve42461";
 
 export interface MalleabilityVariant {
   id: string;
@@ -15,41 +7,63 @@ export interface MalleabilityVariant {
   derHex: string;
 }
 
+/**
+ * High-level: given a canonical DER, generate:
+ *  - canonical
+ *  - extra zero before R
+ *  - extra zero before S
+ *  - both padded
+ *  - length-mismatch (len too big or too small)
+ *  - wrong SEQ tag
+ *  - trailing garbage
+ */
 export function generateCveStyleVariants(canonicalDerHex: string): MalleabilityVariant[] {
   const base = Buffer.from(canonicalDerHex, "hex");
   const variants: MalleabilityVariant[] = [];
 
+  // 0) canonical
   variants.push({
     id: "canonical",
     encodingType: "canonical",
     derHex: base.toString("hex"),
   });
 
+  // parse positions of R/S using strict analyzer (for offsets)
+  const strict = analyzeDerStrict(canonicalDerHex);
+  if (!strict.isCanonical) {
+    // still generate some naive variants, but ideally canonical input
+  }
   const buf = Buffer.from(canonicalDerHex, "hex");
+
+  // helper to clone
   const clone = () => Buffer.from(buf);
 
+  // 1) BER-padding-r
   variants.push({
     id: "ber-pad-r",
     encodingType: "BER-padding-r",
     derHex: addLeadingZeroToR(buf).toString("hex"),
   });
 
+  // 2) BER-padding-s
   variants.push({
     id: "ber-pad-s",
     encodingType: "BER-padding-s",
     derHex: addLeadingZeroToS(buf).toString("hex"),
   });
 
+  // 3) BER-padding-both
   variants.push({
     id: "ber-pad-both",
     encodingType: "BER-padding-both",
     derHex: addLeadingZeroToS(addLeadingZeroToR(buf)).toString("hex"),
   });
 
+  // 4) BER-length-mismatch (increase SEQ length by 1)
   {
     const b = clone();
     if (b.length > 2) {
-      b[1] = b[1] + 1;
+      b[1] = b[1] + 1; // incorrect length
     }
     variants.push({
       id: "ber-length",
@@ -58,9 +72,10 @@ export function generateCveStyleVariants(canonicalDerHex: string): MalleabilityV
     });
   }
 
+  // 5) wrong-seq-tag
   {
     const b = clone();
-    b[0] = 0x31;
+    b[0] = 0x31; // SET
     variants.push({
       id: "wrong-seq-tag",
       encodingType: "wrong-seq-tag",
@@ -68,6 +83,7 @@ export function generateCveStyleVariants(canonicalDerHex: string): MalleabilityV
     });
   }
 
+  // 6) trailing garbage
   {
     const b = Buffer.concat([clone(), Buffer.from("deadbeef", "hex")]);
     variants.push({
@@ -80,8 +96,11 @@ export function generateCveStyleVariants(canonicalDerHex: string): MalleabilityV
   return variants;
 }
 
+// Helpers: modify R/S length+value in a naive ASN.1 way
+
 function addLeadingZeroToR(buf: Buffer): Buffer {
   const out = Buffer.from(buf);
+  // find first INTEGER (R)
   let offset = 2;
   if (out[offset] !== 0x02) return out;
   offset++;
@@ -95,12 +114,14 @@ function addLeadingZeroToR(buf: Buffer): Buffer {
 
 function addLeadingZeroToS(buf: Buffer): Buffer {
   const out = Buffer.from(buf);
+  // first INTEGER (R)
   let offset = 2;
   if (out[offset] !== 0x02) return out;
   offset++;
   const lenR = out[offset];
   offset += 1 + lenR;
 
+  // second INTEGER (S)
   if (out[offset] !== 0x02) return out;
   offset++;
   const lenS = out[offset];
