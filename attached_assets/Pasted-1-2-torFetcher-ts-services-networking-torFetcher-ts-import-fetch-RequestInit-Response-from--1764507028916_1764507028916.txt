@@ -1,0 +1,133 @@
+1.2 torFetcher.ts
+// services/networking/torFetcher.ts
+import fetch, { RequestInit, Response } from "node-fetch";
+import { SocksProxyAgent } from "socks-proxy-agent";
+import fs from "fs";
+import path from "path";
+
+const TOR_SOCKS = "socks5h://127.0.0.1:9050";
+const torAgent = new SocksProxyAgent(TOR_SOCKS);
+
+// Simple in-memory cache
+type CacheEntry = {
+  url: string;
+  json: any;
+  createdAt: number;
+};
+
+const memoryCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// Optional disk cache for long runs
+const CACHE_FILE = path.join(__dirname, "../../data/http_cache.json");
+
+function loadDiskCache() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const raw = fs.readFileSync(CACHE_FILE, "utf8");
+      const parsed = JSON.parse(raw);
+      for (const [k, v] of Object.entries(parsed as Record<string, CacheEntry>)) {
+        memoryCache.set(k, v);
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to load disk cache:", (e as Error).message);
+  }
+}
+
+function saveDiskCache() {
+  try {
+    const obj: Record<string, CacheEntry> = {};
+    for (const [k, v] of memoryCache.entries()) {
+      obj[k] = v;
+    }
+    fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true });
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(obj), "utf8");
+  } catch (e) {
+    console.warn("Failed to save disk cache:", (e as Error).message);
+  }
+}
+
+// Call once at startup
+loadDiskCache();
+
+// Basic cache helpers
+function getFromCache(url: string): any | null {
+  const entry = memoryCache.get(url);
+  if (!entry) return null;
+  if (Date.now() - entry.createdAt > CACHE_TTL_MS) {
+    memoryCache.delete(url);
+    return null;
+  }
+  return entry.json;
+}
+
+function putInCache(url: string, json: any) {
+  memoryCache.set(url, { url, json, createdAt: Date.now() });
+}
+
+// Throttle to avoid rate limits (still important with Tor)
+let lastRequest = 0;
+const MIN_DELAY = 1200; // 1.2s between requests
+
+async function globalThrottle() {
+  const now = Date.now();
+  const diff = now - lastRequest;
+  if (diff < MIN_DELAY) {
+    await new Promise((r) => setTimeout(r, MIN_DELAY - diff));
+  }
+  lastRequest = Date.now();
+}
+
+// Tor-aware fetch with infinite retry + backoff + cache
+export async function torJson(
+  url: string,
+  options: RequestInit = {},
+  useCache = true,
+  attempt = 1
+): Promise<any> {
+  if (useCache) {
+    const cached = getFromCache(url);
+    if (cached) return cached;
+  }
+
+  await globalThrottle();
+
+  const mergedOpts: RequestInit = {
+    ...options,
+    agent: torAgent,
+  };
+
+  try {
+    const res: Response = await fetch(url, mergedOpts);
+
+    if (res.status === 429) {
+      const wait = Math.min(60000, attempt * 2000);
+      console.warn(`429 @ ${url} → backing off ${wait / 1000}s`);
+      await new Promise((r) => setTimeout(r, wait));
+      return torJson(url, options, useCache, attempt + 1);
+    }
+
+    if (!res.ok) {
+      throw new Error(`${res.status} ${res.statusText}`);
+    }
+
+    const json = await res.json();
+    if (useCache) {
+      putInCache(url, json);
+      // optional: persist occasionally
+      if (attempt === 1 && Math.random() < 0.05) saveDiskCache();
+    }
+    return json;
+  } catch (e: any) {
+    const wait = Math.min(60000, attempt * 2000);
+    console.warn(`Network error @ ${url}: ${e.message} → retry in ${wait / 1000}s`);
+    await new Promise((r) => setTimeout(r, wait));
+    return torJson(url, options, useCache, attempt + 1);
+  }
+}
+
+
+🔐 Note: This uses Tor for privacy / resilience, not to hammer APIs. We still throttle and backoff.
+
+You can also expose a saveDiskCache() on shutdown if you want.
