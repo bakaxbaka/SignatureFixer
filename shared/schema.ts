@@ -79,6 +79,43 @@ export const educationalContent = pgTable("educational_content", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+export const vulnerabilityLogs = pgTable("vulnerability_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bitcoinAddress: text("bitcoin_address").notNull(),
+  vulnerabilityType: text("vulnerability_type").notNull(), // 'nonce_reuse', 'signature_malleability', 'weak_randomness', etc.
+  severity: text("severity").notNull(), // 'critical', 'high', 'medium', 'low'
+  transactionHash: text("transaction_hash"),
+  signatureDetails: jsonb("signature_details"), // r, s, m, k values
+  analysisDetails: jsonb("analysis_details"), // full calculation steps
+  recoveredPrivateKey: text("recovered_private_key"),
+  recoveredWIF: text("recovered_wif"),
+  nonce: text("nonce"),
+  detectionMethod: text("detection_method"),
+  confidence: integer("confidence").default(0),
+  detectedAt: timestamp("detected_at").default(sql`now()`),
+  networkType: text("network_type").default("mainnet"),
+}, (table) => ({
+  addressIdx: index("vuln_log_address_idx").on(table.bitcoinAddress),
+  typeIdx: index("vuln_log_type_idx").on(table.vulnerabilityType),
+  timestampIdx: index("vuln_log_timestamp_idx").on(table.detectedAt),
+}));
+
+export const nonceReuseHistory = pgTable("nonce_reuse_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bitcoinAddress: text("bitcoin_address").notNull(),
+  rValue: text("r_value").notNull(),
+  signatures: jsonb("signatures").notNull(), // array of signature hashes
+  transactionHashes: jsonb("transaction_hashes"), // array of txids
+  recoveredPrivateKey: text("recovered_private_key"),
+  recoveredWIF: text("recovered_wif"),
+  nonce: text("nonce"),
+  analysisDetails: jsonb("analysis_details"),
+  detectedAt: timestamp("detected_at").default(sql`now()`),
+}, (table) => ({
+  addressIdx: index("nonce_reuse_address_idx").on(table.bitcoinAddress),
+  rValueIdx: index("nonce_reuse_r_value_idx").on(table.rValue),
+}));
+
 // Relations
 export const analysisResultsRelations = relations(analysisResults, ({ many }) => ({
   vulnerabilityInstances: many(vulnerabilityPatterns),
@@ -146,3 +183,5 @@ export type InsertEducationalContent = z.infer<typeof insertEducationalContentSc
 export type EducationalContent = typeof educationalContent.$inferSelect;
 
 export type ApiMetric = typeof apiMetrics.$inferSelect;
+export type VulnerabilityLog = typeof vulnerabilityLogs.$inferSelect;
+export type NonceReuseHistory = typeof nonceReuseHistory.$inferSelect;

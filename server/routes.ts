@@ -823,5 +823,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vulnerability logs endpoints
+  app.get('/api/vulnerability-logs', async (req, res) => {
+    try {
+      const logs = await storage.getAllVulnerabilityLogs(100);
+      res.json({ success: true, data: logs });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch vulnerability logs' });
+    }
+  });
+
+  app.get('/api/vulnerability-logs/address/:address', async (req, res) => {
+    try {
+      const logs = await storage.getVulnerabilityLogsByAddress(req.params.address);
+      res.json({ success: true, data: logs });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch vulnerability logs' });
+    }
+  });
+
+  app.get('/api/vulnerability-logs/type/:type', async (req, res) => {
+    try {
+      const logs = await storage.getVulnerabilityLogsByType(req.params.type);
+      res.json({ success: true, data: logs });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch vulnerability logs' });
+    }
+  });
+
+  app.post('/api/vulnerability-logs', async (req, res) => {
+    try {
+      const log = await storage.saveVulnerabilityLog(req.body);
+      broadcast({ type: 'vulnerability_detected', log });
+      res.json({ success: true, data: log });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to save vulnerability log' });
+    }
+  });
+
+  // Nonce reuse history endpoints
+  app.get('/api/nonce-reuse-history/address/:address', async (req, res) => {
+    try {
+      const history = await storage.getNonceReuseHistoryByAddress(req.params.address);
+      res.json({ success: true, data: history });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch nonce reuse history' });
+    }
+  });
+
+  app.post('/api/nonce-reuse-history', async (req, res) => {
+    try {
+      const history = await storage.saveNonceReuseHistory(req.body);
+      broadcast({ type: 'nonce_reuse_detected', history });
+      res.json({ success: true, data: history });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to save nonce reuse history' });
+    }
+  });
+
   return httpServer;
 }

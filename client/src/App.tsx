@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import ECDSAWorkbench from "@/pages/ecdsa-workbench";
 import BlockScanner from "@/pages/block-scanner";
+import VulnerabilityHistory from "@/pages/vulnerability-history";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/ecdsa-workbench" component={ECDSAWorkbench} />
       <Route path="/block-scanner" component={BlockScanner} />
+      <Route path="/vulnerability-history" component={VulnerabilityHistory} />
       <Route component={NotFound} />
     </Switch>
   );

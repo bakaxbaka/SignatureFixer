@@ -9,7 +9,9 @@ import {
   type BatchAnalysis,
   type InsertBatchAnalysis,
   type EducationalContent,
-  type InsertEducationalContent
+  type InsertEducationalContent,
+  type VulnerabilityLog,
+  type NonceReuseHistory
 } from "@shared/schema";
 
 export interface IStorage {
@@ -54,6 +56,17 @@ export interface IStorage {
     highVulns: number;
     mediumVulns: number;
   }>;
+
+  // Vulnerability logs methods
+  saveVulnerabilityLog(log: Omit<VulnerabilityLog, 'id' | 'detectedAt'>): Promise<VulnerabilityLog>;
+  getVulnerabilityLogsByAddress(address: string): Promise<VulnerabilityLog[]>;
+  getVulnerabilityLogsByType(type: string): Promise<VulnerabilityLog[]>;
+  getAllVulnerabilityLogs(limit?: number): Promise<VulnerabilityLog[]>;
+
+  // Nonce reuse history methods
+  saveNonceReuseHistory(history: Omit<NonceReuseHistory, 'id' | 'detectedAt'>): Promise<NonceReuseHistory>;
+  getNonceReuseHistoryByAddress(address: string): Promise<NonceReuseHistory[]>;
+  getNonceReuseHistoryByRValue(rValue: string): Promise<NonceReuseHistory[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -63,6 +76,8 @@ export class MemStorage implements IStorage {
   private apiMetrics: ApiMetric[] = [];
   private batchAnalyses: Map<string, BatchAnalysis> = new Map();
   private educationalContents: Map<string, EducationalContent> = new Map();
+  private vulnerabilityLogs: Map<string, VulnerabilityLog> = new Map();
+  private nonceReuseHistories: Map<string, NonceReuseHistory> = new Map();
 
   private generateId(): string {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -288,6 +303,56 @@ export class MemStorage implements IStorage {
       highVulns,
       mediumVulns,
     };
+  }
+
+  async saveVulnerabilityLog(log: Omit<VulnerabilityLog, 'id' | 'detectedAt'>): Promise<VulnerabilityLog> {
+    const vulnLog: VulnerabilityLog = {
+      id: this.generateId(),
+      ...log,
+      detectedAt: new Date(),
+    };
+    this.vulnerabilityLogs.set(vulnLog.id, vulnLog);
+    return vulnLog;
+  }
+
+  async getVulnerabilityLogsByAddress(address: string): Promise<VulnerabilityLog[]> {
+    return Array.from(this.vulnerabilityLogs.values())
+      .filter(log => log.bitcoinAddress === address)
+      .sort((a, b) => (b.detectedAt?.getTime() || 0) - (a.detectedAt?.getTime() || 0));
+  }
+
+  async getVulnerabilityLogsByType(type: string): Promise<VulnerabilityLog[]> {
+    return Array.from(this.vulnerabilityLogs.values())
+      .filter(log => log.vulnerabilityType === type)
+      .sort((a, b) => (b.detectedAt?.getTime() || 0) - (a.detectedAt?.getTime() || 0));
+  }
+
+  async getAllVulnerabilityLogs(limit: number = 100): Promise<VulnerabilityLog[]> {
+    return Array.from(this.vulnerabilityLogs.values())
+      .sort((a, b) => (b.detectedAt?.getTime() || 0) - (a.detectedAt?.getTime() || 0))
+      .slice(0, limit);
+  }
+
+  async saveNonceReuseHistory(history: Omit<NonceReuseHistory, 'id' | 'detectedAt'>): Promise<NonceReuseHistory> {
+    const nonceHistory: NonceReuseHistory = {
+      id: this.generateId(),
+      ...history,
+      detectedAt: new Date(),
+    };
+    this.nonceReuseHistories.set(nonceHistory.id, nonceHistory);
+    return nonceHistory;
+  }
+
+  async getNonceReuseHistoryByAddress(address: string): Promise<NonceReuseHistory[]> {
+    return Array.from(this.nonceReuseHistories.values())
+      .filter(h => h.bitcoinAddress === address)
+      .sort((a, b) => (b.detectedAt?.getTime() || 0) - (a.detectedAt?.getTime() || 0));
+  }
+
+  async getNonceReuseHistoryByRValue(rValue: string): Promise<NonceReuseHistory[]> {
+    return Array.from(this.nonceReuseHistories.values())
+      .filter(h => h.rValue === rValue)
+      .sort((a, b) => (b.detectedAt?.getTime() || 0) - (a.detectedAt?.getTime() || 0));
   }
 }
 

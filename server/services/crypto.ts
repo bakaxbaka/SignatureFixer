@@ -293,6 +293,164 @@ export class CryptoAnalysis {
   }
 
   /**
+   * Detects signature malleability attacks
+   * ECDSA signatures (r, s) can be malleated to (r, n-s) which is still valid
+   */
+  detectSignatureMalleability(signatures: ECDSASignature[]): {
+    hasMalleability: boolean;
+    mutableSignatures: ECDSASignature[];
+    details: string;
+  } {
+    const mutableSignatures: ECDSASignature[] = [];
+    
+    for (const sig of signatures) {
+      try {
+        const s = BigInt('0x' + sig.s);
+        const malleatedS = CURVE_ORDER - s;
+        
+        // If s > n/2, the signature can be malleated to a smaller s value
+        // This is why BIPs like BIP62 require s to be in the lower half
+        if (s > CURVE_ORDER / 2n) {
+          mutableSignatures.push(sig);
+        }
+      } catch (error) {
+        console.error('Error checking signature malleability:', error);
+      }
+    }
+
+    return {
+      hasMalleability: mutableSignatures.length > 0,
+      mutableSignatures,
+      details: mutableSignatures.length > 0 
+        ? `${mutableSignatures.length} signatures vulnerable to malleability. S values exceed n/2, can be normalized to (r, n-s).`
+        : 'No signature malleability detected. All S values are in canonical form (≤ n/2).'
+    };
+  }
+
+  /**
+   * Crafts DER encoded signatures with optional non-canonical forms
+   * DER = Distinguished Encoding Rules
+   */
+  craftDERSignature(rHex: string, sHex: string, makeNonCanonical: boolean = false): {
+    derEncoded: string;
+    isCanonical: boolean;
+    details: string;
+  } {
+    try {
+      let r = BigInt('0x' + rHex.replace(/^0x/, ''));
+      let s = BigInt('0x' + sHex.replace(/^0x/, ''));
+
+      // Convert to non-canonical form if requested (for malleability testing)
+      if (makeNonCanonical && s > CURVE_ORDER / 2n) {
+        s = CURVE_ORDER - s;
+      }
+
+      // DER encoding: 0x30 [total-len] 0x02 [R-len] [R] 0x02 [S-len] [S]
+      const rBytes = Buffer.from(r.toString(16).padStart(64, '0'), 'hex');
+      const sBytes = Buffer.from(s.toString(16).padStart(64, '0'), 'hex');
+
+      // Remove leading zeros but keep one if high bit is set
+      let rTrimmed = rBytes;
+      while (rTrimmed.length > 1 && rTrimmed[0] === 0 && !(rTrimmed[1] & 0x80)) {
+        rTrimmed = rTrimmed.slice(1);
+      }
+
+      let sTrimmed = sBytes;
+      while (sTrimmed.length > 1 && sTrimmed[0] === 0 && !(sTrimmed[1] & 0x80)) {
+        sTrimmed = sTrimmed.slice(1);
+      }
+
+      // Add 0x00 padding if high bit is set
+      if (rTrimmed[0] & 0x80) rTrimmed = Buffer.concat([Buffer.from([0x00]), rTrimmed]);
+      if (sTrimmed[0] & 0x80) sTrimmed = Buffer.concat([Buffer.from([0x00]), sTrimmed]);
+
+      const rLen = Buffer.from([rTrimmed.length]);
+      const sLen = Buffer.from([sTrimmed.length]);
+      
+      const rEncoded = Buffer.concat([Buffer.from([0x02]), rLen, rTrimmed]);
+      const sEncoded = Buffer.concat([Buffer.from([0x02]), sLen, sTrimmed]);
+      
+      const contents = Buffer.concat([rEncoded, sEncoded]);
+      const totalLen = Buffer.from([contents.length]);
+      const derSig = Buffer.concat([Buffer.from([0x30]), totalLen, contents]);
+
+      const isCanonical = s <= CURVE_ORDER / 2n;
+
+      return {
+        derEncoded: derSig.toString('hex'),
+        isCanonical,
+        details: isCanonical 
+          ? 'Canonical DER signature (S ≤ n/2). Complies with BIP62 low-S requirement.'
+          : 'Non-canonical DER signature (S > n/2). Violates BIP62 low-S requirement. Can be malleated.'
+      };
+    } catch (error) {
+      return {
+        derEncoded: '',
+        isCanonical: false,
+        details: `DER crafting error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
+   * Validates DER signature format
+   */
+  validateDERSignature(derHex: string): {
+    isValid: boolean;
+    r?: string;
+    s?: string;
+    details: string;
+  } {
+    try {
+      const derBytes = Buffer.from(derHex.replace(/^0x/, ''), 'hex');
+      
+      if (derBytes[0] !== 0x30) {
+        return { isValid: false, details: 'Invalid DER: must start with 0x30 (SEQUENCE)' };
+      }
+
+      let pos = 2;
+      if (derBytes[1] !== derBytes.length - 2) {
+        return { isValid: false, details: 'Invalid DER: length mismatch' };
+      }
+
+      // Parse R
+      if (derBytes[pos] !== 0x02) {
+        return { isValid: false, details: 'Invalid DER: R component must be INTEGER (0x02)' };
+      }
+      pos++;
+      
+      const rLen = derBytes[pos];
+      pos++;
+      const rBytes = derBytes.slice(pos, pos + rLen);
+      const r = BigInt('0x' + rBytes.toString('hex'));
+      pos += rLen;
+
+      // Parse S
+      if (derBytes[pos] !== 0x02) {
+        return { isValid: false, details: 'Invalid DER: S component must be INTEGER (0x02)' };
+      }
+      pos++;
+      
+      const sLen = derBytes[pos];
+      pos++;
+      const sBytes = derBytes.slice(pos, pos + sLen);
+      const s = BigInt('0x' + sBytes.toString('hex'));
+
+      return {
+        isValid: true,
+        r: r.toString(16).padStart(64, '0'),
+        s: s.toString(16).padStart(64, '0'),
+        details: `Valid DER signature. R length: ${rLen} bytes, S length: ${sLen} bytes`
+      };
+    } catch (error) {
+      return {
+        isValid: false,
+        details: `DER validation error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
    * Analyzes entropy in nonce generation
    */
   analyzeNonceEntropy(signatures: ECDSASignature[]): {
