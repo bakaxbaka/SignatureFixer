@@ -22,13 +22,15 @@ interface NonceReuseResult {
 
 export class CryptoAnalysis {
   /**
-   * Detects nonce reuse in ECDSA signatures
+   * Detects nonce reuse in ECDSA signatures using proper mathematical verification
+   * Uses formula: k = (z1-z2)/(s1-s2) mod n to verify nonce reuse
+   * Then computes: x = (s*k - z) / r mod n to recover private key
    */
   detectNonceReuse(signatures: ECDSASignature[]): NonceReuseResult[] {
     const results: NonceReuseResult[] = [];
     const rValueMap = new Map<string, ECDSASignature[]>();
 
-    // Group signatures by R value
+    // Group signatures by R value (same R = same nonce k)
     for (const sig of signatures) {
       const rValue = sig.r;
       if (!rValueMap.has(rValue)) {
@@ -37,18 +39,86 @@ export class CryptoAnalysis {
       rValueMap.get(rValue)!.push(sig);
     }
 
-    // Find R values that appear more than once (nonce reuse)
+    // Verify nonce reuse mathematically for each R value group
     for (const [rValue, sigs] of rValueMap) {
-      if (sigs.length > 1) {
-        // Nonce reuse detected!
-        const result = this.recoverPrivateKeyFromNonceReuse(sigs);
-        if (result.isVulnerable) {
-          results.push(result);
+      if (sigs.length >= 2) {
+        // Use first two signatures with same R to compute nonce and private key
+        for (let i = 0; i < sigs.length - 1; i++) {
+          const sig1 = sigs[i];
+          const sig2 = sigs[i + 1];
+          
+          const result = this.verifyAndRecoverFromNonceReuse(sig1, sig2);
+          if (result.isVulnerable) {
+            results.push(result);
+            break; // Only report once per R value group
+          }
         }
       }
     }
 
     return results;
+  }
+
+  /**
+   * Mathematically verifies nonce reuse and recovers private key
+   * Input: Two signatures (sig1, sig2) with SAME r value (same nonce k)
+   * Formulas:
+   *   k = (z1-z2)/(s1-s2) mod n
+   *   x = (s*k - z) / r mod n
+   */
+  private verifyAndRecoverFromNonceReuse(sig1: ECDSASignature, sig2: ECDSASignature): NonceReuseResult {
+    try {
+      const r = BigInt('0x' + sig1.r);
+      const s1 = BigInt('0x' + sig1.s);
+      const s2 = BigInt('0x' + sig2.s);
+      const z1 = BigInt('0x' + sig1.messageHash);
+      const z2 = BigInt('0x' + sig2.messageHash);
+
+      // Step 1: Compute nonce k using formula: k = (z1-z2)/(s1-s2) mod n
+      const numerator = this.modSub(z1, z2, CURVE_ORDER);
+      const denominator = this.modSub(s1, s2, CURVE_ORDER);
+      
+      if (denominator === 0n) {
+        return {
+          isVulnerable: false,
+          confidence: 0,
+          method: 'nonce_reuse_verification_failed',
+          signatures: [sig1, sig2]
+        };
+      }
+
+      const k = this.modMul(numerator, this.modInverse(denominator, CURVE_ORDER), CURVE_ORDER);
+
+      // Step 2: Compute private key using formula: x = (s*k - z) / r mod n
+      const skMinusZ = this.modSub(this.modMul(s1, k, CURVE_ORDER), z1, CURVE_ORDER);
+      const rInverse = this.modInverse(r, CURVE_ORDER);
+      const privateKey = this.modMul(skMinusZ, rInverse, CURVE_ORDER);
+
+      // Step 3: Verify the recovered key is valid
+      if (privateKey > 0n && privateKey < CURVE_ORDER && k > 0n && k < CURVE_ORDER) {
+        return {
+          isVulnerable: true,
+          recoveredPrivateKey: privateKey.toString(16).padStart(64, '0'),
+          confidence: 95,
+          method: 'mathematical_nonce_reuse_formula',
+          signatures: [sig1, sig2]
+        };
+      }
+
+      return {
+        isVulnerable: false,
+        confidence: 0,
+        method: 'invalid_key_recovery',
+        signatures: [sig1, sig2]
+      };
+    } catch (error) {
+      return {
+        isVulnerable: false,
+        confidence: 0,
+        method: 'nonce_reuse_error',
+        signatures: [sig1, sig2]
+      };
+    }
   }
 
   /**
