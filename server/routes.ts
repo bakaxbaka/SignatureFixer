@@ -7,6 +7,7 @@ import { vulnerabilityService } from "./services/vulnerability";
 import { ecdsaRecovery, cryptoAnalysis } from "./services/crypto";
 import { blockScanner } from "./services/scanner";
 import { fetchAddressData } from "./services/multiEndpointFetcher";
+import { fetchAddressDataWithTor, clearCache, clearAllCache } from "./services/torFetcher";
 import { generateAllMutations } from "./services/derMutator";
 import { insertAnalysisResultSchema, insertBatchAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
@@ -189,8 +190,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Address: ${address}`);
       console.log(`Using multi-endpoint fetcher (Blockchain.info → Blockstream → Mempool → BlockCypher)\n`);
       
-      // PHASE 1: Fetch ALL transactions with fallback API chain
-      const addressData = await fetchAddressData(address);
+      // PHASE 1: Fetch ALL transactions with Tor + caching layer
+      const addressData = await fetchAddressDataWithTor(address);
       const transactions = addressData.txs || [];
       
       console.log(`✓ Fetched ${transactions.length} transactions from blockchain APIs\n`);
@@ -1710,6 +1711,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, data: summary });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch address vulnerability summary' });
+    }
+  });
+
+  // Cache management endpoints
+  app.post('/api/cache/clear', (req, res) => {
+    try {
+      const { address } = req.body;
+      if (address) {
+        clearCache(address);
+        res.json({ success: true, message: `Cache cleared for ${address}` });
+      } else {
+        clearAllCache();
+        res.json({ success: true, message: 'All cache cleared' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Cache clear failed' });
     }
   });
 
