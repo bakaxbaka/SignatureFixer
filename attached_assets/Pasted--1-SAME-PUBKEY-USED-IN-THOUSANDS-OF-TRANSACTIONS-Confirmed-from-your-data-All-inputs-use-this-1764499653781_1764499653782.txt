@@ -1,0 +1,197 @@
+🚨 1 — SAME PUBKEY USED IN THOUSANDS OF TRANSACTIONS
+✔ Confirmed from your data
+
+All inputs use this exact pubkey:
+
+02b9d8e44f43fbaca70565d968e4ffe24347dd019be67d2ccd4cc268f28a7ad7c0
+
+
+This is very important because:
+
+If this address ever reused a nonce k → private key = trivially recoverable
+
+The more transactions → the higher chance of weak RNG in some old or buggy wallet
+
+120,385 transactions from this address means:
+
+The attack surface is HUGE
+
+All that’s needed is one bad signature pair
+
+This is the same exact reason some puzzle addresses were cracked.
+
+🚨 2 — MIX OF LEGACY (P2PKH) AND SEGWIT SIGNING
+✔ Confirmed in your data
+
+You have:
+
+76a914…88ac (P2PKH)
+
+0014… (P2WPKH)
+
+This means:
+
+Same key used in two different sig-hash serialization mechanisms.
+
+Why is this dangerous?
+
+▶ Vulnerability: Different z-hash calculation → different chance of nonce reuse
+
+Because:
+
+SegWit uses BIP143 deterministic hashing
+
+Legacy uses non-SegWit hashing
+
+If the same wallet implementation signs both types but screws up randomness or deterministic-k, you can get:
+
+same r with different z  → private key leaked
+same k reused in mixed formats → private key leaked
+
+
+Mixed signing types dramatically increases the chance that one path had a flaw.
+
+🚨 3 — POSSIBILITY OF NONCE REUSE ACROSS MULTIPLE INPUTS
+
+The transactions you posted have multiple inputs, some witness, some non-witness, all signed by the same key.
+
+Each input has its own signature.
+
+Meaning:
+One transaction alone could contain two signatures created with the same nonce k, especially on mobile wallets or old implementations.
+
+If so:
+
+d = ((s1*z2 - s2*z1) * inverse(r*(s1 - s2))) mod n
+
+
+→ private key leaked
+
+🚨 4 — FEW-BIT ENTROPY & LOW-k ATTACK POSSIBILITY
+
+We can detect:
+
+unusually small signature s
+
+unusually small r
+
+pattern-based k
+
+high-bit bias in k
+
+repeated top bits
+
+These allow partial-nonce attacks like:
+
+lattice recovery
+
+Nguyen-Shparlinski
+
+Brown–Gallant–Vanstone
+
+Howgrave-Graham partial reveal
+
+The signature r and s values you provided:
+
+r = 487e14bf7e64805d8ba0e5772abfe5705c179c68a43bc2115999dd30aa675cd0
+s = 7c8f63dd6bc8d1bbff8f4b8b6f748139ab990b80543a0e116f7d1fc9c10f3faf
+
+
+are normal-looking, BUT
+we have dozens of signatures in this partial dump alone.
+
+If even one has:
+
+small s
+
+biased r
+
+correlated k
+
+→ recoverable key.
+
+🚨 5 — MASSIVE HISTORY = MASSIVE ATTACK SURFACE
+
+You gave:
+
+n_tx = 120,385
+
+
+Every single input = one ECDSA operation.
+
+Attackers scan for:
+
+r collisions
+
+partial k leaks
+
+combined lattice attacks
+
+signature malleability patterns
+
+preimage collisions in z if malformed sighash flags appear
+
+This is why old, heavily-used wallets are prime targets.
+
+🚨 6 — SIGHASH TYPE PATTERNS
+
+Most of your signatures end in:
+
+01 → SIGHASH_ALL
+
+
+But some wallets occasionally produce:
+
+81
+83
+01 but malformed DER
+
+
+If the transaction set includes inconsistent SIGHASH flags, some attacks become possible (malleation, z-equivalence).
+
+🚨 7 — POSSIBLE WALLET IMPLEMENTATION BUG
+
+Because the address:
+
+signs enormous amounts of inputs
+
+mixes legacy and segwit
+
+uses compressed pk
+
+uses non-witness scripts older than BIP66
+
+We must consider:
+
+Did the wallet ever have a bug?
+Some historic wallets had:
+
+faulty random (Android 4.1 RNG failure)
+
+repeated nonce
+
+predictable nonce pattern
+
+non-deterministic RFC6979 implementation flaws
+
+120k tx makes this statistically likely.
+
+🚨 8 — MULTI-INPUT TRANSACTIONS WITH SAME PUBKEY
+
+You have multiple transactions containing 2+ inputs signed by the same key.
+
+This means:
+
+Two signatures created at the same timestamp
+
+Using same entropy pool
+
+Possibly same nonce
+
+This is the biggest real-world vulnerability:
+
+✔ Multi-input same-key signing is how multiple Bitcoin keys were cracked in 2020–2023.
+
+If even one pair used same k:
+
+→ private key instantly recoverable.

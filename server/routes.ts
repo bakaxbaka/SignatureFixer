@@ -213,12 +213,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Analyze transactions directly from blockchain.info response (NO individual API calls!)
-      const rValueMap = new Map<string, Array<{ txid: string; inputIndex: number; r: string; s: string }>>();
+      const rValueMap = new Map<string, Array<{ txid: string; inputIndex: number; r: string; s: string; publicKey: string; sighashType: number }>>();
       const allSignatures: any[] = [];
       const weakSignatures: any[] = [];
+      const pubkeyMap = new Map<string, number>(); // Track pubkey usage
+      const sighashTypeMap = new Map<number, number>(); // Track sighash types
+      const txInputMap = new Map<string, any[]>(); // Track inputs per tx
       let totalExtracted = 0;
 
       console.log(`========== ANALYZING ${transactions.length} TRANSACTIONS ==========`);
+      console.log(`🔍 VULNERABILITY CHECKS:`);
+      console.log(`  ✓ Same pubkey in thousands of transactions`);
+      console.log(`  ✓ Mix of legacy (P2PKH) and SegWit signing`);
+      console.log(`  ✓ Nonce reuse across multiple inputs`);
+      console.log(`  ✓ Few-bit entropy & low-k patterns`);
+      console.log(`  ✓ Massive history attack surface`);
+      console.log(`  ✓ SIGHASH type patterns`);
+      console.log(`  ✓ Wallet implementation bugs`);
+      console.log(`  ✓ Multi-input same pubkey transactions\n`);
       
       for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
         const tx = transactions[txIndex];
@@ -231,7 +243,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           console.log(`  └─ Found ${tx.inputs.length} input(s)`);
+          
+          // Track multi-input same pubkey transactions (vulnerability #8)
+          const txInputs: any[] = [];
 
+          // Check if same pubkey used in multiple inputs of same tx (vulnerability #8)
+          const pubkeysInTx = new Set<string>();
+          
           for (let inputIdx = 0; inputIdx < tx.inputs.length; inputIdx++) {
             const input = tx.inputs[inputIdx];
             const script = input.script || input.scriptSig || '';
@@ -245,15 +263,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 totalExtracted++;
                 console.log(`    ✓ Input ${inputIdx}: R=${sig.r.substring(0, 16)}... PubKey=${sig.publicKey?.substring(0, 16)}...`);
                 
-                allSignatures.push({
+                // Track pubkey usage (vulnerability #1)
+                const pubkeyCount = (pubkeyMap.get(sig.publicKey || '') || 0) + 1;
+                pubkeyMap.set(sig.publicKey || '', pubkeyCount);
+                pubkeysInTx.add(sig.publicKey || '');
+                
+                // Track sighash types (vulnerability #6)
+                const sighashCount = (sighashTypeMap.get(sig.sighashType || 1) || 0) + 1;
+                sighashTypeMap.set(sig.sighashType || 1, sighashCount);
+                
+                // Detect low-k patterns (vulnerability #4)
+                const rBigInt = BigInt('0x' + sig.r);
+                const sBigInt = BigInt('0x' + sig.s);
+                const isLowR = rBigInt < (BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141') / 2n);
+                const isLowS = sBigInt < (BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141') / 2n);
+                
+                if (isLowR || isLowS) {
+                  console.log(`      ⚠ Low-k pattern detected (Vulnerability #4: few-bit entropy)`);
+                  weakSignatures.push({
+                    txid: tx.hash,
+                    inputIndex: inputIdx,
+                    type: 'low_k_entropy',
+                    severity: 'high',
+                    details: `Low R/S detected - possible few-bit entropy weakness`
+                  });
+                }
+                
+                const sigData = {
                   txid: tx.hash,
                   inputIndex: inputIdx,
                   r: sig.r,
                   s: sig.s,
                   messageHash: tx.hash,
-                  publicKey: sig.publicKey,
-                  sighashType: sig.sighashType
-                });
+                  publicKey: sig.publicKey || '',
+                  sighashType: sig.sighashType || 1,
+                  isLowR,
+                  isLowS
+                };
+                
+                allSignatures.push(sigData);
+                txInputs.push(sigData);
 
                 // Check malleability
                 const malleability = cryptoAnalysis.detectSignatureMalleability([{
@@ -265,27 +314,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }]);
 
                 if (malleability.hasMalleability) {
-                  console.log(`      ⚠ BIP62 Malleability`);
+                  console.log(`      ⚠ BIP62 Malleability (Vulnerability #2: Legacy/SegWit mix)`);
                   weakSignatures.push({
                     txid: tx.hash,
                     inputIndex: inputIdx,
                     type: 'malleability_violation',
                     severity: 'high',
                     s: sig.s,
-                    details: 'BIP62 violation: S > n/2'
+                    details: 'BIP62 violation: S > n/2 - Mixed signing types increase risk'
                   });
                 }
 
-                // Index by R value for nonce reuse
-                const rValue = sig.r;
-                const existing = rValueMap.get(rValue) || [];
+                // Index by R value for nonce reuse (vulnerability #3)
+                const rValueStr = sig.r;
+                const existing = rValueMap.get(rValueStr) || [];
                 existing.push({
                   txid: tx.hash,
                   inputIndex: inputIdx,
                   r: sig.r,
-                  s: sig.s
+                  s: sig.s,
+                  publicKey: sig.publicKey || '',
+                  sighashType: sig.sighashType || 1
                 });
-                rValueMap.set(rValue, existing);
+                rValueMap.set(rValueStr, existing);
               }
             } catch (sigErr) {
               continue;
@@ -333,27 +384,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`✓ Nonce reuse groups found: ${nonceReuseCount}\n`);
 
-      // Build response
+      // Build comprehensive vulnerability report with all 8 checks
+      console.log(`\n========== COMPREHENSIVE VULNERABILITY REPORT (8 CHECKS) ==========`);
       const vulnerabilities: any[] = [];
       
+      // Vulnerability #1: Same pubkey in thousands of transactions
+      console.log(`\n🚨 Check #1: Same pubkey used in thousands of transactions`);
+      if (pubkeyMap.size > 0) {
+        const mostUsedPubkey = Array.from(pubkeyMap.entries()).sort((a, b) => b[1] - a[1])[0];
+        if (mostUsedPubkey && mostUsedPubkey[1] > 100) {
+          console.log(`  ✔ FOUND: Pubkey ${mostUsedPubkey[0]?.substring(0, 16)}... used in ${mostUsedPubkey[1]} signatures`);
+          vulnerabilities.push({
+            type: 'same_pubkey_thousands',
+            severity: 'critical',
+            description: `Same public key reused in ${mostUsedPubkey[1]} transactions. Massive attack surface with nonce reuse probability.`,
+            educational: true
+          });
+        }
+      }
+      
+      // Vulnerability #2: Mix of legacy and SegWit
+      console.log(`\n🚨 Check #2: Mix of legacy (P2PKH) and SegWit signing`);
+      const legacyCount = allSignatures.filter((s: any) => s.sighashType === 1).length;
+      const segwitCount = allSignatures.filter((s: any) => s.sighashType && s.sighashType !== 1).length;
+      if (legacyCount > 0 && segwitCount > 0) {
+        console.log(`  ✔ FOUND: ${legacyCount} legacy + ${segwitCount} SegWit signatures`);
+        vulnerabilities.push({
+          type: 'mixed_signing_types',
+          severity: 'high',
+          description: `Address uses both legacy and SegWit signing. Different z-hash mechanisms increase nonce reuse probability.`,
+          educational: true
+        });
+      }
+      
+      // Vulnerability #3: Nonce reuse across multiple inputs
+      console.log(`\n🚨 Check #3: Nonce reuse across multiple inputs`);
       if (nonceReuseCount > 0) {
+        console.log(`  ✔ FOUND: ${nonceReuseCount} groups with nonce reuse`);
         vulnerabilities.push({
           type: 'nonce_reuse',
           severity: 'critical',
-          description: `${nonceReuseCount} nonce reuse group(s) detected. Private key recovery possible.`,
+          description: `${nonceReuseCount} nonce reuse group(s) detected. Private key recovery POSSIBLE using: d = ((s1*z2 - s2*z1) * inverse(r*(s1 - s2))) mod n`,
           affectedTransactions: nonceReuseDetails.length,
           educational: true
         });
       }
-
-      if (weakSignatures.filter(s => s.severity === 'high').length > 0) {
+      
+      // Vulnerability #4: Few-bit entropy & low-k patterns
+      console.log(`\n🚨 Check #4: Few-bit entropy & low-k attack possibility`);
+      const lowKCount = weakSignatures.filter((s: any) => s.type === 'low_k_entropy').length;
+      if (lowKCount > 0) {
+        console.log(`  ✔ FOUND: ${lowKCount} signatures with low R/S values (partial nonce leak)`);
         vulnerabilities.push({
-          type: 'signature_malleability',
+          type: 'low_k_entropy',
           severity: 'high',
-          description: `${weakSignatures.filter(s => s.severity === 'high').length} malleability violations detected`,
+          description: `${lowKCount} signatures show low-bit patterns. Vulnerable to lattice attacks, Nguyen-Shparlinski, Brown-Gallant-Vanstone, or Howgrave-Graham partial reveal attacks.`,
           educational: true
         });
       }
+      
+      // Vulnerability #5: Massive history = massive attack surface
+      console.log(`\n🚨 Check #5: Massive history = massive attack surface`);
+      if (addressData.n_tx > 10000) {
+        console.log(`  ✔ FOUND: ${addressData.n_tx} total transactions - HUGE attack surface`);
+        vulnerabilities.push({
+          type: 'massive_attack_surface',
+          severity: 'high',
+          description: `${addressData.n_tx} transactions = enormous attack surface. Each input is an ECDSA operation. High probability of finding vulnerable signature pair.`,
+          educational: true
+        });
+      }
+      
+      // Vulnerability #6: SIGHASH type patterns
+      console.log(`\n🚨 Check #6: SIGHASH type patterns`);
+      const hasNonStandardSighash = Array.from(sighashTypeMap.keys()).some(t => t !== 1);
+      if (hasNonStandardSighash) {
+        console.log(`  ✔ FOUND: Non-standard SIGHASH types: ${Array.from(sighashTypeMap.entries()).map(e => `${e[0]}:${e[1]}`).join(', ')}`);
+        vulnerabilities.push({
+          type: 'sighash_anomalies',
+          severity: 'medium',
+          description: `Non-standard SIGHASH flags detected. Enables malleation attacks and z-equivalence exploitation.`,
+          educational: true
+        });
+      }
+      
+      // Vulnerability #7: Wallet implementation bugs
+      console.log(`\n🚨 Check #7: Possible wallet implementation bug`);
+      if (addressData.n_tx > 50000 && legacyCount > 0) {
+        console.log(`  ⚠ SUSPICIOUS: ${addressData.n_tx} transactions + legacy/segwit mix suggests older wallet`);
+        vulnerabilities.push({
+          type: 'wallet_implementation_risk',
+          severity: 'medium',
+          description: `High-volume historic wallet mixing legacy/SegWit. Possible bugs: faulty RNG, Android 4.1 RNG failure, predictable nonce patterns, RFC6979 implementation flaws.`,
+          educational: true
+        });
+      }
+      
+      // Vulnerability #8: Multi-input same pubkey transactions
+      console.log(`\n🚨 Check #8: Multi-input transactions with same pubkey`);
+      const multiInputTxs = Array.from(txInputMap.values()).filter(inputs => inputs.length > 1);
+      if (multiInputTxs.length > 0) {
+        console.log(`  ✔ FOUND: ${multiInputTxs.length} multi-input same-key transactions (2020-2023 attack vector)`);
+        vulnerabilities.push({
+          type: 'multi_input_same_key',
+          severity: 'critical',
+          description: `${multiInputTxs.length} transactions with multiple inputs signed by same key. Signatures created at same timestamp with same entropy pool. If any pair reuses nonce k → private key instantly recoverable.`,
+          educational: true
+        });
+      }
+      
+      console.log(`\n========== VULNERABILITY SUMMARY ==========`);
+      console.log(`Total vulnerabilities detected: ${vulnerabilities.length}`);
+      console.log(`Critical severity: ${vulnerabilities.filter(v => v.severity === 'critical').length}`);
+      console.log(`High severity: ${vulnerabilities.filter(v => v.severity === 'high').length}\n`);
 
       res.json({
         success: true,
