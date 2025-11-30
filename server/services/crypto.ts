@@ -65,6 +65,22 @@ export function parseDerSignature(sigHex: string): ParsedDer {
   };
 }
 
+
+// ===== BIGINT HELPERS =====
+
+const SECP256K1_N = BigInt(
+  "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+);
+
+export function bigIntFromBytes(bytes: Uint8Array): bigint {
+  return BigInt("0x" + bytesToHex(bytes));
+}
+
+export function bigIntToBytes(bi: bigint): Uint8Array {
+  let hex = bi.toString(16);
+  if (hex.length % 2 !== 0) hex = "0" + hex;
+  return hexToBytes(hex);
+}
 // secp256k1 curve parameters
 const CURVE_ORDER = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
 const CURVE_P = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F');
