@@ -962,6 +962,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Individual Address Analysis - WebScrapeHelper pattern
+  // Fetches ALL transactions for an address and analyzes each one
+  app.post('/api/analyze-address', async (req, res) => {
+    try {
+      const { address, limit = 1000 } = req.body;
+
+      if (!address) {
+        return res.status(400).json({ error: 'Bitcoin address required' });
+      }
+
+      // Fetch complete address data with all transactions from blockchain.info
+      let addressData;
+      try {
+        addressData = await bitcoinService.fetchAddressDataComplete(address, limit);
+      } catch (error) {
+        return res.status(400).json({ 
+          error: 'Failed to fetch address data',
+          details: error instanceof Error ? error.message : 'Address may be invalid'
+        });
+      }
+
+      // Extract transaction list
+      const transactions = addressData.txs || [];
+      if (transactions.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            address,
+            totalTransactions: 0,
+            analysis: {
+              totalSignaturesExtracted: 0,
+              nonceReuseGroupsFound: 0,
+              criticalVulnerabilities: 0,
+              weakSignatures: []
+            },
+            nonceReuseDetails: [],
+            addressInfo: { tx_count: 0, total_received: 0, total_sent: 0 }
+          }
+        });
+      }
+
+      // Analyze each transaction for signatures and vulnerabilities
+      const rValueMap = new Map<string, Array<{ txid: string; inputIndex: number; r: string; s: string; input_index: number }>>();
+      const allSignatures: any[] = [];
+      const weakSignatures: any[] = [];
+      let totalExtracted = 0;
+
+      for (const tx of transactions) {
+        try {
+          // Fetch full transaction details to extract signatures
+          const fullTx = await bitcoinService.getTransactionDetails(tx.hash, 'mainnet');
+          if (!fullTx || !fullTx.inputs) continue;
+
+          for (let inputIdx = 0; inputIdx < fullTx.inputs.length; inputIdx++) {
+            const input = fullTx.inputs[inputIdx];
+            if (!input.script) continue;
+
+            try {
+              // Extract signature from script
+              const sig = cryptoAnalysis.validateDERSignature(input.script);
+              
+              if (sig.isValid && sig.r && sig.s) {
+                totalExtracted++;
+                allSignatures.push({
+                  txid: tx.hash,
+                  inputIndex: inputIdx,
+                  r: sig.r,
+                  s: sig.s
+                });
+
+                // Check for malleability (BIP62 violation)
+                const malleability = cryptoAnalysis.detectSignatureMalleability([{
+                  r: sig.r,
+                  s: sig.s,
+                  publicKey: input.prev_out?.addr || '',
+                  messageHash: '',
+                  sighashType: 1
+                }]);
+
+                if (malleability.hasMalleability) {
+                  weakSignatures.push({
+                    txid: tx.hash,
+                    inputIndex: inputIdx,
+                    type: 'malleability_violation',
+                    severity: 'high',
+                    s: sig.s,
+                    details: 'BIP62 violation: S > n/2'
+                  });
+                }
+
+                // Index by R value for nonce reuse
+                const rValue = sig.r;
+                const existing = rValueMap.get(rValue) || [];
+                existing.push({
+                  txid: tx.hash,
+                  inputIndex: inputIdx,
+                  r: sig.r,
+                  s: sig.s,
+                  input_index: inputIdx
+                });
+                rValueMap.set(rValue, existing);
+              }
+            } catch (sigErr) {
+              continue;
+            }
+          }
+        } catch (txErr) {
+          continue;
+        }
+      }
+
+      // Find nonce reuse vulnerabilities
+      const nonceReuseDetails: any[] = [];
+      for (const [rValue, signatures] of rValueMap.entries()) {
+        if (signatures.length >= 2) {
+          nonceReuseDetails.push({
+            rValue: rValue.substring(0, 16) + '...',
+            count: signatures.length,
+            severity: 'critical',
+            transactions: signatures.map(s => ({
+              txid: s.txid,
+              inputIndex: s.inputIndex,
+              s: s.s
+            })),
+            privateKeyRecoveryPossible: true,
+            formula: 'k = (s1-s2)/(z1-z2) mod n, then x = (s*k - m) * r⁻¹ mod n'
+          });
+
+          // Add to weak signatures
+          for (const sig of signatures) {
+            weakSignatures.push({
+              txid: sig.txid,
+              inputIndex: sig.inputIndex,
+              type: 'nonce_reuse',
+              severity: 'critical',
+              r: sig.r,
+              s: sig.s,
+              details: `Nonce reuse: R value ${rValue.substring(0, 16)}... appears in ${signatures.length} transactions`
+            });
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        data: {
+          address,
+          totalTransactions: transactions.length,
+          analysis: {
+            totalSignaturesExtracted: totalExtracted,
+            nonceReuseGroupsFound: nonceReuseDetails.length,
+            criticalVulnerabilities: weakSignatures.filter(s => s.severity === 'critical').length,
+            highVulnerabilities: weakSignatures.filter(s => s.severity === 'high').length,
+            weakSignatures: weakSignatures.slice(0, 100)
+          },
+          nonceReuseDetails: nonceReuseDetails.sort((a, b) => b.count - a.count),
+          addressInfo: {
+            tx_count: addressData.n_tx,
+            total_received: addressData.total_received,
+            total_sent: addressData.total_sent,
+            final_balance: addressData.final_balance
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Address analysis error:', error);
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Analysis failed' });
+    }
+  });
+
   // Comprehensive address transaction scanner - analyzes up to 1000 transactions with cross-comparison
   app.post('/api/scan-address-transactions', async (req, res) => {
     try {

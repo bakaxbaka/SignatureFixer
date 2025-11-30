@@ -1312,6 +1312,23 @@ class BitcoinService {
     }
   }
 
+  async fetchAddressDataComplete(address: string, limit: number = 1000): Promise<any> {
+    try {
+      // Use blockchain.info rawaddr API which returns complete address data with transactions
+      const response = await fetch(`${this.BLOCKCHAIN_API}/rawaddr/${address}?limit=${Math.min(limit, 1000)}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch address data: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`Error fetching complete address data for ${address}:`, error);
+      throw error;
+    }
+  }
+
   async fetchAddressTransactions(address: string, networkType: string = 'mainnet', limit: number = 100): Promise<string[]> {
     const txids: Set<string> = new Set();
     try {
