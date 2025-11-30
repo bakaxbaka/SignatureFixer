@@ -6,6 +6,7 @@ import { bitcoinService } from "./services/bitcoin";
 import { vulnerabilityService } from "./services/vulnerability";
 import { ecdsaRecovery, cryptoAnalysis } from "./services/crypto";
 import { blockScanner } from "./services/scanner";
+import { fetchAddressData } from "./services/multiEndpointFetcher";
 import { insertAnalysisResultSchema, insertBatchAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -185,13 +186,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`\n========== COMPREHENSIVE VULNERABILITY ANALYSIS ==========`);
       console.log(`Address: ${address}`);
-      console.log(`Using single API call: https://blockchain.info/rawaddr/${address}\n`);
+      console.log(`Using multi-endpoint fetcher (Blockchain.info → Blockstream → Mempool → BlockCypher)\n`);
       
-      // PHASE 1: Fetch ALL transactions with single API call (NO PAGINATION)
-      const addressData = await bitcoinService.fetchAddressDataComplete(address, 10000);
+      // PHASE 1: Fetch ALL transactions with fallback API chain
+      const addressData = await fetchAddressData(address);
       const transactions = addressData.txs || [];
       
-      console.log(`✓ Fetched ${transactions.length} transactions from blockchain.info/rawaddr\n`);
+      console.log(`✓ Fetched ${transactions.length} transactions from blockchain APIs\n`);
 
       if (transactions.length === 0) {
         return res.json({
