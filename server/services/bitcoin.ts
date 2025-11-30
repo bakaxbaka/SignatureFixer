@@ -1582,7 +1582,7 @@ class BitcoinService {
   }
 
   async fetchAddressDataComplete(address: string, limit: number = 10000): Promise<any> {
-    const maxRetries = 5;
+    const maxRetries = 15;
     let lastError: any;
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -1590,7 +1590,7 @@ class BitcoinService {
         console.log(`[Attempt ${attempt}/${maxRetries}] Fetching https://blockchain.info/rawaddr/${address}`);
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
         
         const response = await fetch(
           `${this.BLOCKCHAIN_API}/rawaddr/${address}?limit=${Math.min(limit, 10000)}`,
@@ -1617,28 +1617,16 @@ class BitcoinService {
         console.error(`✗ Attempt ${attempt} failed: ${errorMsg}`);
         
         if (attempt < maxRetries) {
-          // Short exponential backoff
-          const delayMs = Math.min(300 * Math.pow(2, attempt - 1), 5000);
+          // Exponential backoff with longer delays
+          const delayMs = Math.min(500 * Math.pow(2, attempt - 1), 30000);
           console.log(`  ⏳ Waiting ${delayMs}ms before retry ${attempt + 1}...`);
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       }
     }
     
-    // Fallback to test data for demonstration
-    console.log(`⚠️  API unavailable after ${maxRetries} attempts. Using test data...`);
-    try {
-      const testDataPath = path.join(this.DATA_DIR, 'test_address_data.json');
-      if (fs.existsSync(testDataPath)) {
-        const testData = JSON.parse(fs.readFileSync(testDataPath, 'utf-8'));
-        console.log(`✓ Loaded test data with ${testData.txs?.length || 0} transactions`);
-        return testData;
-      }
-    } catch (e) {
-      console.error(`Test data unavailable:`, e);
-    }
-    
-    throw lastError || new Error('Failed to fetch address data - no fallback available');
+    console.error(`❌ Failed after ${maxRetries} attempts`);
+    throw lastError || new Error('Failed to fetch address data after all retries');
   }
 
   async fetchAddressTransactions(address: string, networkType: string = 'mainnet', limit: number = 100): Promise<string[]> {
