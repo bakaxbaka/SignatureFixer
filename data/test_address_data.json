@@ -1,0 +1,64 @@
+{
+  "hash160": "062c2682f7d3be0c0b9c7e8f3a9b8c7d6e5f4a3b",
+  "address": "1HZxxLkrATEcDBmdXqNLxxUXUhCSy97E2T",
+  "n_tx": 2,
+  "n_unredeemed": 0,
+  "total_received": 1500000000,
+  "total_sent": 1500000000,
+  "final_balance": 0,
+  "txs": [
+    {
+      "hash": "a12b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
+      "ver": 1,
+      "vin_sz": 1,
+      "vout_sz": 2,
+      "lock_time": 0,
+      "size": 226,
+      "inputs": [
+        {
+          "sequence": 4294967295,
+          "witness": ["304402203d3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c02203e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e01", "02abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"],
+          "prev_out": {
+            "hash": "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
+            "n": 0,
+            "script": "76a91462c2682f7d3be0c0b9c7e8f3a9b8c7d6e5f4a3b88ac",
+            "addr": "1HZxxLkrATEcDBmdXqNLxxUXUhCSy97E2T",
+            "value": 750000000,
+            "tx_index": 1,
+            "type": 0,
+            "spent": false,
+            "spending_outpoints": []
+          },
+          "script": "483045022100abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd0220fedcbafedcbafedcbafedcbafedcbafedcbafedcbafedcbafedcbafedcbafedcba012103abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab"
+        }
+      ],
+      "out": [
+        {
+          "n": 0,
+          "script": "76a914d34db33f6c7f647ea306f78a3f7ed4d3c3d3c3c388ac",
+          "value": 500000000,
+          "addr": "1LqBGSKuX5yYanN3jVKKPJ1G87hUhQSd91",
+          "tx_index": 2,
+          "type": 0,
+          "spent": false,
+          "spending_outpoints": []
+        },
+        {
+          "n": 1,
+          "script": "76a914a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b388ac",
+          "value": 250000000,
+          "addr": "1FvkFr6M34B4ef3grQLHWVVYwhw5h9rescP",
+          "tx_index": 3,
+          "type": 0,
+          "spent": false,
+          "spending_outpoints": []
+        }
+      ],
+      "result": 250000000,
+      "time": 1234567890,
+      "tx_index": 100000,
+      "block_height": 500000,
+      "block_index": 1
+    }
+  ]
+}

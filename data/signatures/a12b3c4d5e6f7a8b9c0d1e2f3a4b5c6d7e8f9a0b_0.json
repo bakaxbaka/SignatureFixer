@@ -1,0 +1,9 @@
+{
+  "txid": "a12b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
+  "vin": 0,
+  "r": "3d3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
+  "s": "3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
+  "pubkey": "unknown",
+  "sighash": "01",
+  "script_type": "P2WPKH"
+}
