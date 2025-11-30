@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createHash } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
+import { mkdirSync } from "fs";
 
 interface UTXOData {
   utxos: Array<{
@@ -83,6 +84,33 @@ class BitcoinService {
     }
     if (!fs.existsSync(this.RAW_TXS_DIR)) {
       fs.mkdirSync(this.RAW_TXS_DIR, { recursive: true });
+    }
+    const sigDir = path.join(this.DATA_DIR, 'signatures');
+    if (!fs.existsSync(sigDir)) {
+      fs.mkdirSync(sigDir, { recursive: true });
+    }
+  }
+
+  // Save individual signature record to disk
+  saveSignature(txid: string, vin: number, signatureData: any): void {
+    try {
+      const sigDir = path.join(this.DATA_DIR, 'signatures');
+      const filename = `${txid}_${vin}.json`;
+      const filepath = path.join(sigDir, filename);
+      
+      const record = {
+        txid,
+        vin,
+        r: signatureData.r || '',
+        s: signatureData.s || '',
+        pubkey: signatureData.publicKey || '',
+        sighash: signatureData.sighashType?.toString(16).padStart(2, '0') || '01',
+        script_type: signatureData.scriptType || 'unknown'
+      };
+      
+      fs.writeFileSync(filepath, JSON.stringify(record, null, 2));
+    } catch (error) {
+      console.error(`Failed to save signature ${txid}_${vin}:`, error);
     }
   }
 
@@ -1400,8 +1428,8 @@ class BitcoinService {
   }
 
   // PHASE 1: DATA FETCHING LAYER
-  // 1.1 Transaction Fetcher - fetch single page with retry logic (NO RATE LIMITING)
-  private async fetchPageWithRetry(address: string, offset: number = 0, limit: number = 50, retries: number = 3): Promise<any> {
+  // 1.1 Transaction Fetcher - fetch single page with exponential backoff retry logic
+  private async fetchPageWithRetry(address: string, offset: number = 0, limit: number = 50, retries: number = 10): Promise<any> {
     let lastError: any;
     
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -1441,11 +1469,14 @@ class BitcoinService {
         };
       } catch (error) {
         lastError = error;
-        console.error(`✗ Attempt ${attempt} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`✗ Attempt ${attempt} failed: ${errorMsg}`);
         
         if (attempt < retries) {
-          console.log(`  Retrying immediately...`);
-          // NO WAIT - immediate retry
+          // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1.6s, 3.2s...
+          const delayMs = Math.min(100 * Math.pow(2, attempt - 1), 5000);
+          console.log(`  ⏳ Waiting ${delayMs}ms before retry ${attempt + 1}...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       }
     }
@@ -1550,44 +1581,52 @@ class BitcoinService {
     }
   }
 
-  async fetchAddressDataComplete(address: string, limit: number = 1000): Promise<any> {
-    try {
-      // Use blockchain.info rawaddr API which returns complete address data with transactions
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-      
-      const response = await fetch(
-        `${this.BLOCKCHAIN_API}/rawaddr/${address}?limit=${Math.min(limit, 1000)}`,
-        { signal: controller.signal }
-      );
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch address data: ${response.status}`);
-      }
+  async fetchAddressDataComplete(address: string, limit: number = 10000): Promise<any> {
+    const maxRetries = 15;
+    let lastError: any;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[Attempt ${attempt}/${maxRetries}] Fetching https://blockchain.info/rawaddr/${address}`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        const response = await fetch(
+          `${this.BLOCKCHAIN_API}/rawaddr/${address}?limit=${Math.min(limit, 10000)}`,
+          { signal: controller.signal }
+        );
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
 
-      const data = await response.json();
-      
-      // Ensure txs array exists
-      if (!data.txs) {
-        data.txs = [];
+        const data = await response.json();
+        
+        if (!data.txs) {
+          data.txs = [];
+        }
+        
+        console.log(`✓ Successfully fetched ${data.txs?.length || 0} transactions for address ${address}`);
+        return data;
+      } catch (error) {
+        lastError = error;
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`✗ Attempt ${attempt} failed: ${errorMsg}`);
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff with cap at 30 seconds
+          const delayMs = Math.min(200 * Math.pow(2, attempt - 1), 30000);
+          console.log(`  ⏳ Waiting ${delayMs}ms before retry ${attempt + 1}...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
       }
-      
-      console.log(`Fetched ${data.txs?.length || 0} transactions for address ${address}`);
-      return data;
-    } catch (error) {
-      console.error(`Error fetching complete address data for ${address}:`, error);
-      // Return empty data structure instead of throwing
-      return {
-        address,
-        n_tx: 0,
-        total_received: 0,
-        total_sent: 0,
-        final_balance: 0,
-        txs: []
-      };
     }
+    
+    console.error(`❌ Failed after ${maxRetries} attempts`);
+    throw lastError || new Error('Failed to fetch address data after all retries');
   }
 
   async fetchAddressTransactions(address: string, networkType: string = 'mainnet', limit: number = 100): Promise<string[]> {

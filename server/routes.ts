@@ -185,16 +185,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`\n========== COMPREHENSIVE VULNERABILITY ANALYSIS ==========`);
       console.log(`Address: ${address}`);
+      console.log(`Using single API call: https://blockchain.info/rawaddr/${address}\n`);
       
-      // PHASE 1: Fetch ALL transactions using paginated multi-page downloader (automatic pagination, no limit)
-      let addressData;
-      try {
-        addressData = await bitcoinService.fetchAllTransactionsPaginated(address, pageSize);
-      } catch (paginationError) {
-        console.log(`Pagination failed, falling back to single fetch...`);
-        addressData = await bitcoinService.fetchAddressDataComplete(address, 1000);
-      }
-      
+      // PHASE 1: Fetch ALL transactions with single API call (NO PAGINATION)
+      const addressData = await bitcoinService.fetchAddressDataComplete(address, 10000);
       const transactions = addressData.txs || [];
       
       console.log(`✓ Fetched ${transactions.length} transactions from blockchain.info/rawaddr\n`);
@@ -327,9 +321,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   messageHash: tx.hash,
                   publicKey: sig.publicKey || '',
                   sighashType: sig.sighashType || 1,
+                  scriptType,
                   isLowR,
                   isLowS
                 };
+                
+                // Save signature to disk
+                bitcoinService.saveSignature(tx.hash, inputIdx, sigData);
                 
                 allSignatures.push(sigData);
                 txInputs.push(sigData);
