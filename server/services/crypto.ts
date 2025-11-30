@@ -20,6 +20,51 @@ export function bytesToHex(bytes: Uint8Array): string {
     .join("");
 }
 
+// ===== DER PARSING INTERFACE & FUNCTION =====
+
+export interface ParsedDer {
+  der: string;
+  derNoSighash: string;
+  sighash: string;
+  r: Uint8Array;
+  s: Uint8Array;
+}
+
+export function parseDerSignature(sigHex: string): ParsedDer {
+  // last byte = sighash type
+  const sighash = sigHex.slice(-2);
+  const derNoSighash = sigHex.slice(0, -2);
+  const bytes = hexToBytes(derNoSighash);
+
+  if (bytes[0] !== 0x30) throw new Error("Not a DER SEQUENCE");
+
+  const seqLen = bytes[1];
+  const seqEnd = 2 + seqLen;
+
+  if (seqEnd !== bytes.length) {
+    throw new Error("DER length mismatch (malleated or invalid)");
+  }
+
+  let idx = 2;
+
+  if (bytes[idx++] !== 0x02) throw new Error("Invalid INTEGER tag for r");
+  const rLen = bytes[idx++];
+  const r = bytes.slice(idx, idx + rLen);
+  idx += rLen;
+
+  if (bytes[idx++] !== 0x02) throw new Error("Invalid INTEGER tag for s");
+  const sLen = bytes[idx++];
+  const s = bytes.slice(idx, idx + sLen);
+  
+  return {
+    der: sigHex,
+    derNoSighash,
+    sighash,
+    r,
+    s
+  };
+}
+
 // secp256k1 curve parameters
 const CURVE_ORDER = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
 const CURVE_P = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F');
