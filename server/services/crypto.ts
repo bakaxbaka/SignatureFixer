@@ -91,6 +91,77 @@ export function buildStrictDer(r: Uint8Array, s: Uint8Array): string {
   return bytesToHex(output);
 }
 
+// ===== SECTION 5: MALLEABILITY MUTATION FUNCTIONS =====
+
+export type DerMutationKind =
+  | "SEMANTIC_HIGH_S"
+  | "EXTRA_LEADING_ZERO_R"
+  | "EXTRA_LEADING_ZERO_S"
+  | "WRONG_SEQUENCE_LEN"
+  | "TRAILING_GARBAGE";
+
+function addLeadingZero(b: Uint8Array): Uint8Array {
+  return Uint8Array.from([0x00, ...b]);
+}
+
+export function makeHighS(p: ParsedDer): ParsedDer {
+  const sVal = bigIntFromBytes(p.s);
+  const sPrime = SECP256K1_N - sVal;
+  const sPrimeBytes = bigIntToBytes(sPrime);
+
+  const derNoSighash = buildStrictDer(p.r, sPrimeBytes);
+  return {
+    ...p,
+    s: sPrimeBytes,
+    derNoSighash,
+    der: derNoSighash + p.sighash
+  };
+}
+
+export function makeExtraZeroR(p: ParsedDer): ParsedDer {
+  const r2 = addLeadingZero(p.r);
+  const derNoSighash = buildStrictDer(r2, p.s);
+  return { ...p, derNoSighash, der: derNoSighash + p.sighash };
+}
+
+export function makeExtraZeroS(p: ParsedDer): ParsedDer {
+  const s2 = addLeadingZero(p.s);
+  const derNoSighash = buildStrictDer(p.r, s2);
+  return { ...p, derNoSighash, der: derNoSighash + p.sighash };
+}
+
+export function makeWrongSeqLen(p: ParsedDer): ParsedDer {
+  const d = p.derNoSighash;
+  const newLen = "ff"; // malicious huge length
+  const mutated = "30" + newLen + d.slice(4);
+  return { ...p, derNoSighash: mutated, der: mutated + p.sighash };
+}
+
+export function makeTrailingGarbage(p: ParsedDer): ParsedDer {
+  const mutated = p.derNoSighash + "deadbeef";
+  return { ...p, derNoSighash: mutated, der: mutated + p.sighash };
+}
+
+export function craftMalleableDer(
+  parsed: ParsedDer,
+  kind: DerMutationKind
+): ParsedDer {
+  switch (kind) {
+    case "SEMANTIC_HIGH_S":
+      return makeHighS(parsed);
+    case "EXTRA_LEADING_ZERO_R":
+      return makeExtraZeroR(parsed);
+    case "EXTRA_LEADING_ZERO_S":
+      return makeExtraZeroS(parsed);
+    case "WRONG_SEQUENCE_LEN":
+      return makeWrongSeqLen(parsed);
+    case "TRAILING_GARBAGE":
+      return makeTrailingGarbage(parsed);
+    default:
+      throw new Error("unknown mutation");
+  }
+}
+
 // ===== BIGINT HELPERS =====
 
 const SECP256K1_N = BigInt(
