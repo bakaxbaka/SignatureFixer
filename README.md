@@ -21,68 +21,68 @@ wallet implementation flaws, and malformed DER encodings.
                                         │
                                         │  Calls Services
                                         ▼
-     ┌───────────────────────────────────────────────────────────────────┐
-     │                        BACKEND SERVICE LAYER                      │
-     │                                                                   │
+     ┌──────────────────────────────────────────────────────────────────┐
+     │                        BACKEND SERVICE LAYER                     │
+     │                                                                  │
      │  ┌───────────────────────┐   ┌───────────────────────────────┐   │
      │  │  Multi-Endpoint       │   │   Tor + Cache Layer           │   │
-     │  │  Blockchain Fetcher   │   │ - Rate limit smoothing         │   │
-     │  │ - blockstream.info    │   │ - Memory + Disk cache          │   │
-     │  │ - mempool.space       │   │ - Tor SOCKS5 optional          │   │
-     │  │ - blockchain.info     │   │ - Retry + backoff              │   │
+     │  │  Blockchain Fetcher   │   │ - Rate limit smoothing        │   │ 
+     │  │ - blockstream.info    │   │ - Memory + Disk cache         │   │
+     │  │ - mempool.space       │   │ - Tor SOCKS5 optional         │   │
+     │  │ - blockchain.info     │   │ - Retry + backoff             │   │
      │  └─────────────▲─────────┘   └───────────────▲───────────────┘   │
      │                │                           │                     │
-     │                │ TX Hex + JSON Data        │ Cached / Tor-Fixed │
+     │                │ TX Hex + JSON Data        │ Cached / Tor-Fixed  │
      │                ▼                           ▼                     │
-     │  ┌──────────────────────────────┐   ┌──────────────────────────┐ │
-     │  │   Raw Transaction Decoder    │   │   UTXO Reconstruction     │ │
-     │  │ - version / locktime         │   │ - find inputs/outputs     │ │
-     │  │ - inputs / outputs           │   │ - mark spent/unspent       │ │
-     │  │ - script extraction          │   │ - change detection         │ │
-     │  └─────────────▲───────────────┘   └──────────────▲────────────┘ │
+     │  ┌─────────────────────────────┐  ┌──────────────────────────┐   │
+     │  │   Raw Transaction Decoder   │   │   UTXO Reconstruction   │   │
+     │  │ - version / locktime        │   │ - find inputs/outputs   │   │
+     │  │ - inputs / outputs          │   │ - mark spent/unspent    │   │
+     │  │ - script extraction         │   │ - change detection      │   │
+     │  └─────────────▲───────────────┘   └──────────────▲──────────┘   │
      │                │                                 │               │
      │                │ Signatures / Scripts            │ UTXO Context  │
      │                ▼                                 ▼               │
      │  ┌──────────────────────────────┐   ┌──────────────────────────┐ │
      │  │  Signature Extraction Engine │   │      Sighash Builder     │ │
      │  │ - r / s / sighash byte       │   │ - Legacy (P2PKH)         │ │
-     │  │ - pubkey parsing             │   │ - SegWit (BIP143)         │ │
-     │  │ - script type detection      │   │ - Nested SW               │ │
+     │  │ - pubkey parsing             │   │ - SegWit (BIP143)        │ │
+     │  │ - script type detection      │   │ - Nested SW              │ │
      │  └─────────────▲───────────────┘   └──────────────▲────────────┘ │
      │                │                                 │               │
      │                │ Parsed Signature Data           │ Preimages     │
      │                ▼                                 ▼               │
-     │  ┌──────────────────────────────┐   ┌──────────────────────────┐ │
+     │  ┌─────────────────────────────┐   ┌───────────────────────────┐ │
      │  │        DER/BER Engine       │   │    Malleability Engine    │ │
      │  │ - Strict DER (Bitcoin Core) │   │ - High‑S transform        │ │
      │  │ - Loose DER (elliptic bug)  │   │ - BER padding             │ │
-     │  │ - Range validation          │   │ - Bad length fields        │ │
+     │  │ - Range validation          │   │ - Bad length fields       │ │
      │  └─────────────▲───────────────┘   └──────────────▲────────────┘ │
      │                │                                 │               │
      │                │ Valid / Invalid DER             │ Malleated Sig │
      │                ▼                                 ▼               │
-     │   ┌────────────────────────────┐  ┌────────────────────────────┐│
-     │   │   Library Verification     │  │    CVE‑2024‑42461 Tester   ││
-     │   │ - elliptic                 │  │ - Generate 15+ BER variants││
-     │   │ - noble-secp256k1          │  │ - Cross‑library verify     ││
-     │   │ - bitcoinjs-lib            │  │ - Produce vulnerability map││
-     │   └─────────────▲──────────────┘  └──────────────▲────────────┘│
-     │                 │                                  │            │
+     │   ┌────────────────────────────┐  ┌───────────────────────────┐  │
+     │   │   Library Verification     │  │    CVE‑2024‑42461 Tester  │  │
+     │   │ - elliptic                 │  │- Generate 15+ BER variants│  │
+     │   │ - noble-secp256k1          │  │- Cross‑library verify     │  │
+     │   │ - bitcoinjs-lib            │  │- Produce vulnerability map│  │
+     │   └─────────────▲──────────────┘  └──────────────▲────────────┘  │
+     │                 │                                  │             │
      │                 │ Verification Matrix               │ CVE Report │
-     │                 ▼                                  ▼            │
-     │   ┌────────────────────────────┐   ┌──────────────────────────┐ │
-     │   │     Wycheproof Runner      │   │ Vulnerability Scoring    │ │
-     │   │ - load vectors             │   │ - r reuse                │ │
-     │   │ - run full suite           │   │ - high-S detection       │ │
-     │   │ - detect invalid accepted  │   │ - sighash anomalies      │ │
+     │                 ▼                                  ▼             │
+     │   ┌────────────────────────────┐   ┌───────────────────────────┐ │
+     │   │     Wycheproof Runner      │   │ Vulnerability Scoring     │ │
+     │   │ - load vectors             │   │ - r reuse                 │ │
+     │   │ - run full suite           │   │ - high-S detection        │ │
+     │   │ - detect invalid accepted  │   │ - sighash anomalies       │ │
      │   └─────────────▲──────────────┘   └──────────────▲────────────┘ │
-     │                 │                                  │            │
+     │                 │                                  │             │
      └─────────────────┼──────────────────────────────────┼─────────────┘
                        │                                  │
                        ▼                                  ▼
               ┌──────────────────┐             ┌────────────────────────┐
-              │ Structured JSON   │             │  UI Visualization      │
-              │ (Analysis Result) │             │ (Tables, Charts, Flags)│
+              │ Structured JSON  │             │  UI Visualization      │
+              │ (Analysis Result)│             │ (Tables, Charts, Flags)│
               └──────────────────┘             └────────────────────────┘
 
 
@@ -97,111 +97,27 @@ npm run server
 Run Tests
 npm test
 🔥 What This System Provides
+
 Feature	Status	Description
+
 Raw TX Inspector	✅	Decode, analyze, extract sigs
+
 DER/BER Parser	✅	Strict + Loose modes
+
 CVE‑2024‑42461 Detector	✅	Auto‑test libraries for ASN.1 bug
+
 Wycheproof Integration	✅	Full compliance testing
+
 Multi‑Curve	✅	secp256k1 + secp521r1
+
 Malleability Engine	✅	High‑S, BER padding, garbage bytes
+
 Sighash Visualizer	✅	BIP143 + legacy
+
 Hardened DER Rules	✅	Bitcoin‑Core canonicality
+
 CI Security Tests	✅	Prevent regression 
-SignatureFixer/
-│
-├── README.md
-├── package.json
-├── tsconfig.json
-├── vite.config.ts (or Next.js config)
-│
-├── src/
-│   ├── frontend/
-│   │   ├── components/
-│   │   │   ├── RawTxInspector/
-│   │   │   ├── DerPlayground/
-│   │   │   ├── Cve42461Panel/
-│   │   │   ├── WycheproofLab/
-│   │   │   ├── SigAnalysisTable/
-│   │   │   └── Alerts/
-│   │   ├── pages/
-│   │   │   ├── index.tsx
-│   │   │   ├── tx-inspector.tsx
-│   │   │   ├── cve-test.tsx
-│   │   │   ├── wycheproof.tsx
-│   │   │   └── api-docs.tsx
-│   │   └── styles/
-│   │
-│   ├── backend/
-│   │   ├── routes/
-│   │   │   ├── inspectTxRoute.ts
-│   │   │   ├── derParseRoute.ts
-│   │   │   ├── cveTestRoute.ts
-│   │   │   └── wycheproofRoute.ts
-│   │   │
-│   │   ├── services/
-│   │   │   ├── inspectTx/
-│   │   │   │   ├── decodeRawTx.ts
-│   │   │   │   ├── enrichUtxos.ts
-│   │   │   │   ├── extractSignatures.ts
-│   │   │   │   ├── computeSighash.ts
-│   │   │   │   ├── summarize.ts
-│   │   │   │   └── index.ts
-│   │   │   │
-│   │   │   ├── der/
-│   │   │   │   ├── derStrict.ts
-│   │   │   │   ├── derLoose.ts
-│   │   │   │   ├── derMutations.ts
-│   │   │   │   ├── canonicalRules.ts
-│   │   │   │   └── berVariants.ts
-│   │   │   │
-│   │   │   ├── cve42461/
-│   │   │   │   ├── cveGenerator.ts      # Create CVE-style malformed signatures
-│   │   │   │   ├── cveTester.ts         # Runs mutated signatures through libraries
-│   │   │   │   └── cveReport.ts         # Produces vulnerability reports
-│   │   │   │
-│   │   │   ├── wycheproof/
-│   │   │   │   ├── loader.ts
-│   │   │   │   ├── runner.ts
-│   │   │   │   ├── compare.ts
-│   │   │   │   └── resultTypes.ts
-│   │   │   │
-│   │   │   ├── libraries/
-│   │   │   │   ├── ellipticWrapper.ts
-│   │   │   │   ├── nobleWrapper.ts
-│   │   │   │   ├── bitcoinjsWrapper.ts
-│   │   │   │   └── hwWrapper.ts (optional)
-│   │   │   │
-│   │   │   ├── bitcoin/
-│   │   │   │   ├── script.ts
-│   │   │   │   ├── addresses.ts
-│   │   │   │   ├── sighash.ts
-│   │   │   │   ├── secp256k1.ts
-│   │   │   │   └── network.ts
-│   │   │   │
-│   │   │   └── fetchers/
-│   │   │       ├── multiEndpointFetcher.ts
-│   │   │       ├── torFetcher.ts
-│   │   │       ├── cache.ts
-│   │   │       └── rateLimiter.ts
-│   │   │
-│   │   └── utils/
-│   │       ├── hex.ts
-│   │       ├── bigint.ts
-│   │       ├── asn1.ts
-│   │       ├── logger.ts
-│   │       └── types.ts
-│   │
-│   └── tests/
-│       ├── cve42461.spec.ts
-│       ├── derStrict.spec.ts
-│       ├── wycheproof.spec.ts
-│       ├── malleability.spec.ts
-│       └── transaction.spec.ts
-│
-└── .github/workflows/
-    ├── run-tests.yml
-    ├── run-wycheproof.yml
-    └── cve-regression.yml
+
 <img width="1455" height="911" alt="image" src="https://github.com/user-attachments/assets/aefaa474-f016-46f1-a24f-baf67a610205" />
 <img width="1038" height="639" alt="image" src="https://github.com/user-attachments/assets/397ae46b-35b6-4fad-be1b-8259689f701c" />
 
