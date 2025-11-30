@@ -4,6 +4,7 @@ _Comprehensive Bitcoin Signature Analyzer · Vulnerability Scanner · DER Mallea
 SignatureFixer is a full-stack Bitcoin signature-forensics platform designed to audit
 Bitcoin transactions for vulnerabilities, signature malleability, key-reuse dangers,
 wallet implementation flaws, and malformed DER encodings.
+
 ⸜(｡˃ ᵕ ˂ )⸝ Buy me a coffee : 1PmAFZaBpokiMZ8TxhwMBW78s4Y1U9mEwK ⸜(｡˃ ᵕ ˂ )⸝
 
 The toolkit includes:
