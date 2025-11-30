@@ -10,7 +10,6 @@ import BlockScanner from "@/pages/block-scanner";
 import NotFound from "@/pages/not-found";
 
 const SignatureTools = React.lazy(() => import("@/pages/signature-tools"));
-const RawTxBuilder = React.lazy(() => import("@/pages/raw-tx-builder"));
 const VulnerabilityHistory = React.lazy(() => import("@/pages/vulnerability-history"));
 
 function Router() {
@@ -23,13 +22,6 @@ function Router() {
         {() => (
           <React.Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
             <SignatureTools />
-          </React.Suspense>
-        )}
-      </Route>
-      <Route path="/raw-tx-builder">
-        {() => (
-          <React.Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
-            <RawTxBuilder />
           </React.Suspense>
         )}
       </Route>

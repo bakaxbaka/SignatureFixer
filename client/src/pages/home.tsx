@@ -83,12 +83,6 @@ export default function Home() {
                   Signature Tools
                 </Button>
               </Link>
-              <Link href="/raw-tx-builder">
-                <Button variant="outline" size="sm" data-testid="button-raw-tx-builder">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Raw TX Builder
-                </Button>
-              </Link>
               <Button variant="ghost" size="sm">
                 <Settings className="w-5 h-5" />
               </Button>
