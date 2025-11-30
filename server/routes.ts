@@ -239,18 +239,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (!script) continue;
 
             try {
-              const sig = cryptoAnalysis.validateDERSignature(script);
+              const sig = cryptoAnalysis.parseBitcoinSignature(script);
               
               if (sig.isValid && sig.r && sig.s) {
                 totalExtracted++;
-                console.log(`    ✓ Input ${inputIdx}: R=${sig.r.substring(0, 16)}...`);
+                console.log(`    ✓ Input ${inputIdx}: R=${sig.r.substring(0, 16)}... PubKey=${sig.publicKey?.substring(0, 16)}...`);
                 
                 allSignatures.push({
                   txid: tx.hash,
                   inputIndex: inputIdx,
                   r: sig.r,
                   s: sig.s,
-                  messageHash: tx.hash
+                  messageHash: tx.hash,
+                  publicKey: sig.publicKey,
+                  sighashType: sig.sighashType
                 });
 
                 // Check malleability
@@ -1199,18 +1201,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             try {
-              // Extract signature from script
-              const sig = cryptoAnalysis.validateDERSignature(script);
+              // Extract signature using Bitcoin-specific parser (extracts r, s, sighash, pubkey)
+              const sig = cryptoAnalysis.parseBitcoinSignature(script);
               
               if (sig.isValid && sig.r && sig.s) {
                 totalExtracted++;
-                console.log(`    ✓ Input ${inputIdx}: R=${sig.r.substring(0, 16)}... S=${sig.s.substring(0, 16)}...`);
+                console.log(`    ✓ Input ${inputIdx}: R=${sig.r.substring(0, 16)}... S=${sig.s.substring(0, 16)}... PubKey=${sig.publicKey?.substring(0, 16)}...`);
+                console.log(`       Sighash: ${sig.sighashType === 1 ? 'SIGHASH_ALL' : 'OTHER'}`);
                 
                 allSignatures.push({
                   txid: tx.hash,
                   inputIndex: inputIdx,
                   r: sig.r,
-                  s: sig.s
+                  s: sig.s,
+                  publicKey: sig.publicKey,
+                  sighashType: sig.sighashType
                 });
 
                 // Check for malleability (BIP62 violation)

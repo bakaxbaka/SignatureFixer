@@ -1,0 +1,115 @@
+How to Parse Bitcoin Transactions and Extract r, s, z and PubKey
+
+Bitcoin signatures always follow this structure:
+
+Signature (DER encoded)
+
+Starts with: 30 (DER SEQUENCE)
+
+Contains two INTEGERs: r and s
+
+Followed by hash-type (1 byte: 01, 81, etc.)
+
+Public key
+Always begins with:
+
+02… or 03… → compressed
+
+04… → uncompressed
+
+z (message hash) is always:
+
+z = double_sha256(serialized_tx_with_sighash)
+
+
+calculated using SIGHASH_ALL unless last byte says otherwise.
+
+So the extraction has 3 steps:
+
+🟦 1 — Extract r and s from the signature
+
+Example witness entry from your data:
+
+024730440220487e14bf7e64805d8ba0e5772abfe5705c179c68a43bc2115999dd30aa675cd002207c8f63dd6bc8d1bbff8f4b8b6f748139ab990b80543a0e116f7d1fc9c10f3faf01
+          │                   r                                    │        s                                │ sighash
+
+
+Der breakdown (general):
+
+0x30 total_length
+  0x02 r_length
+     r_value
+  0x02 s_length
+     s_value
+sighash_type
+
+
+So for that signature:
+
+Extract r
+
+487e14bf7e64805d8ba0e5772abfe5705c179c68a43bc2115999dd30aa675cd0
+
+Extract s
+
+7c8f63dd6bc8d1bbff8f4b8b6f748139ab990b80543a0e116f7d1fc9c10f3faf
+
+SIGHASH type
+
+01 (SIGHASH_ALL)
+
+Public key
+
+At the end of the witness:
+
+02102b9d8e44f43fbaca70565d968e4ffe24347dd019be67d2ccd4cc268f28a7ad7c0   (No → wrong)
+012102b9d8e44f43fbaca70565d968e4ffe24347dd019be67d2ccd4cc268f28a7ad7c0  (Yes → correct)
+      ^ pubkey starts at 02 or 03
+
+Pubkey:
+02b9d8e44f43fbaca70565d968e4ffe24347dd019be67d2ccd4cc268f28a7ad7c0
+
+
+All P2WPKH inputs in your tx use the same pubkey, so this is a perfect candidate for nonce-reuse scanning.
+
+🟩 2 — Extract z (message hash)
+
+For SegWit (witness) inputs:
+
+z = sha256d( serialization_for_sighash_v0 )
+
+
+This requires:
+
+version
+
+hashPrevouts
+
+hashSequence
+
+outpoint (txid + vout)
+
+scriptCode (P2WPKH script)
+
+amount
+
+nSequence
+
+locktime
+
+sighash_type
+
+I can generate z for each input if you want.
+
+Say “generate z for all inputs” and I’ll output all r, s, z tuples ready for ECDSA-recovery attempts.
+
+🟥 3 — Spotting vulnerabilities
+
+From your data I already see:
+
+🔍 Every single input uses the SAME pubkey.
+
+And because you have 120,000+ transactions, if even one pair reuses the same nonce k →
+you get:
+
+d = ((s1*z2 - s2*z1) * inverse(r*(s1 - s2))) mod n

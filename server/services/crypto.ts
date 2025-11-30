@@ -568,6 +568,105 @@ export class CryptoAnalysis {
   }
 
   /**
+   * Parse Bitcoin signature with r, s, sighash type, and extract public key
+   * According to Bitcoin DER signature structure:
+   * 0x30 [total-len] 0x02 [R-len] [R] 0x02 [S-len] [S] [sighash-type]
+   */
+  parseBitcoinSignature(scriptHex: string): {
+    isValid: boolean;
+    r?: string;
+    s?: string;
+    sighashType?: number;
+    publicKey?: string;
+    details: string;
+  } {
+    try {
+      const script = Buffer.from(scriptHex.replace(/^0x/, ''), 'hex');
+      
+      if (script.length < 8) {
+        return { isValid: false, details: 'Script too short for signature' };
+      }
+
+      // DER structure: 0x30 [length] 0x02 [r-len] [r] 0x02 [s-len] [s] [sighash]
+      if (script[0] !== 0x30) {
+        return { isValid: false, details: 'Not a DER sequence' };
+      }
+
+      const derLength = script[1];
+      let pos = 2;
+
+      // Parse R
+      if (script[pos] !== 0x02) {
+        return { isValid: false, details: 'Invalid R marker' };
+      }
+      pos++;
+      
+      const rLen = script[pos];
+      pos++;
+      if (pos + rLen > script.length) {
+        return { isValid: false, details: 'R extends beyond script' };
+      }
+      const rBytes = script.slice(pos, pos + rLen);
+      const r = BigInt('0x' + rBytes.toString('hex'));
+      pos += rLen;
+
+      // Parse S
+      if (script[pos] !== 0x02) {
+        return { isValid: false, details: 'Invalid S marker' };
+      }
+      pos++;
+      
+      const sLen = script[pos];
+      pos++;
+      if (pos + sLen > script.length) {
+        return { isValid: false, details: 'S extends beyond script' };
+      }
+      const sBytes = script.slice(pos, pos + sLen);
+      const s = BigInt('0x' + sBytes.toString('hex'));
+      pos += sLen;
+
+      // Extract sighash type (1 byte after signature)
+      const sighashType = script[pos] || 0x01;
+      pos++;
+
+      // Extract public key (usually follows signature in witness/script)
+      // Public key starts with 02/03 (compressed) or 04 (uncompressed)
+      let publicKey = '';
+      while (pos < script.length) {
+        const byte = script[pos];
+        if (byte === 0x02 || byte === 0x03) {
+          // Compressed public key (33 bytes: 1 byte prefix + 32 bytes key)
+          if (pos + 33 <= script.length) {
+            publicKey = script.slice(pos, pos + 33).toString('hex');
+            break;
+          }
+        } else if (byte === 0x04) {
+          // Uncompressed public key (65 bytes: 1 byte prefix + 64 bytes key)
+          if (pos + 65 <= script.length) {
+            publicKey = script.slice(pos, pos + 65).toString('hex');
+            break;
+          }
+        }
+        pos++;
+      }
+
+      return {
+        isValid: true,
+        r: r.toString(16).padStart(64, '0'),
+        s: s.toString(16).padStart(64, '0'),
+        sighashType,
+        publicKey: publicKey || 'unknown',
+        details: `Valid Bitcoin signature. Sighash: ${sighashType === 1 ? 'SIGHASH_ALL' : 'OTHER'}`
+      };
+    } catch (error) {
+      return {
+        isValid: false,
+        details: `Parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
    * Analyzes entropy in nonce generation
    */
   analyzeNonceEntropy(signatures: ECDSASignature[]): {
