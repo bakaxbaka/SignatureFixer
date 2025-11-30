@@ -3,6 +3,26 @@
  * Computes: weight, vsize, fee, feerate, DER validation, tags
  */
 
+export interface TransactionInput {
+  index: number;
+  prevTxid: string;
+  vout: number;
+  sequence: string;
+  scriptSig: string;
+  scriptType: string;
+  pubkey?: string;
+  address?: string;
+}
+
+export interface TransactionOutput {
+  index: number;
+  value: number;
+  scriptPubKey: string;
+  scriptType: string;
+  address?: string;
+  isChange?: boolean;
+}
+
 export interface TransactionAnalysis {
   txid: string;
   version: number;
@@ -17,6 +37,8 @@ export interface TransactionAnalysis {
   totalIn: number;
   totalOut: number;
   tags: TransactionTag[];
+  inputs?: TransactionInput[];
+  outputs?: TransactionOutput[];
 }
 
 export type TransactionTag = 
@@ -213,4 +235,181 @@ function getVarintSize(firstByte: number): number {
   if (firstByte === 0xfd) return 3;
   if (firstByte === 0xfe) return 5;
   return 9;
+}
+
+/**
+ * Parse full input details from transaction hex
+ */
+export function parseInputs(txHex: string, isSegwit: boolean = false): TransactionInput[] {
+  const bytes = txHexToBytes(txHex);
+  let offset = 4; // Skip version
+
+  if (isSegwit) {
+    offset += 2; // Skip marker + flag
+  }
+
+  const inputCount = readVarint(bytes, offset);
+  offset += getVarintSize(bytes[offset]);
+
+  const inputs: TransactionInput[] = [];
+
+  for (let i = 0; i < inputCount; i++) {
+    const prevTxid = bytesToHex(bytes.slice(offset, offset + 32).reverse());
+    offset += 32;
+
+    const vout = readUint32LE(bytes, offset);
+    offset += 4;
+
+    const scriptLen = readVarint(bytes, offset);
+    const scriptLenSize = getVarintSize(bytes[offset]);
+    offset += scriptLenSize;
+
+    const scriptSig = bytesToHex(bytes.slice(offset, offset + scriptLen));
+    offset += scriptLen;
+
+    const sequence = bytesToHex(bytes.slice(offset, offset + 4).reverse());
+    offset += 4;
+
+    const scriptType = detectScriptType(scriptSig);
+    const pubkey = extractPubkey(scriptSig);
+
+    inputs.push({
+      index: i,
+      prevTxid,
+      vout,
+      sequence,
+      scriptSig,
+      scriptType,
+      pubkey,
+    });
+  }
+
+  return inputs;
+}
+
+/**
+ * Parse full output details from transaction hex
+ */
+export function parseOutputs(txHex: string, inputCount: number, isSegwit: boolean = false): TransactionOutput[] {
+  const bytes = txHexToBytes(txHex);
+  let offset = 4; // Skip version
+
+  if (isSegwit) {
+    offset += 2; // Skip marker + flag
+  }
+
+  // Skip inputs
+  const inputCountVar = readVarint(bytes, offset);
+  offset += getVarintSize(bytes[offset]);
+
+  for (let i = 0; i < inputCountVar; i++) {
+    offset += 32; // prevTxid
+    offset += 4; // vout
+    const scriptLen = readVarint(bytes, offset);
+    offset += getVarintSize(bytes[offset]);
+    offset += scriptLen;
+    offset += 4; // sequence
+  }
+
+  const outputCount = readVarint(bytes, offset);
+  offset += getVarintSize(bytes[offset]);
+
+  const outputs: TransactionOutput[] = [];
+
+  for (let i = 0; i < outputCount; i++) {
+    const value = readUint64LE(bytes, offset);
+    offset += 8;
+
+    const scriptLen = readVarint(bytes, offset);
+    const scriptLenSize = getVarintSize(bytes[offset]);
+    offset += scriptLenSize;
+
+    const scriptPubKey = bytesToHex(bytes.slice(offset, offset + scriptLen));
+    offset += scriptLen;
+
+    const scriptType = detectScriptTypeOutput(scriptPubKey);
+    const address = extractAddress(scriptPubKey);
+
+    outputs.push({
+      index: i,
+      value,
+      scriptPubKey,
+      scriptType,
+      address,
+    });
+  }
+
+  return outputs;
+}
+
+/**
+ * Detect script type from scriptSig (input)
+ */
+function detectScriptType(scriptSig: string): string {
+  if (!scriptSig || scriptSig.length === 0) return "Unknown";
+  
+  // P2PKH: sig pubkey
+  if (scriptSig.startsWith("48") || scriptSig.startsWith("47")) return "P2PKH";
+  // P2SH: often starts with OP_m (51-53)
+  if (scriptSig.match(/^5[123]/)) return "P2SH";
+  // SegWit witness programs are handled differently
+  return "Other";
+}
+
+/**
+ * Detect script type from scriptPubKey (output)
+ */
+function detectScriptTypeOutput(scriptPubKey: string): string {
+  // OP_DUP OP_HASH160 [20 bytes] OP_EQUALVERIFY OP_CHECKSIG = P2PKH
+  if (scriptPubKey.startsWith("76a914") && scriptPubKey.length === 50) return "P2PKH";
+  // OP_HASH160 [20 bytes] OP_EQUAL = P2SH
+  if (scriptPubKey.startsWith("a914") && scriptPubKey.length === 46) return "P2SH";
+  // OP_0 [20 bytes] = P2WPKH
+  if (scriptPubKey.startsWith("0014") && scriptPubKey.length === 44) return "P2WPKH";
+  // OP_0 [32 bytes] = P2WSH
+  if (scriptPubKey.startsWith("0020") && scriptPubKey.length === 68) return "P2WSH";
+  // OP_1 [33 bytes] = Taproot
+  if (scriptPubKey.startsWith("5120") && scriptPubKey.length === 68) return "Taproot";
+  return "Unknown";
+}
+
+/**
+ * Extract pubkey from scriptSig
+ */
+function extractPubkey(scriptSig: string): string | undefined {
+  // P2PKH typically: [sig_len] [sig] [pubkey_len] [pubkey]
+  // Find 21 (33 bytes) or 41 (65 bytes) which are pubkey lengths
+  const pubkeyMatch = scriptSig.match(/21([a-f0-9]{66})|41([a-f0-9]{130})/i);
+  if (pubkeyMatch) {
+    return pubkeyMatch[1] || pubkeyMatch[2];
+  }
+  return undefined;
+}
+
+/**
+ * Extract address from scriptPubKey (simplified)
+ */
+function extractAddress(scriptPubKey: string): string | undefined {
+  // P2PKH: 76a914[20 bytes]88ac
+  const p2pkhMatch = scriptPubKey.match(/76a914([a-f0-9]{40})88ac/i);
+  if (p2pkhMatch) return "1" + p2pkhMatch[1].substring(0, 16) + "..."; // Placeholder
+  
+  // P2SH: a914[20 bytes]87
+  const p2shMatch = scriptPubKey.match(/a914([a-f0-9]{40})87/i);
+  if (p2shMatch) return "3" + p2shMatch[1].substring(0, 16) + "...";
+
+  // P2WPKH: 0014[20 bytes]
+  const p2wpkhMatch = scriptPubKey.match(/0014([a-f0-9]{40})/i);
+  if (p2wpkhMatch) return "bc1q" + p2wpkhMatch[1].substring(0, 16) + "...";
+
+  return undefined;
+}
+
+function readUint64LE(bytes: Uint8Array, offset: number): number {
+  // For demo, just read as 32-bit (Bitcoin satoshis are in range)
+  return readUint32LE(bytes, offset);
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
 }

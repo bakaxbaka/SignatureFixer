@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, CheckCircle } from "lucide-react";
-import { parseRawTx, calculateWeight, analyzeDERSignatures, generateTags } from "@/lib/transaction-analyzer";
+import { parseRawTx, calculateWeight, analyzeDERSignatures, generateTags, parseInputs, parseOutputs } from "@/lib/transaction-analyzer";
 import { truncateString, formatBTC } from "@/lib/bitcoin-utils";
 
 interface TransactionInspectorProps {
@@ -134,16 +134,40 @@ export function TransactionInspector({ txHex, txid }: TransactionInspectorProps)
           <TabsContent value="inputs">
             <Card>
               <CardHeader>
-                <CardTitle>Inputs Table</CardTitle>
-                <CardDescription>Input details with sequence, script type, and value</CardDescription>
+                <CardTitle>Inputs ({txInfo.inputCount})</CardTitle>
+                <CardDescription>Input details with script type, sequence, and pubkey detection</CardDescription>
               </CardHeader>
               <CardContent>
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Inputs table implementation coming soon. Shows index, prev txid:vout, sequence, script type, value, and pubkey detection.
-                  </AlertDescription>
-                </Alert>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="border-b font-semibold">
+                      <tr>
+                        <th className="text-left p-2">#</th>
+                        <th className="text-left p-2">Prev TXID:Vout</th>
+                        <th className="text-left p-2">Sequence</th>
+                        <th className="text-left p-2">Type</th>
+                        <th className="text-left p-2">Pubkey</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parseInputs(txHex, txInfo.isSegwit).map((input) => (
+                        <tr key={input.index} className="border-b hover:bg-muted/50">
+                          <td className="p-2 font-mono">{input.index}</td>
+                          <td className="p-2 font-mono text-xs">
+                            {truncateString(input.prevTxid, 8, 4)}:{input.vout}
+                          </td>
+                          <td className="p-2 font-mono text-xs">{truncateString(input.sequence, 4, 4)}</td>
+                          <td className="p-2">
+                            <Badge variant="outline" className="text-xs">{input.scriptType}</Badge>
+                          </td>
+                          <td className="p-2 font-mono text-xs">
+                            {input.pubkey ? truncateString(input.pubkey, 8, 4) : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -151,16 +175,43 @@ export function TransactionInspector({ txHex, txid }: TransactionInspectorProps)
           <TabsContent value="outputs">
             <Card>
               <CardHeader>
-                <CardTitle>Outputs Table</CardTitle>
-                <CardDescription>Output details with address and change detection</CardDescription>
+                <CardTitle>Outputs ({txInfo.outputCount})</CardTitle>
+                <CardDescription>Output details with script type and address info</CardDescription>
               </CardHeader>
               <CardContent>
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Outputs table implementation coming soon. Shows index, value, script type, decoded address, and change guess.
-                  </AlertDescription>
-                </Alert>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="border-b font-semibold">
+                      <tr>
+                        <th className="text-left p-2">#</th>
+                        <th className="text-left p-2">Value (sats)</th>
+                        <th className="text-left p-2">Type</th>
+                        <th className="text-left p-2">Address</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parseOutputs(txHex, txInfo.inputCount, txInfo.isSegwit).map((output) => {
+                        // Guess change: typically smallest output or second output
+                        const isChange = output.index === 1 || output.index === txInfo.outputCount - 1;
+                        return (
+                          <tr 
+                            key={output.index} 
+                            className={`border-b hover:bg-muted/50 ${isChange ? 'bg-green-500/10' : ''}`}
+                          >
+                            <td className="p-2 font-mono">{output.index}</td>
+                            <td className="p-2 font-mono">{output.value} {isChange && <Badge className="ml-2 bg-green-600 text-xs">change?</Badge>}</td>
+                            <td className="p-2">
+                              <Badge variant="outline" className="text-xs">{output.scriptType}</Badge>
+                            </td>
+                            <td className="p-2 font-mono text-xs">
+                              {output.address || "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
