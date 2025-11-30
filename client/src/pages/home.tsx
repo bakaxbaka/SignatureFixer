@@ -6,6 +6,7 @@ import { QuickTxBuilder } from "@/components/quick-tx-builder";
 import { ApiStatus } from "@/components/api-status";
 import { AnalyticsDashboard } from "@/components/analytics-dashboard";
 import { EducationalResources } from "@/components/educational-resources";
+import { AutomationQuests } from "@/components/automation-quests";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -197,6 +198,7 @@ export default function Home() {
             <ApiStatus />
             <AnalyticsDashboard />
             <EducationalResources />
+            <AutomationQuests />
 
             {/* Batch Analysis Queue */}
             <Card>
