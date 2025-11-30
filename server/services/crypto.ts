@@ -65,6 +65,31 @@ export function parseDerSignature(sigHex: string): ParsedDer {
   };
 }
 
+export function buildStrictDer(r: Uint8Array, s: Uint8Array): string {
+  // Ensure no high-bit negative interpretations
+  let rOut = r[0] & 0x80 ? Uint8Array.from([0, ...r]) : r;
+  let sOut = s[0] & 0x80 ? Uint8Array.from([0, ...s]) : s;
+
+  const totalLen =
+    2 + rOut.length + 2 + sOut.length;
+
+  const output = new Uint8Array(2 + totalLen);
+  let idx = 0;
+
+  output[idx++] = 0x30;
+  output[idx++] = totalLen;
+
+  output[idx++] = 0x02;
+  output[idx++] = rOut.length;
+  output.set(rOut, idx);
+  idx += rOut.length;
+
+  output[idx++] = 0x02;
+  output[idx++] = sOut.length;
+  output.set(sOut, idx);
+
+  return bytesToHex(output);
+}
 
 // ===== BIGINT HELPERS =====
 
