@@ -313,6 +313,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   });
                 }
                 
+                // PHASE 3.2: Compute z-hash
+                const scriptCodeForZ = input.script || input.scriptSig || '';
+                let serialized = '';
+                let z = '';
+                
+                if (scriptType === 'P2WPKH') {
+                  serialized = cryptoAnalysis.serializeBIP143(tx, inputIdx, scriptCodeForZ, input.prev_out?.value || 0);
+                } else {
+                  serialized = cryptoAnalysis.serializeLegacy(tx, inputIdx, scriptCodeForZ);
+                }
+                z = cryptoAnalysis.computeZ(serialized, sig.sighashType || 1);
+                
                 const sigData = {
                   txid: tx.hash,
                   inputIndex: inputIdx,
@@ -322,11 +334,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   publicKey: sig.publicKey || '',
                   sighashType: sig.sighashType || 1,
                   scriptType,
+                  z,
                   isLowR,
                   isLowS
                 };
                 
-                // Save signature to disk
+                // PHASE 3.3: Save signature with z to disk
                 bitcoinService.saveSignature(tx.hash, inputIdx, sigData);
                 
                 allSignatures.push(sigData);
@@ -529,6 +542,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Total vulnerabilities detected: ${vulnerabilities.length}`);
       console.log(`Critical severity: ${vulnerabilities.filter(v => v.severity === 'critical').length}`);
       console.log(`High severity: ${vulnerabilities.filter(v => v.severity === 'high').length}\n`);
+
+      // PHASE 3.3: Export all signatures to CSV with z-hashes
+      console.log(`\n========== PHASE 3.3: EXPORTING SIGNATURES ==========`);
+      bitcoinService.exportSignaturesCSV(allSignatures);
 
       res.json({
         success: true,

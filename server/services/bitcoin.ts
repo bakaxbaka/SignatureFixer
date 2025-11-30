@@ -105,12 +105,42 @@ class BitcoinService {
         s: signatureData.s || '',
         pubkey: signatureData.publicKey || '',
         sighash: signatureData.sighashType?.toString(16).padStart(2, '0') || '01',
-        script_type: signatureData.scriptType || 'unknown'
+        script_type: signatureData.scriptType || 'unknown',
+        z: signatureData.z || ''
       };
       
       fs.writeFileSync(filepath, JSON.stringify(record, null, 2));
     } catch (error) {
       console.error(`Failed to save signature ${txid}_${vin}:`, error);
+    }
+  }
+
+  // Export all signatures to CSV
+  exportSignaturesCSV(signatures: any[]): void {
+    try {
+      const csvPath = path.join(this.DATA_DIR, 'all_signatures.csv');
+      const headers = ['txid', 'vin', 'r', 's', 'pubkey', 'sighash', 'script_type', 'z'];
+      
+      let csv = headers.join(',') + '\n';
+      
+      for (const sig of signatures) {
+        const row = [
+          sig.txid || '',
+          sig.inputIndex || sig.vin || '',
+          sig.r || '',
+          sig.s || '',
+          sig.publicKey || sig.pubkey || '',
+          sig.sighashType?.toString(16).padStart(2, '0') || sig.sighash || '01',
+          sig.scriptType || sig.script_type || 'unknown',
+          sig.z || ''
+        ];
+        csv += row.map(v => `"${(v + '').replace(/"/g, '""')}"`).join(',') + '\n';
+      }
+      
+      fs.writeFileSync(csvPath, csv);
+      console.log(`✓ Exported ${signatures.length} signatures to ${csvPath}`);
+    } catch (error) {
+      console.error('Failed to export signatures CSV:', error);
     }
   }
 
