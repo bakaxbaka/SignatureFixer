@@ -1,12 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, CheckCircle, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, CheckCircle, Copy, Zap } from "lucide-react";
 import { parseRawTx, calculateWeight, analyzeDERSignatures, generateTags, parseInputs, parseOutputs, getPubkeyMap, getRValueMap } from "@/lib/transaction-analyzer";
 import { truncateString, formatBTC } from "@/lib/bitcoin-utils";
 import { useToast } from "@/hooks/use-toast";
+import { DERMalleabilityModal } from "@/components/der-malleability-modal";
 
 interface TransactionInspectorProps {
   txHex: string;
@@ -15,6 +17,10 @@ interface TransactionInspectorProps {
 
 export function TransactionInspector({ txHex, txid }: TransactionInspectorProps) {
   const { toast } = useToast();
+  const [malleabilityOpen, setMalleabilityOpen] = useState(false);
+  const [malleabilityDER, setMalleabilityDER] = useState("");
+  const [malleabilitySighash, setMalleabilitySighash] = useState(0);
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({ description: `${label} copied to clipboard` });
@@ -330,6 +336,23 @@ export function TransactionInspector({ txHex, txid }: TransactionInspectorProps)
                             </AlertDescription>
                           </Alert>
                         )}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            onClick={() => {
+                              setMalleabilityDER(input.signature!.der);
+                              setMalleabilitySighash(input.signature!.sighashByte);
+                              setMalleabilityOpen(true);
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="gap-2 text-xs"
+                          >
+                            <Zap className="w-3 h-3" />
+                            Forge Malleable
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   )
@@ -338,6 +361,14 @@ export function TransactionInspector({ txHex, txid }: TransactionInspectorProps)
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* DER Malleability Modal */}
+        <DERMalleabilityModal
+          open={malleabilityOpen}
+          onOpenChange={setMalleabilityOpen}
+          originalDER={malleabilityDER}
+          sighashByte={malleabilitySighash}
+        />
       </div>
     );
   } catch (error) {
