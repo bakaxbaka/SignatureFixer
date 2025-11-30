@@ -289,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Also get full signature parse for pubkey extraction
               const sig = cryptoAnalysis.parseBitcoinSignature(scriptToParse);
               
-              if (derParsed.r && derParsed.s) {
+              if (derParsed.r && derParsed.s && sig.isValid) {
                 totalExtracted++;
                 console.log(`      ✓ PHASE 2.2 DER: R=${derParsed.r.substring(0, 16)}..., S=${derParsed.s.substring(0, 16)}..., SigHash=0x${derParsed.sighashByte?.toString(16).padStart(2, '0')}`);
                 
@@ -303,8 +303,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 sighashTypeMap.set(sig.sighashType || 1, sighashCount);
                 
                 // Detect low-k patterns (vulnerability #4)
-                const rBigInt = BigInt('0x' + sig.r);
-                const sBigInt = BigInt('0x' + sig.s);
+                const rBigInt = BigInt('0x' + (sig.r || '0'));
+                const sBigInt = BigInt('0x' + (sig.s || '0'));
                 const isLowR = rBigInt < (BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141') / 2n);
                 const isLowS = sBigInt < (BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141') / 2n);
                 
