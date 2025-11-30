@@ -280,11 +280,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (!scriptToParse) continue;
 
             try {
+              // PHASE 2.2: Parse DER signature to extract r, s, sighash
+              const derParsed = cryptoAnalysis.parseDERSignature(scriptToParse);
+              if (!derParsed.isValid) {
+                continue; // Skip if DER parsing fails
+              }
+              
+              // Also get full signature parse for pubkey extraction
               const sig = cryptoAnalysis.parseBitcoinSignature(scriptToParse);
               
-              if (sig.isValid && sig.r && sig.s) {
+              if (derParsed.r && derParsed.s) {
                 totalExtracted++;
-                console.log(`      ✓ Signature extracted: R=${sig.r.substring(0, 16)}... PubKey=${sig.publicKey?.substring(0, 16)}...`);
+                console.log(`      ✓ PHASE 2.2 DER: R=${derParsed.r.substring(0, 16)}..., S=${derParsed.s.substring(0, 16)}..., SigHash=0x${derParsed.sighashByte?.toString(16).padStart(2, '0')}`);
                 
                 // Track pubkey usage (vulnerability #1)
                 const pubkeyCount = (pubkeyMap.get(sig.publicKey || '') || 0) + 1;
@@ -329,8 +336,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
                 // Check malleability
                 const malleability = cryptoAnalysis.detectSignatureMalleability([{
-                  r: sig.r,
-                  s: sig.s,
+                  r: sig.r || '',
+                  s: sig.s || '',
                   publicKey: input.prev_out?.addr || '',
                   messageHash: '',
                   sighashType: 1
@@ -343,19 +350,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     inputIndex: inputIdx,
                     type: 'malleability_violation',
                     severity: 'high',
-                    s: sig.s,
+                    s: sig.s || '',
                     details: 'BIP62 violation: S > n/2 - Mixed signing types increase risk'
                   });
                 }
 
                 // Index by R value for nonce reuse (vulnerability #3)
-                const rValueStr = sig.r;
+                const rValueStr = sig.r || '';
                 const existing = rValueMap.get(rValueStr) || [];
                 existing.push({
                   txid: tx.hash,
                   inputIndex: inputIdx,
-                  r: sig.r,
-                  s: sig.s,
+                  r: sig.r || '',
+                  s: sig.s || '',
                   publicKey: sig.publicKey || '',
                   sighashType: sig.sighashType || 1
                 });

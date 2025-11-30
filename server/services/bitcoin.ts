@@ -1400,7 +1400,7 @@ class BitcoinService {
   }
 
   // PHASE 1: DATA FETCHING LAYER
-  // 1.1 Transaction Fetcher - fetch single page with retry logic
+  // 1.1 Transaction Fetcher - fetch single page with retry logic (NO RATE LIMITING)
   private async fetchPageWithRetry(address: string, offset: number = 0, limit: number = 50, retries: number = 3): Promise<any> {
     let lastError: any;
     
@@ -1409,7 +1409,7 @@ class BitcoinService {
         console.log(`[Attempt ${attempt}/${retries}] Fetching page: offset=${offset}, limit=${limit}`);
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout per request
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout per request
         
         const response = await fetch(
           `${this.BLOCKCHAIN_API}/rawaddr/${address}?offset=${offset}&limit=${limit}`,
@@ -1417,14 +1417,6 @@ class BitcoinService {
         );
         
         clearTimeout(timeoutId);
-        
-        // Handle rate limiting (429)
-        if (response.status === 429) {
-          const waitTime = Math.min(5000 * attempt, 30000); // Exponential backoff: 5s, 10s, 30s
-          console.log(`⚠ Rate limited! Waiting ${waitTime}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-          continue;
-        }
         
         if (!response.ok) {
           throw new Error(`API error: ${response.status} ${response.statusText}`);
@@ -1449,12 +1441,11 @@ class BitcoinService {
         };
       } catch (error) {
         lastError = error;
-        const waitTime = Math.min(2000 * attempt, 10000);
         console.error(`✗ Attempt ${attempt} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         
         if (attempt < retries) {
-          console.log(`  Retrying in ${waitTime}ms...`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
+          console.log(`  Retrying immediately...`);
+          // NO WAIT - immediate retry
         }
       }
     }
@@ -1525,10 +1516,8 @@ class BitcoinService {
         }
 
         offset += pageSize;
-        
-        // Rate limiting: wait a bit between pages to avoid hitting limits
-        console.log(`⏳ Waiting 500ms before next page...\n`);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // NO RATE LIMITING - fetch immediately
+        console.log(``);
       }
 
       // Show cached pages summary

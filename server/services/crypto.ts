@@ -625,6 +625,84 @@ export class CryptoAnalysis {
   }
 
   /**
+   * PHASE 2.2: DER Parser
+   * Explicitly parses DER signature and extracts r, s, sighash_byte
+   * DER structure: 0x30 [total-len] 0x02 [R-len] [R] 0x02 [S-len] [S] [sighash-type]
+   */
+  parseDERSignature(derHex: string): {
+    isValid: boolean;
+    r?: string;
+    s?: string;
+    sighashByte?: number;
+    details: string;
+  } {
+    try {
+      const der = Buffer.from(derHex.replace(/^0x/, ''), 'hex');
+      
+      if (der.length < 8) {
+        return { isValid: false, details: 'DER too short' };
+      }
+
+      // Check DER sequence marker (0x30)
+      if (der[0] !== 0x30) {
+        return { isValid: false, details: 'Invalid DER sequence marker' };
+      }
+
+      let pos = 2; // Skip 0x30 and length byte
+
+      // Extract R value
+      if (der[pos] !== 0x02) {
+        return { isValid: false, details: 'Invalid R marker' };
+      }
+      pos++;
+      
+      const rLen = der[pos];
+      pos++;
+      if (pos + rLen > der.length) {
+        return { isValid: false, details: 'R extends beyond DER' };
+      }
+      
+      const rBytes = der.slice(pos, pos + rLen);
+      const r = BigInt('0x' + rBytes.toString('hex'));
+      const rHex = r.toString(16).padStart(64, '0');
+      pos += rLen;
+
+      // Extract S value
+      if (der[pos] !== 0x02) {
+        return { isValid: false, details: 'Invalid S marker' };
+      }
+      pos++;
+      
+      const sLen = der[pos];
+      pos++;
+      if (pos + sLen > der.length) {
+        return { isValid: false, details: 'S extends beyond DER' };
+      }
+      
+      const sBytes = der.slice(pos, pos + sLen);
+      const s = BigInt('0x' + sBytes.toString('hex'));
+      const sHex = s.toString(16).padStart(64, '0');
+      pos += sLen;
+
+      // Extract SIGHASH byte (follows signature, usually 0x01)
+      const sighashByte = pos < der.length ? der[pos] : 0x01;
+
+      return {
+        isValid: true,
+        r: rHex,
+        s: sHex,
+        sighashByte,
+        details: `Valid DER: R=${rHex.substring(0, 16)}..., S=${sHex.substring(0, 16)}..., SigHash=0x${sighashByte.toString(16).padStart(2, '0')}`
+      };
+    } catch (error) {
+      return {
+        isValid: false,
+        details: `DER parsing error: ${error instanceof Error ? error.message : 'Unknown'}`
+      };
+    }
+  }
+
+  /**
    * Parse Bitcoin signature with r, s, sighash type, and extract public key
    * According to Bitcoin DER signature structure:
    * 0x30 [total-len] 0x02 [R-len] [R] 0x02 [S-len] [S] [sighash-type]
