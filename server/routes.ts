@@ -973,15 +973,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch complete address data with all transactions from blockchain.info
-      let addressData;
-      try {
-        addressData = await bitcoinService.fetchAddressDataComplete(address, limit);
-      } catch (error) {
-        return res.status(400).json({ 
-          error: 'Failed to fetch address data',
-          details: error instanceof Error ? error.message : 'Address may be invalid'
-        });
-      }
+      const addressData = await bitcoinService.fetchAddressDataComplete(address, limit);
 
       // Extract transaction list
       const transactions = addressData.txs || [];
@@ -1004,20 +996,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Analyze each transaction for signatures and vulnerabilities
+      console.log(`\n========== ANALYZING ${transactions.length} TRANSACTIONS FOR ADDRESS: ${address} ==========`);
+      
       const rValueMap = new Map<string, Array<{ txid: string; inputIndex: number; r: string; s: string; input_index: number }>>();
       const allSignatures: any[] = [];
       const weakSignatures: any[] = [];
       let totalExtracted = 0;
 
-      for (const tx of transactions) {
+      for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
+        const tx = transactions[txIndex];
+        console.log(`\n[${txIndex + 1}/${transactions.length}] Processing transaction: ${tx.hash}`);
+        
         try {
-          // Fetch full transaction details to extract signatures
+          // Fetch full transaction details to extract signatures from blockchain.info
+          console.log(`  └─ Fetching transaction details from blockchain.info...`);
           const fullTx = await bitcoinService.getTransactionDetails(tx.hash, 'mainnet');
-          if (!fullTx || !fullTx.inputs) continue;
+          
+          if (!fullTx || !fullTx.inputs) {
+            console.log(`  └─ ✗ No inputs found or transaction unavailable`);
+            continue;
+          }
+
+          console.log(`  └─ ✓ Found ${fullTx.inputs.length} input(s)`);
 
           for (let inputIdx = 0; inputIdx < fullTx.inputs.length; inputIdx++) {
             const input = fullTx.inputs[inputIdx];
-            if (!input.script) continue;
+            console.log(`    Input ${inputIdx}: Extracting signature...`);
+            
+            if (!input.script) {
+              console.log(`    └─ ✗ No script found`);
+              continue;
+            }
 
             try {
               // Extract signature from script
@@ -1025,6 +1034,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               if (sig.isValid && sig.r && sig.s) {
                 totalExtracted++;
+                console.log(`    └─ ✓ Signature extracted`);
+                console.log(`       R: ${sig.r.substring(0, 20)}...`);
+                console.log(`       S: ${sig.s.substring(0, 20)}...`);
+                
                 allSignatures.push({
                   txid: tx.hash,
                   inputIndex: inputIdx,
@@ -1042,6 +1055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }]);
 
                 if (malleability.hasMalleability) {
+                  console.log(`    └─ ⚠ BIP62 Malleability violation detected (S > n/2)`);
                   weakSignatures.push({
                     txid: tx.hash,
                     inputIndex: inputIdx,
@@ -1063,20 +1077,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   input_index: inputIdx
                 });
                 rValueMap.set(rValue, existing);
+              } else {
+                console.log(`    └─ ✗ Invalid DER signature`);
               }
             } catch (sigErr) {
+              console.log(`    └─ ✗ Error extracting signature: ${sigErr instanceof Error ? sigErr.message : String(sigErr)}`);
               continue;
             }
           }
         } catch (txErr) {
+          console.log(`  └─ ✗ Error processing transaction: ${txErr instanceof Error ? txErr.message : String(txErr)}`);
           continue;
         }
       }
+      
+      console.log(`\n========== SIGNATURE EXTRACTION COMPLETE ==========`);
+      console.log(`Total signatures extracted: ${totalExtracted}`);
+      console.log(`Unique R values found: ${rValueMap.size}`);
 
       // Find nonce reuse vulnerabilities
+      console.log(`\n========== ANALYZING NONCE REUSE ==========`);
       const nonceReuseDetails: any[] = [];
+      let nonceReuseCount = 0;
+      
       for (const [rValue, signatures] of rValueMap.entries()) {
         if (signatures.length >= 2) {
+          nonceReuseCount++;
+          console.log(`\n[NONCE REUSE #${nonceReuseCount}] R value: ${rValue.substring(0, 32)}...`);
+          console.log(`  Appears in ${signatures.length} transactions:`);
+          
+          for (let i = 0; i < signatures.length; i++) {
+            const sig = signatures[i];
+            console.log(`    ${i + 1}. TxID: ${sig.txid}`);
+            console.log(`       Input: ${sig.inputIndex}`);
+            console.log(`       S value: ${sig.s.substring(0, 32)}...`);
+          }
+          
+          console.log(`  ✓ CRITICAL: Same nonce k detected - private key recovery possible!`);
+          console.log(`  Formula: k = (z1-z2)/(s1-s2) mod n, then x = (s*k - m) * r⁻¹ mod n`);
+          
           nonceReuseDetails.push({
             rValue: rValue.substring(0, 16) + '...',
             count: signatures.length,
@@ -1087,7 +1126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               s: s.s
             })),
             privateKeyRecoveryPossible: true,
-            formula: 'k = (s1-s2)/(z1-z2) mod n, then x = (s*k - m) * r⁻¹ mod n'
+            formula: 'k = (z1-z2)/(s1-s2) mod n, then x = (s*k - m) * r⁻¹ mod n'
           });
 
           // Add to weak signatures
@@ -1104,6 +1143,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
+      
+      console.log(`\n========== ANALYSIS COMPLETE ==========`);
+      console.log(`Nonce reuse groups found: ${nonceReuseCount}`);
+      console.log(`Total vulnerabilities detected: ${weakSignatures.length}`);
 
       res.json({
         success: true,

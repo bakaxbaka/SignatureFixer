@@ -68,17 +68,34 @@ export class CryptoAnalysis {
    */
   private verifyAndRecoverFromNonceReuse(sig1: ECDSASignature, sig2: ECDSASignature): NonceReuseResult {
     try {
+      console.log('\n=== ECDSA NONCE REUSE VERIFICATION ===');
+      console.log(`Signature 1 - R: ${sig1.r.substring(0, 16)}..., S: ${sig1.s.substring(0, 16)}...`);
+      console.log(`Signature 2 - R: ${sig2.r.substring(0, 16)}..., S: ${sig2.s.substring(0, 16)}...`);
+      
+      // Parse values
       const r = BigInt('0x' + sig1.r);
       const s1 = BigInt('0x' + sig1.s);
       const s2 = BigInt('0x' + sig2.s);
       const z1 = BigInt('0x' + sig1.messageHash);
       const z2 = BigInt('0x' + sig2.messageHash);
 
+      console.log('\n--- Step 1: Parse Input Values ---');
+      console.log(`R (hex):         ${sig1.r}`);
+      console.log(`S1 (hex):        ${sig1.s}`);
+      console.log(`S2 (hex):        ${sig2.s}`);
+      console.log(`Z1 (messageHash):${sig1.messageHash}`);
+      console.log(`Z2 (messageHash):${sig2.messageHash}`);
+
       // Step 1: Compute nonce k using formula: k = (z1-z2)/(s1-s2) mod n
+      console.log('\n--- Step 2: Calculate Nonce k = (z1-z2)/(s1-s2) mod n ---');
       const numerator = this.modSub(z1, z2, CURVE_ORDER);
+      console.log(`z1 - z2 (numerator):   ${numerator.toString(16)}`);
+      
       const denominator = this.modSub(s1, s2, CURVE_ORDER);
+      console.log(`s1 - s2 (denominator): ${denominator.toString(16)}`);
       
       if (denominator === 0n) {
+        console.log('ERROR: Denominator is 0 - cannot compute nonce');
         return {
           isVulnerable: false,
           confidence: 0,
@@ -87,24 +104,52 @@ export class CryptoAnalysis {
         };
       }
 
-      const k = this.modMul(numerator, this.modInverse(denominator, CURVE_ORDER), CURVE_ORDER);
+      const denominatorInverse = this.modInverse(denominator, CURVE_ORDER);
+      console.log(`(s1-s2)^-1 mod n:      ${denominatorInverse.toString(16)}`);
+      
+      const k = this.modMul(numerator, denominatorInverse, CURVE_ORDER);
+      console.log(`k (nonce):             ${k.toString(16)}`);
 
       // Step 2: Compute private key using formula: x = (s*k - z) / r mod n
-      const skMinusZ = this.modSub(this.modMul(s1, k, CURVE_ORDER), z1, CURVE_ORDER);
+      console.log('\n--- Step 3: Calculate Private Key x = (s*k - z) / r mod n ---');
+      
+      const sk = this.modMul(s1, k, CURVE_ORDER);
+      console.log(`s1 * k:                ${sk.toString(16)}`);
+      
+      const skMinusZ = this.modSub(sk, z1, CURVE_ORDER);
+      console.log(`s1*k - z1:             ${skMinusZ.toString(16)}`);
+      
       const rInverse = this.modInverse(r, CURVE_ORDER);
+      console.log(`r^-1 mod n:            ${rInverse.toString(16)}`);
+      
       const privateKey = this.modMul(skMinusZ, rInverse, CURVE_ORDER);
+      console.log(`x (private key):       ${privateKey.toString(16)}`);
 
       // Step 3: Verify the recovered key is valid
+      console.log('\n--- Step 4: Validate Recovered Values ---');
+      console.log(`k > 0:                 ${k > 0n}`);
+      console.log(`k < n:                 ${k < CURVE_ORDER}`);
+      console.log(`x > 0:                 ${privateKey > 0n}`);
+      console.log(`x < n:                 ${privateKey < CURVE_ORDER}`);
+
       if (privateKey > 0n && privateKey < CURVE_ORDER && k > 0n && k < CURVE_ORDER) {
+        const recoveredKey = privateKey.toString(16).padStart(64, '0');
+        console.log(`\n✓ VULNERABILITY CONFIRMED: Private key successfully recovered!`);
+        console.log(`Recovered Private Key: ${recoveredKey}`);
+        console.log('=== END VERIFICATION ===\n');
+        
         return {
           isVulnerable: true,
-          recoveredPrivateKey: privateKey.toString(16).padStart(64, '0'),
+          recoveredPrivateKey: recoveredKey,
           confidence: 95,
           method: 'mathematical_nonce_reuse_formula',
           signatures: [sig1, sig2]
         };
       }
 
+      console.log(`\n✗ Validation failed: Values outside valid range`);
+      console.log('=== END VERIFICATION ===\n');
+      
       return {
         isVulnerable: false,
         confidence: 0,
@@ -112,6 +157,8 @@ export class CryptoAnalysis {
         signatures: [sig1, sig2]
       };
     } catch (error) {
+      console.error('Nonce reuse verification error:', error);
+      console.log('=== END VERIFICATION (ERROR) ===\n');
       return {
         isVulnerable: false,
         confidence: 0,

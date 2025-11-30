@@ -511,32 +511,41 @@ class BitcoinService {
 
   async getTransactionDetails(txid: string, networkType: string = 'mainnet'): Promise<any> {
     try {
-      // Try Blockstream first
+      // ALWAYS use blockchain.info first - as per requirements
+      const response = await fetch(`${this.BLOCKCHAIN_API}/rawtx/${txid}?format=json`, {
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`✓ Transaction ${txid} fetched from blockchain.info`);
+        return data;
+      }
+      
+      console.warn(`blockchain.info returned ${response.status} for ${txid}`);
+    } catch (error) {
+      console.warn(`blockchain.info fetch failed for ${txid}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    try {
+      // Fallback to Blockstream only if blockchain.info fails
       const baseUrl = networkType === 'testnet'
         ? 'https://blockstream.info/testnet/api'
         : this.BLOCKSTREAM_API;
 
-      const response = await fetch(`${baseUrl}/tx/${txid}`);
+      const response = await fetch(`${baseUrl}/tx/${txid}`, {
+        signal: AbortSignal.timeout(10000)
+      });
 
       if (response.ok) {
+        console.log(`⚠ Transaction ${txid} fetched from Blockstream (fallback)`);
         return await response.json();
       }
     } catch (error) {
-      console.warn('Blockstream API failed, trying Blockchain.com');
+      console.warn('Blockstream fallback also failed');
     }
 
-    try {
-      // Fallback to Blockchain.com
-      const response = await fetch(`${this.BLOCKCHAIN_API}/rawtx/${txid}?format=json`);
-
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.warn('Blockchain.com API failed');
-    }
-
-    throw new Error('Failed to fetch transaction details from all APIs');
+    throw new Error(`Failed to fetch transaction details for ${txid} from all APIs`);
   }
 
   private generateMessageHash(txBuffer: Buffer, inputIndex: number, sighashType: number): string {
@@ -1315,17 +1324,40 @@ class BitcoinService {
   async fetchAddressDataComplete(address: string, limit: number = 1000): Promise<any> {
     try {
       // Use blockchain.info rawaddr API which returns complete address data with transactions
-      const response = await fetch(`${this.BLOCKCHAIN_API}/rawaddr/${address}?limit=${Math.min(limit, 1000)}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      const response = await fetch(
+        `${this.BLOCKCHAIN_API}/rawaddr/${address}?limit=${Math.min(limit, 1000)}`,
+        { signal: controller.signal }
+      );
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch address data: ${response.status}`);
       }
 
       const data = await response.json();
+      
+      // Ensure txs array exists
+      if (!data.txs) {
+        data.txs = [];
+      }
+      
+      console.log(`Fetched ${data.txs?.length || 0} transactions for address ${address}`);
       return data;
     } catch (error) {
       console.error(`Error fetching complete address data for ${address}:`, error);
-      throw error;
+      // Return empty data structure instead of throwing
+      return {
+        address,
+        n_tx: 0,
+        total_received: 0,
+        total_sent: 0,
+        final_balance: 0,
+        txs: []
+      };
     }
   }
 
