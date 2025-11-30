@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Copy, AlertTriangle, CheckCircle, XCircle, Zap } from "lucide-react";
 import { Cve42461Report } from "@/engines/cve42461";
 import { detectInputType, getTypeLabel, validateDetectedType } from "@/lib/input-detector";
+import { TransactionInspector } from "@/components/transaction-inspector";
 
 export default function SignatureTools() {
   const { toast } = useToast();
@@ -34,6 +35,8 @@ export default function SignatureTools() {
   const [cveReport, setCveReport] = useState<Cve42461Report | null>(null);
   const [smartInput, setSmartInput] = useState("");
   const detectedInput = detectInputType(smartInput);
+  const [parsedTxid, setParsedTxid] = useState<string | null>(null);
+  const [parsedTxHex, setParsedTxHex] = useState<string | null>(null);
 
   const fetchTxHex = async () => {
     if (!txidInput.trim()) {
@@ -176,9 +179,12 @@ export default function SignatureTools() {
                         });
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.error || "Failed");
-                        setTxHexResult(data.data.hex);
+                        const hex = data.data.hex;
+                        setTxHexResult(hex);
+                        setParsedTxid(smartInput);
+                        setParsedTxHex(hex);
                         setSmartInput("");
-                        toast({ title: "Success", description: "TX hex fetched & auto-loaded" });
+                        toast({ title: "Success", description: "TX hex fetched & analyzing..." });
                       } catch (e) {
                         toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
                       } finally {
@@ -196,12 +202,13 @@ export default function SignatureTools() {
                   <Button
                     onClick={() => {
                       setTxHexInput(smartInput);
+                      setParsedTxHex(smartInput);
                       setSmartInput("");
-                      toast({ title: "Success", description: "Raw TX loaded into Extract Signatures" });
+                      toast({ title: "Success", description: "Raw TX loaded & analyzing..." });
                     }}
                     className="w-full bg-green-600 hover:bg-green-700"
                   >
-                    Load into Extract Signatures →
+                    Analyze Raw TX →
                   </Button>
                 )}
 
@@ -227,7 +234,14 @@ export default function SignatureTools() {
                 <Button onClick={fetchTxHex} disabled={hexLoading} className="w-full">
                   {hexLoading ? "Fetching..." : "Fetch Hex"}
                 </Button>
-                {txHexResult && (
+                {parsedTxHex && (
+                  <div className="space-y-6 border-t pt-6">
+                    <h4 className="font-semibold text-lg">Transaction Analysis</h4>
+                    <TransactionInspector txHex={parsedTxHex} txid={parsedTxid || undefined} />
+                  </div>
+                )}
+
+                {txHexResult && !parsedTxHex && (
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <label className="text-sm font-medium">TX Hex:</label>
