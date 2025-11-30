@@ -1582,51 +1582,36 @@ class BitcoinService {
   }
 
   async fetchAddressDataComplete(address: string, limit: number = 10000): Promise<any> {
-    const maxRetries = 15;
-    let lastError: any;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`[Attempt ${attempt}/${maxRetries}] Fetching https://blockchain.info/rawaddr/${address}`);
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
-        
-        const response = await fetch(
-          `${this.BLOCKCHAIN_API}/rawaddr/${address}?limit=${Math.min(limit, 10000)}`,
-          { signal: controller.signal }
-        );
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        
-        if (!data.txs) {
-          data.txs = [];
-        }
-        
-        console.log(`✓ Successfully fetched ${data.txs?.length || 0} transactions for address ${address}`);
-        return data;
-      } catch (error) {
-        lastError = error;
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`✗ Attempt ${attempt} failed: ${errorMsg}`);
-        
-        if (attempt < maxRetries) {
-          // Exponential backoff with longer delays
-          const delayMs = Math.min(500 * Math.pow(2, attempt - 1), 30000);
-          console.log(`  ⏳ Waiting ${delayMs}ms before retry ${attempt + 1}...`);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
+    try {
+      console.log(`Fetching https://blockchain.info/rawaddr/${address}`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      const response = await fetch(
+        `${this.BLOCKCHAIN_API}/rawaddr/${address}?limit=${Math.min(limit, 10000)}`,
+        { signal: controller.signal }
+      );
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
+
+      const data = await response.json();
+      
+      if (!data.txs) {
+        data.txs = [];
+      }
+      
+      console.log(`✓ Successfully fetched ${data.txs?.length || 0} transactions for address ${address}`);
+      return data;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`✗ Failed: ${errorMsg}`);
+      throw error;
     }
-    
-    console.error(`❌ Failed after ${maxRetries} attempts`);
-    throw lastError || new Error('Failed to fetch address data after all retries');
   }
 
   async fetchAddressTransactions(address: string, networkType: string = 'mainnet', limit: number = 100): Promise<string[]> {
