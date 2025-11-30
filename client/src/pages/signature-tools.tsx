@@ -15,6 +15,7 @@ import { performVulnerabilityScan } from "@/lib/vulnerability-scanner";
 import { generateReport, downloadReport } from "@/lib/report-generator";
 import { parseRawTx, parseInputs, parseOutputs } from "@/lib/transaction-analyzer";
 import { CVELibraryChecker } from "@/components/cve-library-checker";
+import { TxInspectorPage } from "@/components/tx-inspector-page";
 
 export default function SignatureTools() {
   const { toast } = useToast();
@@ -128,8 +129,9 @@ export default function SignatureTools() {
         </div>
 
         <Tabs defaultValue="fetch-hex" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="fetch-hex">Fetch TX Hex</TabsTrigger>
+            <TabsTrigger value="inspect">TX Inspector</TabsTrigger>
             <TabsTrigger value="extract-sig">Extract Signatures</TabsTrigger>
             <TabsTrigger value="build-sign">Build & Sign</TabsTrigger>
             <TabsTrigger value="cve-42461">CVE-2024-42461</TabsTrigger>
@@ -329,6 +331,10 @@ export default function SignatureTools() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="inspect" className="space-y-4">
+            <TxInspectorPage />
           </TabsContent>
 
           <TabsContent value="extract-sig" className="space-y-4">
