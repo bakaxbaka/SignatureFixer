@@ -1,0 +1,220 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<HTML LANG="EN-US">
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">
+<STYLE TYPE="text/css">
+<!--
+img { margin-bottom: -4px }
+.r { font-family: "Arial Narrow";
+     font-size: x-small;
+   }
+.i { font-family: "Arial Narrow";
+     font-size: x-small;
+     color: gray;
+   }
+-->
+</STYLE>
+
+<TITLE>ax-oadist - Quantum Logic Explorer</TITLE>
+<LINK REL="shortcut icon" HREF="favicon.ico" TYPE="image/x-icon">
+</HEAD>
+<BODY BGCOLOR="#FFFFFF">
+<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 WIDTH="100%">
+  <TR>
+    <TD ALIGN=LEFT VALIGN=TOP WIDTH="25%"><A HREF=
+    "mmql.html"><IMG SRC="l46-7icon.gif"
+      BORDER=0
+      ALT="QLE Home"
+      TITLE="QLE Home"
+      HEIGHT=32 WIDTH=32 ALIGN=TOP STYLE="margin-bottom:0px"></A>
+    </TD>
+    <TD ALIGN=CENTER COLSPAN=2 VALIGN=TOP><FONT SIZE="+3" COLOR="#006633"><B>
+Quantum Logic Explorer
+      </B></FONT></TD>
+    <TD ALIGN=RIGHT VALIGN=TOP WIDTH="25%">
+      <FONT SIZE=-1 FACE=sans-serif>
+      <A HREF="oa3-1to5.html">
+      &lt; Previous</A>&nbsp;&nbsp;
+      <A HREF="d3oa.html">Next &gt;</A>
+      </FONT><FONT FACE=sans-serif SIZE=-2>
+      <BR><A HREF="mmtheorems10.html#ax-oadist">Nearby theorems</A>
+      </FONT>
+    </TD>
+  </TR>
+  <TR>
+    <TD COLSPAN=2 ALIGN=LEFT VALIGN=TOP><FONT SIZE=-2
+      FACE=sans-serif>
+      <A HREF="http://us.metamath.org/mm.html">Mirrors</A>&nbsp; &gt;
+      &nbsp;<A HREF="http://us.metamath.org/index.html">Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmql.html">QLE Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmtheorems.html">Th. List</A>&nbsp; &gt;
+      &nbsp;ax-oadist
+      </FONT>
+    </TD>
+    <TD COLSPAN=2 ALIGN=RIGHT VALIGN=TOP>
+      <FONT SIZE=-2 FACE=sans-serif>
+
+      <A HREF="http://us.metamath.org/qlegif/ax-oadist.html">GIF version</A>
+      </FONT>
+    </TD>
+  </TR>
+</TABLE>
+<HR NOSHADE SIZE=1>
+<CENTER><B><FONT SIZE="+1">Axiom <FONT
+COLOR="#006633">ax-oadist</FONT></FONT></B>&nbsp;<SPAN CLASS=r
+STYLE="color:#B73CFF">994</SPAN></CENTER>
+<CENTER><TABLE><TR><TD ALIGN=LEFT><B>Description: </B>OA Distributive law.  In
+this section, we postulate this temporary axiom
+       (intended not to be used outside of this section) for the OA
+       distributive law, and derive from it the 6-OA, in Theorem <A
+HREF="d6oa.html">d6oa</A>&nbsp;<SPAN CLASS=r STYLE="color:#B83AFF">997</SPAN>. 
+This
+       together with the derivation of the distributive law in theorem
+       <A HREF="4oadist.html">4oadist</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#CB21F9">1044</SPAN> shows that the OA distributive law is
+equivalent to the 6-OA.
+       (Contributed by NM, 30-Dec-1998.)</TD></TR></TABLE></CENTER>
+
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Hypotheses">
+<CAPTION><B>Hypotheses</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>oad.1</TD><TD>
+<SPAN ><I><FONT COLOR="#CC4400">e</FONT></I> = (((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup;
+((<I><FONT COLOR="#CC4400">a</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">d</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>1 </SUB><I><FONT COLOR="#CC4400">d</FONT></I>))) &cap; ((<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup;
+((<I><FONT COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">d</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>1 </SUB><I><FONT COLOR="#CC4400">d</FONT></I>))))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>oad.2</TD><TD>
+<SPAN ><I><FONT COLOR="#CC4400">f</FONT></I> = (((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cup;
+((<I><FONT COLOR="#CC4400">a</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">d</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&rarr;<SUB>1 </SUB><I><FONT COLOR="#CC4400">d</FONT></I>))) &cup; <I><FONT
+COLOR="#CC4400">e</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>oad.3</TD><TD>
+<SPAN ><I><FONT COLOR="#CC4400">h</FONT></I> &le; (<I><FONT
+COLOR="#CC4400">a</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">d</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>oad.4</TD><TD>
+<SPAN ><I><FONT COLOR="#CC4400">j</FONT></I> &le; <I><FONT
+COLOR="#CC4400">f</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>oad.5</TD><TD>
+<SPAN ><I><FONT COLOR="#CC4400">k</FONT></I> &le; <I><FONT
+COLOR="#CC4400">f</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>oad.6</TD><TD>
+<SPAN >(<I><FONT COLOR="#CC4400">h</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">d</FONT></I>)) &le; <I><FONT
+COLOR="#CC4400">k</FONT></I></SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Assertion">
+<CAPTION><B>Assertion</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD><FONT COLOR="#006633"><B>ax-oadist</B></FONT></TD><TD>
+<SPAN >(<I><FONT COLOR="#CC4400">h</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">j</FONT></I> &cup; <I><FONT COLOR="#CC4400">k</FONT></I>)) =
+((<I><FONT COLOR="#CC4400">h</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">j</FONT></I>) &cup; (<I><FONT COLOR="#CC4400">h</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">k</FONT></I>))</SPAN></TD></TR>
+</TABLE></CENTER>
+
+
+<HR NOSHADE SIZE=1>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Detailed syntax breakdown of axiom">
+<CAPTION><B>Detailed syntax breakdown of Axiom <FONT
+   COLOR="#006633">ax-oadist</FONT></B></CAPTION>
+<TR><TH>Step</TH><TH>Hyp</TH><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>1</TD><TD>&nbsp;</TD><TD>wvh</TD><TD><A NAME="1"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">h</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>2</TD><TD>&nbsp;</TD><TD>wvj</TD><TD><A NAME="2"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">j</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>3</TD><TD>&nbsp;</TD><TD>wvk</TD><TD><A NAME="3"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">k</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>4</TD><TD><A HREF="#2">2</A>, <A HREF="#3">3</A></TD><TD><A
+HREF="wo.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a v b ) ` .">wo</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0100">6</SPAN></TD><TD><A NAME="4"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">j</FONT></I> &cup; <I><FONT
+COLOR="#CC4400">k</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>5</TD><TD><A HREF="#1">1</A>, <A HREF="#4">4</A></TD><TD><A
+HREF="wa.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ^ b ) ` .">wa</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0100">7</SPAN></TD><TD><A NAME="5"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">h</FONT></I> &cap; (<I><FONT COLOR="#CC4400">j</FONT></I> &cup;
+<I><FONT COLOR="#CC4400">k</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>6</TD><TD><A HREF="#1">1</A>, <A HREF="#2">2</A></TD><TD><A
+HREF="wa.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ^ b ) ` .">wa</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0100">7</SPAN></TD><TD><A NAME="6"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">h</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">j</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>7</TD><TD><A HREF="#1">1</A>, <A HREF="#3">3</A></TD><TD><A
+HREF="wa.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ^ b ) ` .">wa</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0100">7</SPAN></TD><TD><A NAME="7"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">h</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">k</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>8</TD><TD><A HREF="#6">6</A>, <A HREF="#7">7</A></TD><TD><A
+HREF="wo.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a v b ) ` .">wo</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0100">6</SPAN></TD><TD><A NAME="8"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>((<I><FONT
+COLOR="#CC4400">h</FONT></I> &cap; <I><FONT COLOR="#CC4400">j</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">h</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">k</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>9</TD><TD><A HREF="#5">5</A>, <A HREF="#8">8</A></TD><TD><A
+HREF="wb.html"
+TITLE="If ` a ` and ` b ` are terms, ` a = b ` is a wff.">wb</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FB0000">1</SPAN></TD><TD><A NAME="9"></A>
+<SPAN CLASS=i>1</SPAN>
+<SPAN ><FONT COLOR="#00CC00">wff&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">h</FONT></I> &cap; (<I><FONT COLOR="#CC4400">j</FONT></I> &cup;
+<I><FONT COLOR="#CC4400">k</FONT></I>)) = ((<I><FONT
+COLOR="#CC4400">h</FONT></I> &cap; <I><FONT COLOR="#CC4400">j</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">h</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">k</FONT></I>))</SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE CELLSPACING=5><TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Colors of
+variables:</B>  <FONT COLOR="#CC4400">term</FONT></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This axiom is referenced by:</B> &nbsp;<A HREF="d3oa.html">d3oa</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#B73BFF">995</SPAN> &nbsp;<A HREF="d4oa.html">d4oa</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#B83BFF">996</SPAN></FONT></TD></TR></TABLE></CENTER>
+<TABLE BORDER=0 WIDTH="100%">
+<TR><TD WIDTH="25%">&nbsp;</TD>
+<TD ALIGN=CENTER VALIGN=BOTTOM>
+<FONT SIZE=-2 FACE=sans-serif>
+Copyright terms:
+<A HREF="http://us.metamath.org/copyright.html#pd">Public domain</A>
+</FONT></TD><TD ALIGN=RIGHT VALIGN=BOTTOM WIDTH="25%">
+<FONT SIZE=-2 FACE=sans-serif>
+<A HREF="http://validator.w3.org/check?uri=referer">
+W3C validator</A>
+</FONT></TD></TR></TABLE>
+</BODY></HTML>

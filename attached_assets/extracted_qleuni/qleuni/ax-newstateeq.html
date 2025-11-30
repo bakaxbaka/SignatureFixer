@@ -1,0 +1,230 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<HTML LANG="EN-US">
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">
+<STYLE TYPE="text/css">
+<!--
+img { margin-bottom: -4px }
+.r { font-family: "Arial Narrow";
+     font-size: x-small;
+   }
+.i { font-family: "Arial Narrow";
+     font-size: x-small;
+     color: gray;
+   }
+-->
+</STYLE>
+
+<TITLE>ax-newstateeq - Quantum Logic Explorer</TITLE>
+<LINK REL="shortcut icon" HREF="favicon.ico" TYPE="image/x-icon">
+</HEAD>
+<BODY BGCOLOR="#FFFFFF">
+<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 WIDTH="100%">
+  <TR>
+    <TD ALIGN=LEFT VALIGN=TOP WIDTH="25%"><A HREF=
+    "mmql.html"><IMG SRC="l46-7icon.gif"
+      BORDER=0
+      ALT="QLE Home"
+      TITLE="QLE Home"
+      HEIGHT=32 WIDTH=32 ALIGN=TOP STYLE="margin-bottom:0px"></A>
+    </TD>
+    <TD ALIGN=CENTER COLSPAN=2 VALIGN=TOP><FONT SIZE="+3" COLOR="#006633"><B>
+Quantum Logic Explorer
+      </B></FONT></TD>
+    <TD ALIGN=RIGHT VALIGN=TOP WIDTH="25%">
+      <FONT SIZE=-1 FACE=sans-serif>
+      <A HREF="4oadist.html">
+      &lt; Previous</A>&nbsp;&nbsp;
+      <A HREF="lem3.3.2.html">Next &gt;</A>
+      </FONT><FONT FACE=sans-serif SIZE=-2>
+      <BR><A HREF="mmtheorems11.html#ax-newstateeq">Nearby theorems</A>
+      </FONT>
+    </TD>
+  </TR>
+  <TR>
+    <TD COLSPAN=2 ALIGN=LEFT VALIGN=TOP><FONT SIZE=-2
+      FACE=sans-serif>
+      <A HREF="http://us.metamath.org/mm.html">Mirrors</A>&nbsp; &gt;
+      &nbsp;<A HREF="http://us.metamath.org/index.html">Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmql.html">QLE Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmtheorems.html">Th. List</A>&nbsp; &gt;
+      &nbsp;ax-newstateeq
+      </FONT>
+    </TD>
+    <TD COLSPAN=2 ALIGN=RIGHT VALIGN=TOP>
+      <FONT SIZE=-2 FACE=sans-serif>
+
+      <A HREF="http://us.metamath.org/qlegif/ax-newstateeq.html">GIF version</A>
+      </FONT>
+    </TD>
+  </TR>
+</TABLE>
+<HR NOSHADE SIZE=1>
+<CENTER><B><FONT SIZE="+1">Axiom <FONT
+COLOR="#006633">ax-newstateeq</FONT></FONT></B>&nbsp;<SPAN CLASS=r
+STYLE="color:#CC20F8">1045</SPAN></CENTER>
+<CENTER><TABLE><TR><TD ALIGN=LEFT><B>Description: </B>This is the simplest
+known example of an equation implied by the set of
+     Mayet--Godowski equations that is independent from all Godowski equations.
+     It was discovered by Norman Megill and Mladen Pavicic between 1997 and
+     August 2003.  This is Equation (54) in
+<P STYLE="margin-bottom:0em">
+     Mladen Pavicic, Norman D. Megill, <I>Quantum Logic and Quantum
+Computation</I>,
+     in <I>Handbook of Quantum Logic and Quantum Structures</I>, Volume
+<I>Quantum
+     Structures</I>, Elsevier, Amsterdam, 2007, pp. 751--787.
+     <A
+HREF="https://arxiv.org/abs/0812.3072">https://arxiv.org/abs/0812.3072</A>
+<P STYLE="margin-bottom:0em">
+     and Equation (15) in
+<P STYLE="margin-bottom:0em">
+     Mladen Pavicic, Brendan D. McKay, Norman D. Megill, Kresimir Fresl,
+<I>Graph
+     Approach to Quantum Systems</I>, Journal of Mathematical Physics, Volume
+51,
+     Issue 10, October 2010. <A
+HREF="https://arxiv.org/abs/1004.0776">https://arxiv.org/abs/1004.0776</A>
+<P STYLE="margin-bottom:0em">
+     (Contributed by NM, 1-Jan-1998.)</TD></TR></TABLE></CENTER>
+
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Assertion">
+<CAPTION><B>Assertion</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD><FONT COLOR="#006633"><B>ax-newstateeq</B></FONT></TD><TD>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>) &rarr;<SUB>1 </SUB>(<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) &cap; ((<I><FONT COLOR="#CC4400">a</FONT></I>
+&rarr;<SUB>1 </SUB><I><FONT COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">a</FONT></I>))) &le; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>1 </SUB><I><FONT COLOR="#CC4400">a</FONT></I>)</SPAN></TD></TR>
+</TABLE></CENTER>
+
+
+<HR NOSHADE SIZE=1>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Detailed syntax breakdown of axiom">
+<CAPTION><B>Detailed syntax breakdown of Axiom <FONT
+   COLOR="#006633">ax-newstateeq</FONT></B></CAPTION>
+<TR><TH>Step</TH><TH>Hyp</TH><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>1</TD><TD>&nbsp;</TD><TD>wva</TD><TD><A NAME="1"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">a</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>2</TD><TD>&nbsp;</TD><TD>wvb</TD><TD><A NAME="2"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>3</TD><TD><A HREF="#1">1</A>, <A HREF="#2">2</A></TD><TD><A
+HREF="wi1.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ->1 b ) ` .">wi1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F90300">12</SPAN></TD><TD><A NAME="3"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">a</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>4</TD><TD>&nbsp;</TD><TD>wvc</TD><TD><A NAME="4"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">c</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>5</TD><TD><A HREF="#4">4</A>, <A HREF="#2">2</A></TD><TD><A
+HREF="wi1.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ->1 b ) ` .">wi1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F90300">12</SPAN></TD><TD><A NAME="5"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>6</TD><TD><A HREF="#3">3</A>, <A HREF="#5">5</A></TD><TD><A
+HREF="wi1.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ->1 b ) ` .">wi1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F90300">12</SPAN></TD><TD><A NAME="6"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>((<I><FONT
+COLOR="#CC4400">a</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>) &rarr;<SUB>1 </SUB>(<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>7</TD><TD><A HREF="#1">1</A>, <A HREF="#4">4</A></TD><TD><A
+HREF="wi1.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ->1 b ) ` .">wi1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F90300">12</SPAN></TD><TD><A NAME="7"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">a</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>8</TD><TD><A HREF="#2">2</A>, <A HREF="#1">1</A></TD><TD><A
+HREF="wi1.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ->1 b ) ` .">wi1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F90300">12</SPAN></TD><TD><A NAME="8"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">a</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>9</TD><TD><A HREF="#7">7</A>, <A HREF="#8">8</A></TD><TD><A
+HREF="wa.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ^ b ) ` .">wa</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0100">7</SPAN></TD><TD><A NAME="9"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>((<I><FONT
+COLOR="#CC4400">a</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&rarr;<SUB>1 </SUB><I><FONT COLOR="#CC4400">a</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>10</TD><TD><A HREF="#6">6</A>, <A HREF="#9">9</A></TD><TD><A
+HREF="wa.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ^ b ) ` .">wa</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0100">7</SPAN></TD><TD><A NAME="10"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(((<I><FONT
+COLOR="#CC4400">a</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>) &rarr;<SUB>1 </SUB>(<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) &cap; ((<I><FONT COLOR="#CC4400">a</FONT></I>
+&rarr;<SUB>1 </SUB><I><FONT COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">a</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>11</TD><TD><A HREF="#4">4</A>, <A HREF="#1">1</A></TD><TD><A
+HREF="wi1.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a ->1 b ) ` .">wi1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F90300">12</SPAN></TD><TD><A NAME="11"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">a</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>12</TD><TD><A HREF="#10">10</A>, <A
+HREF="#11">11</A></TD><TD><A HREF="wle.html"
+TITLE="If ` a ` and ` b ` are terms, ` a =< b ` is a wff.">wle</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0000">2</SPAN></TD><TD><A NAME="12"></A>
+<SPAN CLASS=i>1</SPAN>
+<SPAN ><FONT COLOR="#00CC00">wff&nbsp; </FONT>(((<I><FONT
+COLOR="#CC4400">a</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>) &rarr;<SUB>1 </SUB>(<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) &cap; ((<I><FONT COLOR="#CC4400">a</FONT></I>
+&rarr;<SUB>1 </SUB><I><FONT COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">a</FONT></I>))) &le; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>1 </SUB><I><FONT COLOR="#CC4400">a</FONT></I>)</SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE CELLSPACING=5><TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Colors of
+variables:</B>  <FONT COLOR="#CC4400">term</FONT></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This axiom is referenced by:</B> (None)</FONT></TD></TR></TABLE></CENTER>
+<TABLE BORDER=0 WIDTH="100%">
+<TR><TD WIDTH="25%">&nbsp;</TD>
+<TD ALIGN=CENTER VALIGN=BOTTOM>
+<FONT SIZE=-2 FACE=sans-serif>
+Copyright terms:
+<A HREF="http://us.metamath.org/copyright.html#pd">Public domain</A>
+</FONT></TD><TD ALIGN=RIGHT VALIGN=BOTTOM WIDTH="25%">
+<FONT SIZE=-2 FACE=sans-serif>
+<A HREF="http://validator.w3.org/check?uri=referer">
+W3C validator</A>
+</FONT></TD></TR></TABLE>
+</BODY></HTML>

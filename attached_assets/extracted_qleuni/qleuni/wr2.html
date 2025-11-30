@@ -1,0 +1,377 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<HTML LANG="EN-US">
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">
+<STYLE TYPE="text/css">
+<!--
+img { margin-bottom: -4px }
+.r { font-family: "Arial Narrow";
+     font-size: x-small;
+   }
+.i { font-family: "Arial Narrow";
+     font-size: x-small;
+     color: gray;
+   }
+-->
+</STYLE>
+
+<TITLE>wr2 - Quantum Logic Explorer</TITLE>
+<LINK REL="shortcut icon" HREF="favicon.ico" TYPE="image/x-icon">
+</HEAD>
+<BODY BGCOLOR="#FFFFFF">
+<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 WIDTH="100%">
+  <TR>
+    <TD ALIGN=LEFT VALIGN=TOP WIDTH="25%"><A HREF=
+    "mmql.html"><IMG SRC="l46-7icon.gif"
+      BORDER=0
+      ALT="QLE Home"
+      TITLE="QLE Home"
+      HEIGHT=32 WIDTH=32 ALIGN=TOP STYLE="margin-bottom:0px"></A>
+    </TD>
+    <TD ALIGN=CENTER COLSPAN=2 VALIGN=TOP><FONT SIZE="+3" COLOR="#006633"><B>
+Quantum Logic Explorer
+      </B></FONT></TD>
+    <TD ALIGN=RIGHT VALIGN=TOP WIDTH="25%">
+      <FONT SIZE=-1 FACE=sans-serif>
+      <A HREF="wlan.html">
+      &lt; Previous</A>&nbsp;&nbsp;
+      <A HREF="w2or.html">Next &gt;</A>
+      </FONT><FONT FACE=sans-serif SIZE=-2>
+      <BR><A HREF="mmtheorems4.html#wr2">Nearby theorems</A>
+      </FONT>
+    </TD>
+  </TR>
+  <TR>
+    <TD COLSPAN=2 ALIGN=LEFT VALIGN=TOP><FONT SIZE=-2
+      FACE=sans-serif>
+      <A HREF="http://us.metamath.org/mm.html">Mirrors</A>&nbsp; &gt;
+      &nbsp;<A HREF="http://us.metamath.org/index.html">Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmql.html">QLE Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmtheorems.html">Th. List</A>&nbsp; &gt;
+      &nbsp;wr2
+      </FONT>
+    </TD>
+    <TD COLSPAN=2 ALIGN=RIGHT VALIGN=TOP>
+      <FONT SIZE=-2 FACE=sans-serif>
+
+      <A HREF="http://us.metamath.org/qlegif/wr2.html">GIF version</A>
+      </FONT>
+    </TD>
+  </TR>
+</TABLE>
+<HR NOSHADE SIZE=1>
+<CENTER><B><FONT SIZE="+1">Theorem <FONT
+COLOR="#006633">wr2</FONT></FONT></B>&nbsp;<SPAN CLASS=r
+STYLE="color:#618A00">371</SPAN></CENTER>
+<CENTER><TABLE><TR><TD ALIGN=LEFT><B>Description: </B>Inference rule of AUQL.
+(Contributed by NM, 24-Sep-1997.)</TD></TR></TABLE></CENTER>
+
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Hypotheses">
+<CAPTION><B>Hypotheses</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>wr2.1</TD><TD>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">b</FONT></I>) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>wr2.2</TD><TD>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) = 1</SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Assertion">
+<CAPTION><B>Assertion</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD><FONT COLOR="#006633"><B>wr2</B></FONT></TD><TD>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) = 1</SPAN></TD></TR>
+</TABLE></CENTER>
+
+
+<HR NOSHADE SIZE=1>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Proof of theorem">
+<CAPTION><B>Proof of Theorem <FONT
+   COLOR="#006633">wr2</FONT></B></CAPTION>
+<TR><TH>Step</TH><TH>Hyp</TH><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>1</TD><TD>&nbsp;</TD><TD>wr2.2</TD><TD><A NAME="1"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>2</TD><TD>&nbsp;</TD><TD><A HREF="dfb.html"
+TITLE="Biconditional expressed with others. (Contributed by NM, 10-Aug-1997.)">dfb</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EB2F00">94</SPAN></TD><TD><A NAME="2"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) = ((<I><FONT COLOR="#CC4400">b</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>3</TD><TD><A HREF="#2">2</A></TD><TD><A HREF="rbi.html"
+TITLE="Introduce biconditional to the right. (Contributed by NM, 10-Aug-1997.)">rbi</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EA3200">98</SPAN></TD><TD><A NAME="3"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">b</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &equiv; ((<I><FONT COLOR="#CC4400">a</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))) = (((<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )) &equiv; ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>4</TD><TD>&nbsp;</TD><TD>wr2.1</TD><TD><A NAME="4"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">b</FONT></I>) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>5</TD><TD><A HREF="#4">4</A></TD><TD><A HREF="wr1.html"
+TITLE="Weak R1. (Contributed by NM, 2-Sep-1997.)">wr1</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#BE6200">197</SPAN></TD><TD><A NAME="5"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">a</FONT></I>) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>6</TD><TD><A HREF="#5">5</A></TD><TD><A HREF="wran.html"
+TITLE="Weak orthomodular law. (Contributed by NM, 24-Sep-1997.)">wran</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#628A00">369</SPAN></TD><TD><A NAME="6"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &equiv; (<I><FONT COLOR="#CC4400">a</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>)) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>7</TD><TD><A HREF="#6">6</A></TD><TD><A HREF="wr5-2v.html"
+TITLE="WOML derived from 2-variable axioms. (Contributed by NM, 11-Nov-1998.)">wr5-2v</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#648900">366</SPAN></TD><TD><A NAME="7"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )) &equiv; ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>8</TD><TD><A HREF="#3">3</A>, <A HREF="#7">7</A></TD><TD><A
+HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="8"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">b</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &equiv; ((<I><FONT COLOR="#CC4400">a</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>9</TD><TD><A HREF="#1">1</A>, <A HREF="#8">8</A></TD><TD><A
+HREF="wwbmp.html"
+TITLE="Weak weak equivalential detachment (WBMP). (Contributed by NM, 2-Sep-1997.)">wwbmp</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#B96600">205</SPAN></TD><TD><A NAME="9"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>10</TD><TD>&nbsp;</TD><TD><A HREF="dfb.html"
+TITLE="Biconditional expressed with others. (Contributed by NM, 10-Aug-1997.)">dfb</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EB2F00">94</SPAN></TD><TD><A NAME="10"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) = ((<I><FONT COLOR="#CC4400">a</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>11</TD><TD><A HREF="#10">10</A></TD><TD><A HREF="rbi.html"
+TITLE="Introduce biconditional to the right. (Contributed by NM, 10-Aug-1997.)">rbi</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EA3200">98</SPAN></TD><TD><A NAME="11"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &equiv; ((<I><FONT COLOR="#CC4400">a</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))) = (((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )) &equiv; ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>12</TD><TD><A HREF="#4">4</A></TD><TD><A HREF="wr4.html"
+TITLE="Weak R4. (Contributed by NM, 2-Sep-1997.)">wr4</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#BD6300">199</SPAN></TD><TD><A NAME="12"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &equiv;
+<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>13</TD><TD><A HREF="#12">12</A></TD><TD><A HREF="wran.html"
+TITLE="Weak orthomodular law. (Contributed by NM, 24-Sep-1997.)">wran</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#628A00">369</SPAN></TD><TD><A NAME="13"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ) &equiv; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>14</TD><TD><A HREF="#13">13</A></TD><TD><A HREF="wlor.html"
+TITLE="Weak orthomodular law. (Contributed by NM, 24-Sep-1997.)">wlor</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#638A00">368</SPAN></TD><TD><A NAME="14"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )) &equiv; ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>15</TD><TD><A HREF="#11">11</A>, <A
+HREF="#14">14</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="15"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &equiv; ((<I><FONT COLOR="#CC4400">a</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))) = 1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>16</TD><TD><A HREF="#9">9</A>, <A
+HREF="#15">15</A></TD><TD><A HREF="wwbmpr.html"
+TITLE="Weak weak equivalential detachment (WBMP). (Contributed by NM, 24-Sep-1997.)">wwbmpr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#B96600">206</SPAN></TD><TD><A NAME="16"></A>
+<SPAN CLASS=i>1</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) = 1</SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE CELLSPACING=5><TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Colors of
+variables:</B>  <FONT COLOR="#CC4400">term</FONT></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Syntax hints:</B>  &nbsp;<SPAN > =
+</SPAN><A HREF="wb.html">wb</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FB0000">1</SPAN> &nbsp;<SPAN ><SUP>&#8869;</SUP> </SPAN><A
+HREF="wn.html">wn</A>&nbsp;<SPAN CLASS=r STYLE="color:#FA0000">4</SPAN>
+&nbsp;<SPAN > &equiv; </SPAN><A HREF="tb.html">tb</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FA0100">5</SPAN> &nbsp;<SPAN > &cup; </SPAN><A
+HREF="wo.html">wo</A>&nbsp;<SPAN CLASS=r STYLE="color:#FA0100">6</SPAN>
+&nbsp;<SPAN > &cap; </SPAN><A HREF="wa.html">wa</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FA0100">7</SPAN> &nbsp;<SPAN >1</SPAN><A
+HREF="wt.html">wt</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FA0100">8</SPAN></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This theorem was proved from axioms:</B>
+&nbsp;<A HREF="ax-a1.html">ax-a1</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F80800">30</SPAN> &nbsp;<A HREF="ax-a2.html">ax-a2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F80800">31</SPAN> &nbsp;<A
+HREF="ax-a3.html">ax-a3</A>&nbsp;<SPAN CLASS=r STYLE="color:#F80800">32</SPAN>
+&nbsp;<A HREF="ax-a4.html">ax-a4</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F80800">33</SPAN> &nbsp;<A HREF="ax-a5.html">ax-a5</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">34</SPAN> &nbsp;<A
+HREF="ax-r1.html">ax-r1</A>&nbsp;<SPAN CLASS=r STYLE="color:#F70900">35</SPAN>
+&nbsp;<A HREF="ax-r2.html">ax-r2</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F70900">36</SPAN> &nbsp;<A HREF="ax-r4.html">ax-r4</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">37</SPAN> &nbsp;<A
+HREF="ax-r5.html">ax-r5</A>&nbsp;<SPAN CLASS=r STYLE="color:#F70A00">38</SPAN>
+&nbsp;<A HREF="ax-wom.html">ax-wom</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#678900">361</SPAN></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This theorem depends on definitions:</B>
+&nbsp;<A HREF="df-b.html">df-b</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F70A00">39</SPAN> &nbsp;<A HREF="df-a.html">df-a</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70A00">40</SPAN> &nbsp;<A
+HREF="df-t.html">df-t</A>&nbsp;<SPAN CLASS=r STYLE="color:#F70B00">41</SPAN>
+&nbsp;<A HREF="df-f.html">df-f</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F70B00">42</SPAN> &nbsp;<A HREF="df-i1.html">df-i1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70B00">44</SPAN> &nbsp;<A
+HREF="df-i2.html">df-i2</A>&nbsp;<SPAN CLASS=r STYLE="color:#F60C00">45</SPAN>
+&nbsp;<A HREF="df-le1.html">df-le1</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#DE4600">130</SPAN> &nbsp;<A
+HREF="df-le2.html">df-le2</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#DE4600">131</SPAN></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This theorem is referenced by:</B> &nbsp;<A
+HREF="w2or.html">w2or</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#618A00">372</SPAN> &nbsp;<A
+HREF="w2an.html">w2an</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#608A00">373</SPAN> &nbsp;<A
+HREF="w3tr1.html">w3tr1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#608A00">374</SPAN> &nbsp;<A
+HREF="wleoa.html">wleoa</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5E8B00">376</SPAN> &nbsp;<A
+HREF="wleao.html">wleao</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5E8B00">377</SPAN> &nbsp;<A
+HREF="wom5.html">wom5</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5C8B00">381</SPAN> &nbsp;<A
+HREF="wcomlem.html">wcomlem</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5B8B00">382</SPAN> &nbsp;<A
+HREF="wdf-c1.html">wdf-c1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5B8B00">383</SPAN> &nbsp;<A
+HREF="wlea.html">wlea</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#588C00">388</SPAN> &nbsp;<A
+HREF="wlel.html">wlel</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#568C00">392</SPAN> &nbsp;<A
+HREF="wleror.html">wleror</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#558D00">393</SPAN> &nbsp;<A
+HREF="wleran.html">wleran</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#548D00">394</SPAN> &nbsp;<A
+HREF="wletr.html">wletr</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#538D00">396</SPAN> &nbsp;<A
+HREF="wbltr.html">wbltr</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#538D00">397</SPAN> &nbsp;<A
+HREF="wlbtr.html">wlbtr</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#528D00">398</SPAN> &nbsp;<A
+HREF="wbile.html">wbile</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#508D00">401</SPAN> &nbsp;<A
+HREF="wlebi.html">wlebi</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#508D00">402</SPAN> &nbsp;<A
+HREF="wlecom.html">wlecom</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#4B8E00">409</SPAN> &nbsp;<A
+HREF="wcbtr.html">wcbtr</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#4A8E00">411</SPAN> &nbsp;<A
+HREF="wcomcom2.html">wcomcom2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#488E00">415</SPAN> &nbsp;<A
+HREF="wcomd.html">wcomd</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#468E00">418</SPAN> &nbsp;<A
+HREF="wcom3ii.html">wcom3ii</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#458E00">419</SPAN> &nbsp;<A
+HREF="wcomdr.html">wcomdr</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#448E00">421</SPAN> &nbsp;<A
+HREF="wcom3i.html">wcom3i</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#448F00">422</SPAN> &nbsp;<A
+HREF="wfh1.html">wfh1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#438F00">423</SPAN> &nbsp;<A
+HREF="wfh2.html">wfh2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#428F00">424</SPAN> &nbsp;<A
+HREF="wfh3.html">wfh3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#428F00">425</SPAN> &nbsp;<A
+HREF="wfh4.html">wfh4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#418F00">426</SPAN> &nbsp;<A
+HREF="wcom2or.html">wcom2or</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#418F00">427</SPAN> &nbsp;<A
+HREF="wnbdi.html">wnbdi</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3F8F00">429</SPAN> &nbsp;<A
+HREF="ska2.html">ska2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3E8F00">432</SPAN> &nbsp;<A
+HREF="woml6.html">woml6</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3B9000">436</SPAN> &nbsp;<A
+HREF="woml7.html">woml7</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3B9000">437</SPAN> &nbsp;<A
+HREF="wddi2.html">wddi2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D808E4">1108</SPAN> &nbsp;<A
+HREF="wddi4.html">wddi4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D907E4">1110</SPAN> &nbsp;<A
+HREF="wdid0id5.html">wdid0id5</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D907E4">1111</SPAN> &nbsp;<A
+HREF="wdid0id1.html">wdid0id1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D907E3">1112</SPAN> &nbsp;<A
+HREF="wdid0id2.html">wdid0id2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D906E3">1113</SPAN> &nbsp;<A
+HREF="wdid0id3.html">wdid0id3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D906E3">1114</SPAN> &nbsp;<A
+HREF="wdid0id4.html">wdid0id4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#DA05E2">1115</SPAN></FONT></TD></TR>
+</TABLE></CENTER>
+<TABLE BORDER=0 WIDTH="100%">
+<TR><TD WIDTH="25%">&nbsp;</TD>
+<TD ALIGN=CENTER VALIGN=BOTTOM>
+<FONT SIZE=-2 FACE=sans-serif>
+Copyright terms:
+<A HREF="http://us.metamath.org/copyright.html#pd">Public domain</A>
+</FONT></TD><TD ALIGN=RIGHT VALIGN=BOTTOM WIDTH="25%">
+<FONT SIZE=-2 FACE=sans-serif>
+<A HREF="http://validator.w3.org/check?uri=referer">
+W3C validator</A>
+</FONT></TD></TR></TABLE>
+</BODY></HTML>

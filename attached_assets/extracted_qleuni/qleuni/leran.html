@@ -1,0 +1,272 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<HTML LANG="EN-US">
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">
+<STYLE TYPE="text/css">
+<!--
+img { margin-bottom: -4px }
+.r { font-family: "Arial Narrow";
+     font-size: x-small;
+   }
+.i { font-family: "Arial Narrow";
+     font-size: x-small;
+     color: gray;
+   }
+-->
+</STYLE>
+
+<TITLE>leran - Quantum Logic Explorer</TITLE>
+<LINK REL="shortcut icon" HREF="favicon.ico" TYPE="image/x-icon">
+</HEAD>
+<BODY BGCOLOR="#FFFFFF">
+<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 WIDTH="100%">
+  <TR>
+    <TD ALIGN=LEFT VALIGN=TOP WIDTH="25%"><A HREF=
+    "mmql.html"><IMG SRC="l46-7icon.gif"
+      BORDER=0
+      ALT="QLE Home"
+      TITLE="QLE Home"
+      HEIGHT=32 WIDTH=32 ALIGN=TOP STYLE="margin-bottom:0px"></A>
+    </TD>
+    <TD ALIGN=CENTER COLSPAN=2 VALIGN=TOP><FONT SIZE="+3" COLOR="#006633"><B>
+Quantum Logic Explorer
+      </B></FONT></TD>
+    <TD ALIGN=RIGHT VALIGN=TOP WIDTH="25%">
+      <FONT SIZE=-1 FACE=sans-serif>
+      <A HREF="leror.html">
+      &lt; Previous</A>&nbsp;&nbsp;
+      <A HREF="lecon.html">Next &gt;</A>
+      </FONT><FONT FACE=sans-serif SIZE=-2>
+      <BR><A HREF="mmtheorems2.html#leran">Nearby theorems</A>
+      </FONT>
+    </TD>
+  </TR>
+  <TR>
+    <TD COLSPAN=2 ALIGN=LEFT VALIGN=TOP><FONT SIZE=-2
+      FACE=sans-serif>
+      <A HREF="http://us.metamath.org/mm.html">Mirrors</A>&nbsp; &gt;
+      &nbsp;<A HREF="http://us.metamath.org/index.html">Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmql.html">QLE Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmtheorems.html">Th. List</A>&nbsp; &gt;
+      &nbsp;leran
+      </FONT>
+    </TD>
+    <TD COLSPAN=2 ALIGN=RIGHT VALIGN=TOP>
+      <FONT SIZE=-2 FACE=sans-serif>
+
+      <A HREF="http://us.metamath.org/qlegif/leran.html">GIF version</A>
+      </FONT>
+    </TD>
+  </TR>
+</TABLE>
+<HR NOSHADE SIZE=1>
+<CENTER><B><FONT SIZE="+1">Theorem <FONT
+COLOR="#006633">leran</FONT></FONT></B>&nbsp;<SPAN CLASS=r
+STYLE="color:#D44F00">153</SPAN></CENTER>
+<CENTER><TABLE><TR><TD ALIGN=LEFT><B>Description: </B>Add conjunct to right of
+both sides.  (Contributed by NM,
+       27-Aug-1997.)</TD></TR></TABLE></CENTER>
+
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Hypothesis">
+<CAPTION><B>Hypothesis</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>le.1</TD><TD>
+<SPAN ><I><FONT COLOR="#CC4400">a</FONT></I> &le; <I><FONT
+COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Assertion">
+<CAPTION><B>Assertion</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD><FONT COLOR="#006633"><B>leran</B></FONT></TD><TD>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &le; (<I><FONT COLOR="#CC4400">b</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+</TABLE></CENTER>
+
+
+<HR NOSHADE SIZE=1>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Proof of theorem">
+<CAPTION><B>Proof of Theorem <FONT
+   COLOR="#006633">leran</FONT></B></CAPTION>
+<TR><TH>Step</TH><TH>Hyp</TH><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>1</TD><TD>&nbsp;</TD><TD><A HREF="anandir.html"
+TITLE="Distribution of conjunction over conjunction. (Contributed by NM, 27-Aug-1997.)">anandir</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#E43C00">115</SPAN></TD><TD><A NAME="1"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) =
+((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>2</TD><TD><A HREF="#1">1</A></TD><TD><A HREF="ax-r1.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">35</SPAN></TD><TD><A NAME="2"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>)) = ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>3</TD><TD>&nbsp;</TD><TD>le.1</TD><TD><A NAME="3"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN ><I><FONT COLOR="#CC4400">a</FONT></I> &le; <I><FONT
+COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>4</TD><TD><A HREF="#3">3</A></TD><TD><A HREF="df2le2.html"
+TITLE="Alternate definition of 'less than or equal to'. (Contributed by NM, 27-Aug-1997.)">df2le2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#DB4800">136</SPAN></TD><TD><A NAME="4"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) = <I><FONT
+COLOR="#CC4400">a</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>5</TD><TD><A HREF="#4">4</A></TD><TD><A HREF="ran.html"
+TITLE="Introduce conjunct on right. (Contributed by NM, 10-Aug-1997.)">ran</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02400">78</SPAN></TD><TD><A NAME="5"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) =
+(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>6</TD><TD><A HREF="#2">2</A>, <A HREF="#5">5</A></TD><TD><A
+HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="6"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>)) = (<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>7</TD><TD><A HREF="#6">6</A></TD><TD><A HREF="df2le1.html"
+TITLE="Alternate definition of 'less than or equal to'. (Contributed by NM, 27-Aug-1997.)">df2le1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#DC4800">135</SPAN></TD><TD><A NAME="7"></A>
+<SPAN CLASS=i>1</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &le; (<I><FONT COLOR="#CC4400">b</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE CELLSPACING=5><TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Colors of
+variables:</B>  <FONT COLOR="#CC4400">term</FONT></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Syntax hints:</B>  &nbsp;<SPAN > &le;
+</SPAN><A HREF="wle.html">wle</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FA0000">2</SPAN> &nbsp;<SPAN > &cap; </SPAN><A
+HREF="wa.html">wa</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FA0100">7</SPAN></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This theorem was proved from axioms:</B>
+&nbsp;<A HREF="ax-a1.html">ax-a1</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F80800">30</SPAN> &nbsp;<A HREF="ax-a2.html">ax-a2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F80800">31</SPAN> &nbsp;<A
+HREF="ax-a3.html">ax-a3</A>&nbsp;<SPAN CLASS=r STYLE="color:#F80800">32</SPAN>
+&nbsp;<A HREF="ax-a5.html">ax-a5</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F70900">34</SPAN> &nbsp;<A HREF="ax-r1.html">ax-r1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">35</SPAN> &nbsp;<A
+HREF="ax-r2.html">ax-r2</A>&nbsp;<SPAN CLASS=r STYLE="color:#F70900">36</SPAN>
+&nbsp;<A HREF="ax-r4.html">ax-r4</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F70900">37</SPAN> &nbsp;<A HREF="ax-r5.html">ax-r5</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70A00">38</SPAN></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This theorem depends on definitions:</B>
+&nbsp;<A HREF="df-a.html">df-a</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F70A00">40</SPAN> &nbsp;<A HREF="df-t.html">df-t</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70B00">41</SPAN> &nbsp;<A
+HREF="df-f.html">df-f</A>&nbsp;<SPAN CLASS=r STYLE="color:#F70B00">42</SPAN>
+&nbsp;<A HREF="df-le1.html">df-le1</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#DE4600">130</SPAN> &nbsp;<A
+HREF="df-le2.html">df-le2</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#DE4600">131</SPAN></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This theorem is referenced by:</B> &nbsp;<A
+HREF="lelan.html">lelan</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#CE5500">167</SPAN> &nbsp;<A
+HREF="le2an.html">le2an</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#CD5600">169</SPAN> &nbsp;<A
+HREF="i2or.html">i2or</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#6F8700">344</SPAN> &nbsp;<A
+HREF="i5lei4.html">i5lei4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#6D8800">350</SPAN> &nbsp;<A
+HREF="k1-8a.html">k1-8a</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#6A8800">355</SPAN> &nbsp;<A
+HREF="3vth1.html">3vth1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#237BFF">804</SPAN> &nbsp;<A
+HREF="3vded21.html">3vded21</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3778FF">817</SPAN> &nbsp;<A
+HREF="3vded22.html">3vded22</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3978FF">818</SPAN> &nbsp;<A
+HREF="1oaiii.html">1oaiii</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#4177FF">823</SPAN> &nbsp;<A
+HREF="3vroa.html">3vroa</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#4A76FF">831</SPAN> &nbsp;<A
+HREF="eqtr4.html">eqtr4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#4D75FF">834</SPAN> &nbsp;<A
+HREF="sadm3.html">sadm3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5174FF">838</SPAN> &nbsp;<A
+HREF="negantlem3.html">negantlem3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5B71FF">850</SPAN> &nbsp;<A
+HREF="comanblem1.html">comanblem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#6D6DFF">870</SPAN> &nbsp;<A
+HREF="mh.html">mh</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#736AFF">879</SPAN> &nbsp;<A
+HREF="gomaex4.html">gomaex4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#8066FF">900</SPAN> &nbsp;<A
+HREF="oasr.html">oasr</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#925DFF">926</SPAN> &nbsp;<A
+HREF="oa3-u2lem.html">oa3-u2lem</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#B440FF">986</SPAN> &nbsp;<A
+HREF="d4oa.html">d4oa</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#B83BFF">996</SPAN> &nbsp;<A
+HREF="oaliii.html">oaliii</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#BA38FE">1001</SPAN> &nbsp;<A
+HREF="oagen2b.html">oagen2b</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#C02FFC">1017</SPAN> &nbsp;<A
+HREF="axoa4.html">axoa4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#C726FA">1034</SPAN> &nbsp;<A
+HREF="lem3.4.3.html">lem3.4.3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D214EE">1076</SPAN> &nbsp;<A
+HREF="lem4.6.7.html">lem4.6.7</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D70AE6">1103</SPAN> &nbsp;<A
+HREF="ml.html">ml</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#DB02E0">1123</SPAN> &nbsp;<A
+HREF="dp15lema.html">dp15lema</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#E300C3">1154</SPAN> &nbsp;<A
+HREF="dp15leme.html">dp15leme</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#E400BF">1158</SPAN> &nbsp;<A
+HREF="dp41lemh.html">dp41lemh</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#EB009D">1190</SPAN> &nbsp;<A
+HREF="dp41leml.html">dp41leml</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#EB009B">1193</SPAN> &nbsp;<A
+HREF="xdp41.html">xdp41</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#EC0096">1198</SPAN> &nbsp;<A
+HREF="xdp15.html">xdp15</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#EC0095">1199</SPAN> &nbsp;<A
+HREF="xxdp41.html">xxdp41</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#EC0093">1201</SPAN> &nbsp;<A
+HREF="xxdp15.html">xxdp15</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#EC0092">1202</SPAN> &nbsp;<A
+HREF="xdp45lem.html">xdp45lem</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#ED0090">1204</SPAN> &nbsp;<A
+HREF="xdp43lem.html">xdp43lem</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#ED008F">1205</SPAN> &nbsp;<A
+HREF="xdp45.html">xdp45</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#ED008F">1206</SPAN> &nbsp;<A
+HREF="xdp43.html">xdp43</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#ED008E">1207</SPAN> &nbsp;<A
+HREF="3dp43.html">3dp43</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#ED008D">1208</SPAN></FONT></TD></TR>
+</TABLE></CENTER>
+<TABLE BORDER=0 WIDTH="100%">
+<TR><TD WIDTH="25%">&nbsp;</TD>
+<TD ALIGN=CENTER VALIGN=BOTTOM>
+<FONT SIZE=-2 FACE=sans-serif>
+Copyright terms:
+<A HREF="http://us.metamath.org/copyright.html#pd">Public domain</A>
+</FONT></TD><TD ALIGN=RIGHT VALIGN=BOTTOM WIDTH="25%">
+<FONT SIZE=-2 FACE=sans-serif>
+<A HREF="http://validator.w3.org/check?uri=referer">
+W3C validator</A>
+</FONT></TD></TR></TABLE>
+</BODY></HTML>

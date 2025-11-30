@@ -76,8 +76,10 @@ export class CryptoAnalysis {
       const m2 = BigInt('0x' + sig2.messageHash);
 
       // Calculate private key using the nonce reuse formula:
-      // k = (m1 - m2) / (s1 - s2) mod n
-      // privateKey = (r * k - m1) / s1 mod n
+      // From ECDSA signature equation: s = k⁻¹ * (m + r*x) mod n
+      // Solving for k and x:
+      // k = (m1 - m2) * (s1 - s2)⁻¹ mod n
+      // x = (s*k - m) * r⁻¹ mod n
 
       const sDiff = this.modSub(s1, s2, CURVE_ORDER);
       const mDiff = this.modSub(m1, m2, CURVE_ORDER);
@@ -95,11 +97,11 @@ export class CryptoAnalysis {
       const sDiffInv = this.modInverse(sDiff, CURVE_ORDER);
       const k = this.modMul(mDiff, sDiffInv, CURVE_ORDER);
 
-      // Calculate private key
-      const rk = this.modMul(r, k, CURVE_ORDER);
-      const rk_minus_m1 = this.modSub(rk, m1, CURVE_ORDER);
-      const s1Inv = this.modInverse(s1, CURVE_ORDER);
-      const privateKey = this.modMul(rk_minus_m1, s1Inv, CURVE_ORDER);
+      // Calculate private key: x = (s*k - m) * r⁻¹ mod n
+      const sk = this.modMul(s1, k, CURVE_ORDER);
+      const sk_minus_m1 = this.modSub(sk, m1, CURVE_ORDER);
+      const rInv = this.modInverse(r, CURVE_ORDER);
+      const privateKey = this.modMul(sk_minus_m1, rInv, CURVE_ORDER);
 
       // Verify the recovered private key
       const isValid = this.verifyRecoveredKey(privateKey, sig1);
@@ -359,4 +361,303 @@ export class CryptoAnalysis {
   }
 }
 
+/**
+ * Enhanced ECDSA recovery with WIF conversion
+ */
+export class ECDSARecovery {
+  private cryptoAnalysis = new CryptoAnalysis();
+
+  async recoverFromNonceReuse(input: {
+    r: string;
+    s1: string;
+    s2: string;
+    m1: string;
+    m2: string;
+  }): Promise<{
+    success: boolean;
+    privateKey?: string;
+    nonce?: string;
+    wif?: string;
+    address?: string;
+    error?: string;
+    calculations?: { step: string; formula: string; value: string }[];
+  }> {
+    const calculations: { step: string; formula: string; value: string }[] = [];
+
+    try {
+      const r = BigInt('0x' + input.r.replace(/^0x/, ''));
+      const s1 = BigInt('0x' + input.s1.replace(/^0x/, ''));
+      const s2 = BigInt('0x' + input.s2.replace(/^0x/, ''));
+      const m1 = BigInt('0x' + input.m1.replace(/^0x/, ''));
+      const m2 = BigInt('0x' + input.m2.replace(/^0x/, ''));
+
+      calculations.push({
+        step: '1. Parse Input Values',
+        formula: 'Convert hex strings to BigInt in group order field',
+        value: `r = 0x${r.toString(16).slice(0, 16)}...`
+      });
+
+      if (s1 === s2) {
+        return { success: false, error: 'S values are identical', calculations };
+      }
+
+      const sDiff = this.modSub(s1, s2, CURVE_ORDER);
+      const mDiff = this.modSub(m1, m2, CURVE_ORDER);
+
+      calculations.push({
+        step: '2. Calculate Difference Values',
+        formula: '(s1 - s2) mod n and (m1 - m2) mod n',
+        value: `sDiff = ${sDiff.toString(16).slice(0, 16)}..., mDiff = ${mDiff.toString(16).slice(0, 16)}...`
+      });
+
+      const sDiffInv = this.modInverse(sDiff, CURVE_ORDER);
+      const k = this.modMul(mDiff, sDiffInv, CURVE_ORDER);
+
+      calculations.push({
+        step: '3. Recover Nonce (k)',
+        formula: 'k = (m1 - m2) × (s1 - s2)⁻¹ mod n',
+        value: `k = 0x${k.toString(16).padStart(64, '0')}`
+      });
+
+      // x = (s*k - m) * r⁻¹ mod n
+      const sk = this.modMul(s1, k, CURVE_ORDER);
+      const sk_minus_m = this.modSub(sk, m1, CURVE_ORDER);
+      const rInv = this.modInverse(r, CURVE_ORDER);
+      const privateKey = this.modMul(sk_minus_m, rInv, CURVE_ORDER);
+
+      calculations.push({
+        step: '4. Recover Private Key',
+        formula: 'x = (s × k - m) × r⁻¹ mod n',
+        value: `x = 0x${privateKey.toString(16).padStart(64, '0')}`
+      });
+
+      if (privateKey <= 0n || privateKey >= CURVE_ORDER) {
+        return { success: false, error: 'Invalid private key computed', calculations };
+      }
+
+      const privateKeyHex = privateKey.toString(16).padStart(64, '0');
+      const nonceHex = k.toString(16).padStart(64, '0');
+
+      const wif = await this.privateKeyToWIF(privateKeyHex, true, true);
+      const address = await this.privateKeyToAddress(privateKeyHex, true, true);
+
+      calculations.push({
+        step: '5. Generate WIF & Address',
+        formula: 'Base58Check encoding of private key',
+        value: `WIF: ${wif}\nAddress: ${address}`
+      });
+
+      return {
+        success: true,
+        privateKey: privateKeyHex,
+        nonce: nonceHex,
+        wif,
+        address,
+        calculations
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        calculations
+      };
+    }
+  }
+
+  async recoverFromKnownNonce(input: {
+    r: string;
+    s: string;
+    m: string;
+    k: string;
+  }): Promise<{
+    success: boolean;
+    privateKey?: string;
+    wif?: string;
+    address?: string;
+    error?: string;
+  }> {
+    try {
+      const r = BigInt('0x' + input.r.replace(/^0x/, ''));
+      const s = BigInt('0x' + input.s.replace(/^0x/, ''));
+      const m = BigInt('0x' + input.m.replace(/^0x/, ''));
+      const k = BigInt('0x' + input.k.replace(/^0x/, ''));
+
+      const sk = this.modMul(s, k, CURVE_ORDER);
+      const sk_minus_m = this.modSub(sk, m, CURVE_ORDER);
+      const rInv = this.modInverse(r, CURVE_ORDER);
+      const privateKey = this.modMul(sk_minus_m, rInv, CURVE_ORDER);
+
+      if (privateKey <= 0n || privateKey >= CURVE_ORDER) {
+        return { success: false, error: 'Invalid private key computed' };
+      }
+
+      const privateKeyHex = privateKey.toString(16).padStart(64, '0');
+      const wif = await this.privateKeyToWIF(privateKeyHex, true, true);
+      const address = await this.privateKeyToAddress(privateKeyHex, true, true);
+
+      return {
+        success: true,
+        privateKey: privateKeyHex,
+        wif,
+        address
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  private async privateKeyToWIF(privateKeyHex: string, compressed: boolean, mainnet: boolean): Promise<string> {
+    const prefix = mainnet ? 0x80 : 0xef;
+    const keyBytes = Buffer.from(privateKeyHex, 'hex');
+    
+    let extendedKey: Buffer;
+    if (compressed) {
+      extendedKey = Buffer.concat([Buffer.from([prefix]), keyBytes, Buffer.from([0x01])]);
+    } else {
+      extendedKey = Buffer.concat([Buffer.from([prefix]), keyBytes]);
+    }
+
+    const checksum = createHash('sha256')
+      .update(createHash('sha256').update(extendedKey).digest())
+      .digest()
+      .slice(0, 4);
+
+    const finalKey = Buffer.concat([extendedKey, checksum]);
+    return this.encodeBase58(finalKey);
+  }
+
+  private async privateKeyToAddress(privateKeyHex: string, compressed: boolean, mainnet: boolean): Promise<string> {
+    const prefix = mainnet ? 0x00 : 0x6f;
+    const privateKey = BigInt('0x' + privateKeyHex);
+    
+    const pubKey = this.scalarMultiply(privateKey);
+    let pubKeyBytes: Buffer;
+    
+    if (compressed) {
+      const yIsEven = pubKey.y % 2n === 0n;
+      pubKeyBytes = Buffer.concat([
+        Buffer.from([yIsEven ? 0x02 : 0x03]),
+        Buffer.from(pubKey.x.toString(16).padStart(64, '0'), 'hex')
+      ]);
+    } else {
+      pubKeyBytes = Buffer.concat([
+        Buffer.from([0x04]),
+        Buffer.from(pubKey.x.toString(16).padStart(64, '0'), 'hex'),
+        Buffer.from(pubKey.y.toString(16).padStart(64, '0'), 'hex')
+      ]);
+    }
+
+    const sha256Hash = createHash('sha256').update(pubKeyBytes).digest();
+    const ripemd160Hash = createHash('ripemd160').update(sha256Hash).digest();
+    
+    const prefixedHash = Buffer.concat([Buffer.from([prefix]), ripemd160Hash]);
+    const checksum = createHash('sha256')
+      .update(createHash('sha256').update(prefixedHash).digest())
+      .digest()
+      .slice(0, 4);
+
+    return this.encodeBase58(Buffer.concat([prefixedHash, checksum]));
+  }
+
+  private scalarMultiply(scalar: bigint): { x: bigint; y: bigint } {
+    const Gx = BigInt('0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798');
+    const Gy = BigInt('0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8');
+    
+    let result = { x: 0n, y: 0n, isInfinity: true };
+    let current = { x: Gx, y: Gy, isInfinity: false };
+    
+    while (scalar > 0n) {
+      if (scalar & 1n) {
+        result = this.pointAdd(result, current);
+      }
+      current = this.pointAdd(current, current);
+      scalar >>= 1n;
+    }
+    
+    return { x: result.x, y: result.y };
+  }
+
+  private pointAdd(
+    p1: { x: bigint; y: bigint; isInfinity?: boolean },
+    p2: { x: bigint; y: bigint; isInfinity?: boolean }
+  ): { x: bigint; y: bigint; isInfinity: boolean } {
+    if (p1.isInfinity) return { ...p2, isInfinity: false };
+    if (p2.isInfinity) return { ...p1, isInfinity: false };
+
+    if (p1.x === p2.x && p1.y === p2.y) {
+      if (p1.y === 0n) return { x: 0n, y: 0n, isInfinity: true };
+      const lambda = this.modMul(
+        this.modMul(3n, this.modMul(p1.x, p1.x, CURVE_P), CURVE_P),
+        this.modInverse(this.modMul(2n, p1.y, CURVE_P), CURVE_P),
+        CURVE_P
+      );
+      const x3 = this.modSub(this.modMul(lambda, lambda, CURVE_P), this.modAdd(p1.x, p2.x, CURVE_P), CURVE_P);
+      const y3 = this.modSub(this.modMul(lambda, this.modSub(p1.x, x3, CURVE_P), CURVE_P), p1.y, CURVE_P);
+      return { x: x3, y: y3, isInfinity: false };
+    }
+
+    if (p1.x === p2.x) return { x: 0n, y: 0n, isInfinity: true };
+
+    const lambda = this.modMul(
+      this.modSub(p2.y, p1.y, CURVE_P),
+      this.modInverse(this.modSub(p2.x, p1.x, CURVE_P), CURVE_P),
+      CURVE_P
+    );
+    const x3 = this.modSub(this.modMul(lambda, lambda, CURVE_P), this.modAdd(p1.x, p2.x, CURVE_P), CURVE_P);
+    const y3 = this.modSub(this.modMul(lambda, this.modSub(p1.x, x3, CURVE_P), CURVE_P), p1.y, CURVE_P);
+    return { x: x3, y: y3, isInfinity: false };
+  }
+
+  private modAdd(a: bigint, b: bigint, mod: bigint): bigint {
+    return ((a + b) % mod + mod) % mod;
+  }
+
+  private modSub(a: bigint, b: bigint, mod: bigint): bigint {
+    return ((a - b) % mod + mod) % mod;
+  }
+
+  private modMul(a: bigint, b: bigint, mod: bigint): bigint {
+    return ((a * b) % mod + mod) % mod;
+  }
+
+  private modInverse(a: bigint, mod: bigint): bigint {
+    let [old_r, r] = [a, mod];
+    let [old_s, s] = [1n, 0n];
+
+    while (r !== 0n) {
+      const quotient = old_r / r;
+      [old_r, r] = [r, old_r - quotient * r];
+      [old_s, s] = [s, old_s - quotient * s];
+    }
+
+    return old_s < 0n ? old_s + mod : old_s;
+  }
+
+  private encodeBase58(buffer: Buffer): string {
+    const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    let num = BigInt('0x' + buffer.toString('hex'));
+    let result = '';
+
+    while (num > 0n) {
+      const remainder = Number(num % 58n);
+      num = num / 58n;
+      result = ALPHABET[remainder] + result;
+    }
+
+    for (const byte of buffer) {
+      if (byte === 0) {
+        result = '1' + result;
+      } else {
+        break;
+      }
+    }
+
+    return result;
+  }
+}
+
 export const cryptoAnalysis = new CryptoAnalysis();
+export const ecdsaRecovery = new ECDSARecovery();

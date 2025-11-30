@@ -1,0 +1,154 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<HTML LANG="EN-US">
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">
+<STYLE TYPE="text/css">
+<!--
+img { margin-bottom: -4px }
+.r { font-family: "Arial Narrow";
+     font-size: x-small;
+   }
+.i { font-family: "Arial Narrow";
+     font-size: x-small;
+     color: gray;
+   }
+-->
+</STYLE>
+
+<TITLE>df-le - Quantum Logic Explorer</TITLE>
+<LINK REL="shortcut icon" HREF="favicon.ico" TYPE="image/x-icon">
+</HEAD>
+<BODY BGCOLOR="#FFFFFF">
+<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 WIDTH="100%">
+  <TR>
+    <TD ALIGN=LEFT VALIGN=TOP WIDTH="25%"><A HREF=
+    "mmql.html"><IMG SRC="l46-7icon.gif"
+      BORDER=0
+      ALT="QLE Home"
+      TITLE="QLE Home"
+      HEIGHT=32 WIDTH=32 ALIGN=TOP STYLE="margin-bottom:0px"></A>
+    </TD>
+    <TD ALIGN=CENTER COLSPAN=2 VALIGN=TOP><FONT SIZE="+3" COLOR="#006633"><B>
+Quantum Logic Explorer
+      </B></FONT></TD>
+    <TD ALIGN=RIGHT VALIGN=TOP WIDTH="25%">
+      <FONT SIZE=-1 FACE=sans-serif>
+      <A HREF="omlem2.html">
+      &lt; Previous</A>&nbsp;&nbsp;
+      <A HREF="df-le1.html">Next &gt;</A>
+      </FONT><FONT FACE=sans-serif SIZE=-2>
+      <BR><A HREF="mmtheorems2.html#df-le">Nearby theorems</A>
+      </FONT>
+    </TD>
+  </TR>
+  <TR>
+    <TD COLSPAN=2 ALIGN=LEFT VALIGN=TOP><FONT SIZE=-2
+      FACE=sans-serif>
+      <A HREF="http://us.metamath.org/mm.html">Mirrors</A>&nbsp; &gt;
+      &nbsp;<A HREF="http://us.metamath.org/index.html">Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmql.html">QLE Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmtheorems.html">Th. List</A>&nbsp; &gt;
+      &nbsp;df-le
+      </FONT>
+    </TD>
+    <TD COLSPAN=2 ALIGN=RIGHT VALIGN=TOP>
+      <FONT SIZE=-2 FACE=sans-serif>
+
+      <A HREF="http://us.metamath.org/qlegif/df-le.html">GIF version</A>
+      </FONT>
+    </TD>
+  </TR>
+</TABLE>
+<HR NOSHADE SIZE=1>
+<CENTER><B><FONT SIZE="+1">Definition <FONT
+COLOR="#006633">df-le</FONT></FONT></B>&nbsp;<SPAN CLASS=r
+STYLE="color:#DE4500">129</SPAN></CENTER>
+<CENTER><TABLE><TR><TD ALIGN=LEFT><B>Description: </B>Define &quot;less than or
+equal to&quot; analogue.  (Contributed by NM,
+     27-Aug-1997.)</TD></TR></TABLE></CENTER>
+
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Assertion">
+<CAPTION><B>Assertion</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD><FONT COLOR="#006633"><B>df-le</B></FONT></TD><TD>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &le;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>) = ((<I><FONT COLOR="#CC4400">a</FONT></I> &cup;
+<I><FONT COLOR="#CC4400">b</FONT></I>) &equiv; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+</TABLE></CENTER>
+
+
+<HR NOSHADE SIZE=1>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Detailed syntax breakdown of definition">
+<CAPTION><B>Detailed syntax breakdown of Definition <FONT
+   COLOR="#006633">df-le</FONT></B></CAPTION>
+<TR><TH>Step</TH><TH>Hyp</TH><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>1</TD><TD>&nbsp;</TD><TD>wva</TD><TD><A NAME="1"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">a</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>2</TD><TD>&nbsp;</TD><TD>wvb</TD><TD><A NAME="2"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>3</TD><TD><A HREF="#1">1</A>, <A HREF="#2">2</A></TD><TD><A
+HREF="wle2.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a =<2 b ) ` .">wle2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0200">10</SPAN></TD><TD><A NAME="3"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">a</FONT></I> &le;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>4</TD><TD><A HREF="#1">1</A>, <A HREF="#2">2</A></TD><TD><A
+HREF="wo.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a v b ) ` .">wo</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0100">6</SPAN></TD><TD><A NAME="4"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">a</FONT></I> &cup; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>5</TD><TD><A HREF="#4">4</A>, <A HREF="#2">2</A></TD><TD><A
+HREF="tb.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a == b ) ` .">tb</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0100">5</SPAN></TD><TD><A NAME="5"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cup; <I><FONT COLOR="#CC4400">b</FONT></I>)
+&equiv; <I><FONT COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>6</TD><TD><A HREF="#3">3</A>, <A HREF="#5">5</A></TD><TD><A
+HREF="wb.html"
+TITLE="If ` a ` and ` b ` are terms, ` a = b ` is a wff.">wb</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FB0000">1</SPAN></TD><TD><A NAME="6"></A>
+<SPAN CLASS=i>1</SPAN>
+<SPAN ><FONT COLOR="#00CC00">wff&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">a</FONT></I> &le;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>) = ((<I><FONT COLOR="#CC4400">a</FONT></I> &cup;
+<I><FONT COLOR="#CC4400">b</FONT></I>) &equiv; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE CELLSPACING=5><TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Colors of
+variables:</B>  <FONT COLOR="#CC4400">term</FONT></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This definition is referenced by:</B> &nbsp;<A HREF="lei2.html">lei2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#6F8700">346</SPAN> &nbsp;<A HREF="wdf-le1.html">wdf-le1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5D8B00">378</SPAN> &nbsp;<A HREF="wdf-le2.html">wdf-le2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5D8B00">379</SPAN> &nbsp;<A HREF="wle0.html">wle0</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#578C00">390</SPAN> &nbsp;<A HREF="wler.html">wler</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#568C00">391</SPAN></FONT></TD></TR></TABLE></CENTER>
+<TABLE BORDER=0 WIDTH="100%">
+<TR><TD WIDTH="25%">&nbsp;</TD>
+<TD ALIGN=CENTER VALIGN=BOTTOM>
+<FONT SIZE=-2 FACE=sans-serif>
+Copyright terms:
+<A HREF="http://us.metamath.org/copyright.html#pd">Public domain</A>
+</FONT></TD><TD ALIGN=RIGHT VALIGN=BOTTOM WIDTH="25%">
+<FONT SIZE=-2 FACE=sans-serif>
+<A HREF="http://validator.w3.org/check?uri=referer">
+W3C validator</A>
+</FONT></TD></TR></TABLE>
+</BODY></HTML>

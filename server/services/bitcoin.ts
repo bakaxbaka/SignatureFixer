@@ -1266,6 +1266,90 @@ class BitcoinService {
     // Estimate fee at 1 sat/byte (very low fee rate for educational purposes)
     return size;
   }
+
+  async getBlockHash(height: number, networkType: string = 'mainnet'): Promise<string | null> {
+    try {
+      const baseUrl = networkType === 'testnet'
+        ? 'https://blockstream.info/testnet/api'
+        : this.BLOCKSTREAM_API;
+
+      const response = await fetch(`${baseUrl}/block-height/${height}`);
+      
+      if (!response.ok) {
+        return null;
+      }
+      
+      return await response.text();
+    } catch (error) {
+      console.error(`Error getting block hash for height ${height}:`, error);
+      return null;
+    }
+  }
+
+  async getBlock(blockHash: string, networkType: string = 'mainnet'): Promise<any | null> {
+    try {
+      const baseUrl = networkType === 'testnet'
+        ? 'https://blockstream.info/testnet/api'
+        : this.BLOCKSTREAM_API;
+
+      const response = await fetch(`${baseUrl}/block/${blockHash}`);
+      
+      if (!response.ok) {
+        return null;
+      }
+      
+      const block = await response.json();
+      
+      const txResponse = await fetch(`${baseUrl}/block/${blockHash}/txids`);
+      if (txResponse.ok) {
+        block.tx = await txResponse.json();
+      }
+      
+      return block;
+    } catch (error) {
+      console.error(`Error getting block ${blockHash}:`, error);
+      return null;
+    }
+  }
+
+  async getMempoolTxids(networkType: string = 'mainnet'): Promise<string[]> {
+    try {
+      const baseUrl = networkType === 'testnet'
+        ? 'https://blockstream.info/testnet/api'
+        : this.BLOCKSTREAM_API;
+
+      const response = await fetch(`${baseUrl}/mempool/txids`);
+      
+      if (!response.ok) {
+        return [];
+      }
+      
+      const txids = await response.json();
+      return Array.isArray(txids) ? txids : [];
+    } catch (error) {
+      console.error('Error getting mempool txids:', error);
+      return [];
+    }
+  }
+
+  async getBlockHeight(networkType: string = 'mainnet'): Promise<number> {
+    try {
+      const baseUrl = networkType === 'testnet'
+        ? 'https://blockstream.info/testnet/api'
+        : this.BLOCKSTREAM_API;
+
+      const response = await fetch(`${baseUrl}/blocks/tip/height`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to get block height: ${response.status}`);
+      }
+      
+      return parseInt(await response.text(), 10);
+    } catch (error) {
+      console.error('Error getting block height:', error);
+      throw error;
+    }
+  }
 }
 
 export const bitcoinService = new BitcoinService();

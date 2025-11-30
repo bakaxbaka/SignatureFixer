@@ -4,6 +4,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { bitcoinService } from "./services/bitcoin";
 import { vulnerabilityService } from "./services/vulnerability";
+import { ecdsaRecovery } from "./services/crypto";
+import { blockScanner } from "./services/scanner";
 import { insertAnalysisResultSchema, insertBatchAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -572,6 +574,250 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Vulnerability patterns error:', error);
       res.status(500).json({ 
         error: 'Failed to get vulnerability patterns',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // ECDSA Nonce Reuse Recovery endpoint
+  app.post('/api/ecdsa/recover-nonce-reuse', async (req, res) => {
+    try {
+      const { r, s1, s2, m1, m2 } = req.body;
+
+      if (!r || !s1 || !s2 || !m1 || !m2) {
+        return res.status(400).json({ 
+          error: 'Missing required parameters: r, s1, s2, m1, m2' 
+        });
+      }
+
+      const result = await ecdsaRecovery.recoverFromNonceReuse({ r, s1, s2, m1, m2 });
+
+      if (result.success) {
+        broadcast({
+          type: 'key_recovered',
+          method: 'nonce_reuse',
+          address: result.address,
+        });
+      }
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('ECDSA nonce reuse recovery error:', error);
+      res.status(500).json({ 
+        error: 'Failed to recover private key',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // ECDSA Known Nonce Recovery endpoint
+  app.post('/api/ecdsa/recover-known-nonce', async (req, res) => {
+    try {
+      const { r, s, m, k } = req.body;
+
+      if (!r || !s || !m || !k) {
+        return res.status(400).json({ 
+          error: 'Missing required parameters: r, s, m, k' 
+        });
+      }
+
+      const result = await ecdsaRecovery.recoverFromKnownNonce({ r, s, m, k });
+
+      if (result.success) {
+        broadcast({
+          type: 'key_recovered',
+          method: 'known_nonce',
+          address: result.address,
+        });
+      }
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('ECDSA known nonce recovery error:', error);
+      res.status(500).json({ 
+        error: 'Failed to recover private key',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // ECDSA Curve Parameters endpoint
+  app.get('/api/ecdsa/curve-params', async (req, res) => {
+    try {
+      res.json({
+        success: true,
+        data: {
+          curve: 'secp256k1',
+          p: 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F',
+          n: 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141',
+          Gx: '79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798',
+          Gy: '483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8',
+          a: '0',
+          b: '7',
+          equation: 'y² = x³ + 7',
+        },
+      });
+    } catch (error) {
+      console.error('Curve params error:', error);
+      res.status(500).json({ 
+        error: 'Failed to get curve parameters',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Block Scanner endpoints
+  app.post('/api/scanner/scan-blocks', async (req, res) => {
+    try {
+      const { startBlock, endBlock, networkType = 'mainnet' } = req.body;
+
+      if (!startBlock || !endBlock) {
+        return res.status(400).json({ 
+          error: 'Missing required parameters: startBlock, endBlock' 
+        });
+      }
+
+      if (endBlock - startBlock > 100) {
+        return res.status(400).json({ 
+          error: 'Maximum scan range is 100 blocks' 
+        });
+      }
+
+      const results = await blockScanner.scanBlockRange(
+        startBlock,
+        endBlock,
+        networkType,
+        (progress) => {
+          broadcast({
+            type: 'scan_progress',
+            ...progress,
+          });
+        },
+        (vulnerability) => {
+          broadcast({
+            type: 'vulnerability_found',
+            ...vulnerability,
+          });
+        }
+      );
+
+      res.json({
+        success: true,
+        data: {
+          scannedBlocks: endBlock - startBlock + 1,
+          vulnerabilitiesFound: results.length,
+          results,
+        },
+      });
+    } catch (error) {
+      console.error('Block scan error:', error);
+      res.status(500).json({ 
+        error: 'Failed to scan blocks',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/scanner/scan-mempool', async (req, res) => {
+    try {
+      const { networkType = 'mainnet' } = req.body;
+
+      const results = await blockScanner.scanMempool(
+        networkType,
+        (tx) => {
+          if (tx.potentialVulnerability) {
+            broadcast({
+              type: 'mempool_vulnerability',
+              txid: tx.txid,
+              vulnerability: tx.potentialVulnerability,
+            });
+          }
+        }
+      );
+
+      res.json({
+        success: true,
+        data: {
+          transactionsScanned: results.length,
+          vulnerabilities: results.filter(r => r.potentialVulnerability).length,
+          results,
+        },
+      });
+    } catch (error) {
+      console.error('Mempool scan error:', error);
+      res.status(500).json({ 
+        error: 'Failed to scan mempool',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/scanner/progress', async (req, res) => {
+    try {
+      const progress = blockScanner.getScanProgress();
+      res.json({
+        success: true,
+        data: progress,
+      });
+    } catch (error) {
+      console.error('Scanner progress error:', error);
+      res.status(500).json({ 
+        error: 'Failed to get scan progress',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/scanner/stop', async (req, res) => {
+    try {
+      blockScanner.stopScan();
+      res.json({
+        success: true,
+        message: 'Scan stopped',
+      });
+    } catch (error) {
+      console.error('Scanner stop error:', error);
+      res.status(500).json({ 
+        error: 'Failed to stop scan',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/scanner/statistics', async (req, res) => {
+    try {
+      const stats = blockScanner.getRValueStatistics();
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      console.error('Scanner statistics error:', error);
+      res.status(500).json({ 
+        error: 'Failed to get scanner statistics',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/blockchain/height', async (req, res) => {
+    try {
+      const { networkType = 'mainnet' } = req.query;
+      const height = await bitcoinService.getBlockHeight(networkType as string);
+      res.json({
+        success: true,
+        data: { height },
+      });
+    } catch (error) {
+      console.error('Block height error:', error);
+      res.status(500).json({ 
+        error: 'Failed to get block height',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }

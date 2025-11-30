@@ -1,0 +1,1165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<HTML LANG="EN-US">
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">
+<STYLE TYPE="text/css">
+<!--
+img { margin-bottom: -4px }
+.r { font-family: "Arial Narrow";
+     font-size: x-small;
+   }
+.i { font-family: "Arial Narrow";
+     font-size: x-small;
+     color: gray;
+   }
+-->
+</STYLE>
+
+<TITLE>bi3 - Quantum Logic Explorer</TITLE>
+<LINK REL="shortcut icon" HREF="favicon.ico" TYPE="image/x-icon">
+</HEAD>
+<BODY BGCOLOR="#FFFFFF">
+<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 WIDTH="100%">
+  <TR>
+    <TD ALIGN=LEFT VALIGN=TOP WIDTH="25%"><A HREF=
+    "mmql.html"><IMG SRC="l46-7icon.gif"
+      BORDER=0
+      ALT="QLE Home"
+      TITLE="QLE Home"
+      HEIGHT=32 WIDTH=32 ALIGN=TOP STYLE="margin-bottom:0px"></A>
+    </TD>
+    <TD ALIGN=CENTER COLSPAN=2 VALIGN=TOP><FONT SIZE="+3" COLOR="#006633"><B>
+Quantum Logic Explorer
+      </B></FONT></TD>
+    <TD ALIGN=RIGHT VALIGN=TOP WIDTH="25%">
+      <FONT SIZE=-1 FACE=sans-serif>
+      <A HREF="sadm3.html">
+      &lt; Previous</A>&nbsp;&nbsp;
+      <A HREF="bi4.html">Next &gt;</A>
+      </FONT><FONT FACE=sans-serif SIZE=-2>
+      <BR><A HREF="mmtheorems9.html#bi3">Nearby theorems</A>
+      </FONT>
+    </TD>
+  </TR>
+  <TR>
+    <TD COLSPAN=2 ALIGN=LEFT VALIGN=TOP><FONT SIZE=-2
+      FACE=sans-serif>
+      <A HREF="http://us.metamath.org/mm.html">Mirrors</A>&nbsp; &gt;
+      &nbsp;<A HREF="http://us.metamath.org/index.html">Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmql.html">QLE Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmtheorems.html">Th. List</A>&nbsp; &gt;
+      &nbsp;bi3
+      </FONT>
+    </TD>
+    <TD COLSPAN=2 ALIGN=RIGHT VALIGN=TOP>
+      <FONT SIZE=-2 FACE=sans-serif>
+
+      <A HREF="http://us.metamath.org/qlegif/bi3.html">GIF version</A>
+      </FONT>
+    </TD>
+  </TR>
+</TABLE>
+<HR NOSHADE SIZE=1>
+<CENTER><B><FONT SIZE="+1">Theorem <FONT
+COLOR="#006633">bi3</FONT></FONT></B>&nbsp;<SPAN CLASS=r
+STYLE="color:#5174FF">839</SPAN></CENTER>
+<CENTER><TABLE><TR><TD ALIGN=LEFT><B>Description: </B>Chained biconditional. 
+(Contributed by NM, 2-Mar-2000.)</TD></TR></TABLE></CENTER>
+
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Assertion">
+<CAPTION><B>Assertion</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD><FONT COLOR="#006633"><B>bi3</B></FONT></TD><TD>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&equiv; <I><FONT COLOR="#CC4400">c</FONT></I>)) = (((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+</TABLE></CENTER>
+
+
+<HR NOSHADE SIZE=1>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Proof of theorem">
+<CAPTION><B>Proof of Theorem <FONT
+   COLOR="#006633">bi3</FONT></B></CAPTION>
+<TR><TH>Step</TH><TH>Hyp</TH><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>1</TD><TD>&nbsp;</TD><TD><A HREF="dfb.html"
+TITLE="Biconditional expressed with others. (Contributed by NM, 10-Aug-1997.)">dfb</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EB2F00">94</SPAN></TD><TD><A NAME="1"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">b</FONT></I>) = ((<I><FONT COLOR="#CC4400">a</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>2</TD><TD>&nbsp;</TD><TD><A HREF="u12lembi.html"
+TITLE="Sasaki/Dishkant implication and biconditional. Equation 4.14 of [MegPav2000] p. 23....">u12lembi</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#0087C8">726</SPAN></TD><TD><A NAME="2"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>)) = (<I><FONT
+COLOR="#CC4400">b</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>3</TD><TD><A HREF="#2">2</A></TD><TD><A HREF="ax-r1.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">35</SPAN></TD><TD><A NAME="3"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">c</FONT></I>) = ((<I><FONT COLOR="#CC4400">b</FONT></I>
+&rarr;<SUB>1 </SUB><I><FONT COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>4</TD><TD><A HREF="#1">1</A>, <A HREF="#3">3</A></TD><TD><A
+HREF="2an.html"
+TITLE="Conjoin both sides of hypotheses. (Contributed by NM, 10-Aug-1997.)">2an</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EF2500">79</SPAN></TD><TD><A NAME="4"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&equiv; <I><FONT COLOR="#CC4400">c</FONT></I>)) = (((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; ((<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>5</TD><TD>&nbsp;</TD><TD><A HREF="df-i1.html"
+TITLE="Define Sasaki (Mittelstaedt) conditional. (Contributed by NM, 23-Nov-1997.)">df-i1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70B00">44</SPAN></TD><TD><A NAME="5"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>) = (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>6</TD><TD><A HREF="#5">5</A></TD><TD><A HREF="lan.html"
+TITLE="Introduce conjunct on left. (Contributed by NM, 10-Aug-1997.)">lan</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">77</SPAN></TD><TD><A NAME="6"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>)) = (((<I><FONT COLOR="#CC4400">a</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>7</TD><TD>&nbsp;</TD><TD><A HREF="lear.html"
+TITLE="L.e. absorption. (Contributed by NM, 11-Nov-1997.)">lear</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#D15300">161</SPAN></TD><TD><A NAME="7"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &le; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>8</TD><TD>&nbsp;</TD><TD><A HREF="leo.html"
+TITLE="L.e. absorption. (Contributed by NM, 27-Aug-1997.)">leo</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#D25200">158</SPAN></TD><TD><A NAME="8"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN ><I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &le; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>9</TD><TD><A HREF="#7">7</A>, <A HREF="#8">8</A></TD><TD><A
+HREF="letr.html"
+TITLE="Transitive law for 'less than or equal to'. (Contributed by NM, 27-Aug-1997.)">letr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#DB4900">137</SPAN></TD><TD><A NAME="9"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &le; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>10</TD><TD><A HREF="#9">9</A></TD><TD><A HREF="lecom.html"
+TITLE="Comparable elements commute. Beran 84 2.3(iii) p. 40. (Contributed by NM, 30-Aug-1997.)">lecom</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#C85B00">180</SPAN></TD><TD><A NAME="10"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )<I> C </I>(<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>11</TD><TD>&nbsp;</TD><TD><A HREF="coman1.html"
+TITLE="Commutation law. Does not use OML. (Contributed by NM, 30-Aug-1997.)">coman1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#C55D00">185</SPAN></TD><TD><A NAME="11"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )<I> C </I><I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>12</TD><TD><A HREF="#11">11</A></TD><TD><A
+HREF="comcom7.html"
+TITLE="Commutation equivalence. Kalmbach 83 p. 23. (Contributed by NM, 26-Nov-1997.)">comcom7</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#2B9100">460</SPAN></TD><TD><A NAME="12"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )<I> C </I><I><FONT
+COLOR="#CC4400">a</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>13</TD><TD>&nbsp;</TD><TD><A HREF="coman2.html"
+TITLE="Commutation law. Does not use OML. (Contributed by NM, 9-Nov-1997.)">coman2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#C45D00">186</SPAN></TD><TD><A NAME="13"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )<I> C </I><I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>14</TD><TD><A HREF="#13">13</A></TD><TD><A
+HREF="comcom7.html"
+TITLE="Commutation equivalence. Kalmbach 83 p. 23. (Contributed by NM, 26-Nov-1997.)">comcom7</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#2B9100">460</SPAN></TD><TD><A NAME="14"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )<I> C </I><I><FONT
+COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>15</TD><TD><A HREF="#12">12</A>, <A
+HREF="#14">14</A></TD><TD><A HREF="com2an.html"
+TITLE="Thm. 4.2 Beran p. 49. (Contributed by NM, 7-Nov-1997.)">com2an</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#1A9302">484</SPAN></TD><TD><A NAME="15"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )<I> C </I>(<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>16</TD><TD><A HREF="#10">10</A>, <A
+HREF="#15">15</A></TD><TD><A HREF="fh2rc.html"
+TITLE="Foulis-Holland Theorem. (Contributed by NM, 20-Sep-1998.)">fh2rc</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#1D9300">480</SPAN></TD><TD><A NAME="16"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>))) =
+(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)))
+&cup; ((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>17</TD><TD>&nbsp;</TD><TD><A HREF="comanr2.html"
+TITLE="Commutation law. (Contributed by NM, 26-Nov-1997.)">comanr2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#279200">465</SPAN></TD><TD><A NAME="17"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN ><I><FONT COLOR="#CC4400">b</FONT></I><I> C </I>(<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>18</TD><TD><A HREF="#17">17</A></TD><TD><A
+HREF="comcom3.html"
+TITLE="Commutation equivalence. Kalmbach 83 p. 23. (Contributed by NM, 27-Aug-1997.)">comcom3</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#2F9100">454</SPAN></TD><TD><A NAME="18"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN ><I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> <I> C
+</I>(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>19</TD><TD>&nbsp;</TD><TD><A HREF="comanr1.html"
+TITLE="Commutation law. (Contributed by NM, 26-Nov-1997.)">comanr1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#289100">464</SPAN></TD><TD><A NAME="19"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN ><I><FONT COLOR="#CC4400">b</FONT></I><I> C </I>(<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>20</TD><TD><A HREF="#19">19</A></TD><TD><A
+HREF="comcom3.html"
+TITLE="Commutation equivalence. Kalmbach 83 p. 23. (Contributed by NM, 27-Aug-1997.)">comcom3</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#2F9100">454</SPAN></TD><TD><A NAME="20"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN ><I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> <I> C
+</I>(<I><FONT COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>21</TD><TD><A HREF="#18">18</A>, <A
+HREF="#20">20</A></TD><TD><A HREF="fh2.html"
+TITLE="Foulis-Holland Theorem. (Contributed by NM, 29-Aug-1997.)">fh2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#249200">470</SPAN></TD><TD><A NAME="21"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>))) =
+(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+(<I><FONT COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>22</TD><TD>&nbsp;</TD><TD><A HREF="anass.html"
+TITLE="Associative law. (Contributed by NM, 12-Aug-1997.)">anass</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">76</SPAN></TD><TD><A NAME="22"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) = (<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; (<I><FONT COLOR="#CC4400">b</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>23</TD><TD>&nbsp;</TD><TD><A HREF="dff.html"
+TITLE="Alternate definition of 'false'. (Contributed by NM, 29-Aug-1997.)">dff</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#E93400">101</SPAN></TD><TD><A NAME="23"></A>
+<SPAN CLASS=i>. . . . . . . . . . 11</SPAN>
+<SPAN >0 = (<I><FONT COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>24</TD><TD><A HREF="#23">23</A></TD><TD><A HREF="lan.html"
+TITLE="Introduce conjunct on left. (Contributed by NM, 10-Aug-1997.)">lan</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">77</SPAN></TD><TD><A NAME="24"></A>
+<SPAN CLASS=i>. . . . . . . . . 10</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; 0) = (<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; (<I><FONT COLOR="#CC4400">b</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>25</TD><TD><A HREF="#24">24</A></TD><TD><A HREF="ax-r1.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">35</SPAN></TD><TD><A NAME="25"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) = (<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; 0)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>26</TD><TD>&nbsp;</TD><TD><A HREF="an0.html"
+TITLE="Conjunction with 0. (Contributed by NM, 10-Aug-1997.)">an0</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#E63800">108</SPAN></TD><TD><A NAME="26"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; 0) = 0</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>27</TD><TD><A HREF="#22">22</A>, <A HREF="#25">25</A>, <A
+HREF="#26">26</A></TD><TD><A HREF="3tr.html"
+TITLE="Triple transitive inference. (Contributed by NM, 20-Sep-1998.)">3tr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F21B00">65</SPAN></TD><TD><A NAME="27"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) = 0</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>28</TD><TD>&nbsp;</TD><TD><A HREF="anass.html"
+TITLE="Associative law. (Contributed by NM, 12-Aug-1997.)">anass</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">76</SPAN></TD><TD><A NAME="28"></A>
+<SPAN CLASS=i>. . . . . . . . . 10</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">b</FONT></I>)
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>) = ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+(<I><FONT COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>29</TD><TD><A HREF="#28">28</A></TD><TD><A HREF="ax-r1.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">35</SPAN></TD><TD><A NAME="29"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>)) = (((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>30</TD><TD>&nbsp;</TD><TD><A HREF="anass.html"
+TITLE="Associative law. (Contributed by NM, 12-Aug-1997.)">anass</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">76</SPAN></TD><TD><A NAME="30"></A>
+<SPAN CLASS=i>. . . . . . . . . . 11</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) =
+(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>31</TD><TD>&nbsp;</TD><TD><A HREF="anidm.html"
+TITLE="Idempotent law. (Contributed by NM, 10-Aug-1997.)">anidm</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#E53A00">111</SPAN></TD><TD><A NAME="31"></A>
+<SPAN CLASS=i>. . . . . . . . . . . 12</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) = <I><FONT
+COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>32</TD><TD><A HREF="#31">31</A></TD><TD><A HREF="lan.html"
+TITLE="Introduce conjunct on left. (Contributed by NM, 10-Aug-1997.)">lan</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">77</SPAN></TD><TD><A NAME="32"></A>
+<SPAN CLASS=i>. . . . . . . . . . 11</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>)) =
+(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>33</TD><TD><A HREF="#30">30</A>, <A
+HREF="#32">32</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="33"></A>
+<SPAN CLASS=i>. . . . . . . . . 10</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) =
+(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>34</TD><TD><A HREF="#33">33</A></TD><TD><A HREF="ran.html"
+TITLE="Introduce conjunct on right. (Contributed by NM, 10-Aug-1997.)">ran</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02400">78</SPAN></TD><TD><A NAME="34"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">b</FONT></I>)
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>) = ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>35</TD><TD><A HREF="#29">29</A>, <A
+HREF="#34">34</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="35"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">c</FONT></I>)) = ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>36</TD><TD><A HREF="#27">27</A>, <A
+HREF="#35">35</A></TD><TD><A HREF="2or.html"
+TITLE="Join both sides with disjunction. (Contributed by NM, 10-Aug-1997.)">2or</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F12000">72</SPAN></TD><TD><A NAME="36"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+(<I><FONT COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))) = (0 &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>37</TD><TD>&nbsp;</TD><TD><A HREF="or0r.html"
+TITLE="Disjunction with 0. (Contributed by NM, 26-Nov-1997.)">or0r</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#E83500">103</SPAN></TD><TD><A NAME="37"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(0 &cup; ((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)) =
+((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>38</TD><TD><A HREF="#21">21</A>, <A HREF="#36">36</A>, <A
+HREF="#37">37</A></TD><TD><A HREF="3tr.html"
+TITLE="Triple transitive inference. (Contributed by NM, 20-Sep-1998.)">3tr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F21B00">65</SPAN></TD><TD><A NAME="38"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>))) =
+((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>39</TD><TD><A HREF="#13">13</A></TD><TD><A
+HREF="comcom.html"
+TITLE="Commutation is symmetric. Kalmbach 83 p. 22. (Contributed by NM, 27-Aug-1997.)">comcom</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#309100">453</SPAN></TD><TD><A NAME="39"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN ><I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> <I> C
+</I>(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>40</TD><TD><A HREF="#39">39</A>, <A
+HREF="#20">20</A></TD><TD><A HREF="fh2.html"
+TITLE="Foulis-Holland Theorem. (Contributed by NM, 29-Aug-1997.)">fh2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#249200">470</SPAN></TD><TD><A NAME="40"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>))) =
+(((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>41</TD><TD>&nbsp;</TD><TD><A HREF="anass.html"
+TITLE="Associative law. (Contributed by NM, 12-Aug-1997.)">anass</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">76</SPAN></TD><TD><A NAME="41"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) = (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>42</TD><TD>&nbsp;</TD><TD><A HREF="anidm.html"
+TITLE="Idempotent law. (Contributed by NM, 10-Aug-1997.)">anidm</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#E53A00">111</SPAN></TD><TD><A NAME="42"></A>
+<SPAN CLASS=i>. . . . . . . . . 10</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) = <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>43</TD><TD><A HREF="#42">42</A></TD><TD><A HREF="lan.html"
+TITLE="Introduce conjunct on left. (Contributed by NM, 10-Aug-1997.)">lan</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">77</SPAN></TD><TD><A NAME="43"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) = (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>44</TD><TD><A HREF="#41">41</A>, <A
+HREF="#43">43</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="44"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) = (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>45</TD><TD>&nbsp;</TD><TD><A HREF="an4.html"
+TITLE="Swap conjuncts. (Contributed by NM, 27-Aug-1997.)">an4</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EE2A00">86</SPAN></TD><TD><A NAME="45"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)) =
+((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>46</TD><TD>&nbsp;</TD><TD><A HREF="anass.html"
+TITLE="Associative law. (Contributed by NM, 12-Aug-1997.)">anass</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">76</SPAN></TD><TD><A NAME="46"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)) = (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>47</TD><TD><A HREF="#23">23</A></TD><TD><A HREF="ran.html"
+TITLE="Introduce conjunct on right. (Contributed by NM, 10-Aug-1997.)">ran</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02400">78</SPAN></TD><TD><A NAME="47"></A>
+<SPAN CLASS=i>. . . . . . . . . . . . 13</SPAN>
+<SPAN >(0 &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) = ((<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>48</TD><TD><A HREF="#47">47</A></TD><TD><A HREF="ax-r1.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">35</SPAN></TD><TD><A NAME="48"></A>
+<SPAN CLASS=i>. . . . . . . . . . . 12</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) = (0 &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>49</TD><TD>&nbsp;</TD><TD><A HREF="anass.html"
+TITLE="Associative law. (Contributed by NM, 12-Aug-1997.)">anass</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">76</SPAN></TD><TD><A NAME="49"></A>
+<SPAN CLASS=i>. . . . . . . . . . . 12</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) = (<I><FONT COLOR="#CC4400">b</FONT></I> &cap;
+(<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>50</TD><TD>&nbsp;</TD><TD><A HREF="an0r.html"
+TITLE="Conjunction with 0. (Contributed by NM, 26-Nov-1997.)">an0r</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#E63900">109</SPAN></TD><TD><A NAME="50"></A>
+<SPAN CLASS=i>. . . . . . . . . . . 12</SPAN>
+<SPAN >(0 &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) = 0</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>51</TD><TD><A HREF="#48">48</A>, <A HREF="#49">49</A>, <A
+HREF="#50">50</A></TD><TD><A HREF="3tr2.html"
+TITLE="Transitive inference useful for eliminating definitions. (Contributed by NM,...">3tr2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F21A00">64</SPAN></TD><TD><A NAME="51"></A>
+<SPAN CLASS=i>. . . . . . . . . . 11</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)) = 0</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>52</TD><TD><A HREF="#51">51</A></TD><TD><A HREF="lan.html"
+TITLE="Introduce conjunct on left. (Contributed by NM, 10-Aug-1997.)">lan</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">77</SPAN></TD><TD><A NAME="52"></A>
+<SPAN CLASS=i>. . . . . . . . . 10</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))) = (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; 0)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>53</TD><TD>&nbsp;</TD><TD><A HREF="an0.html"
+TITLE="Conjunction with 0. (Contributed by NM, 10-Aug-1997.)">an0</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#E63800">108</SPAN></TD><TD><A NAME="53"></A>
+<SPAN CLASS=i>. . . . . . . . . 10</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; 0) =
+0</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>54</TD><TD><A HREF="#52">52</A>, <A
+HREF="#53">53</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="54"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))) = 0</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>55</TD><TD><A HREF="#45">45</A>, <A HREF="#46">46</A>, <A
+HREF="#54">54</A></TD><TD><A HREF="3tr.html"
+TITLE="Triple transitive inference. (Contributed by NM, 20-Sep-1998.)">3tr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F21B00">65</SPAN></TD><TD><A NAME="55"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)) =
+0</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>56</TD><TD><A HREF="#44">44</A>, <A
+HREF="#55">55</A></TD><TD><A HREF="2or.html"
+TITLE="Join both sides with disjunction. (Contributed by NM, 10-Aug-1997.)">2or</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F12000">72</SPAN></TD><TD><A NAME="56"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>))) =
+((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cup; 0)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>57</TD><TD>&nbsp;</TD><TD><A HREF="or0.html"
+TITLE="Disjunction with 0. (Contributed by NM, 10-Aug-1997.)">or0</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#E83400">102</SPAN></TD><TD><A NAME="57"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cup; 0) = (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>58</TD><TD><A HREF="#40">40</A>, <A HREF="#56">56</A>, <A
+HREF="#57">57</A></TD><TD><A HREF="3tr.html"
+TITLE="Triple transitive inference. (Contributed by NM, 20-Sep-1998.)">3tr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F21B00">65</SPAN></TD><TD><A NAME="58"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>))) =
+(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>59</TD><TD><A HREF="#38">38</A>, <A
+HREF="#58">58</A></TD><TD><A HREF="2or.html"
+TITLE="Join both sides with disjunction. (Contributed by NM, 10-Aug-1997.)">2or</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F12000">72</SPAN></TD><TD><A NAME="59"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)))
+&cup; ((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cup; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)))) =
+(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)
+&cup; (<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>60</TD><TD><A HREF="#6">6</A>, <A HREF="#16">16</A>, <A
+HREF="#59">59</A></TD><TD><A HREF="3tr.html"
+TITLE="Triple transitive inference. (Contributed by NM, 20-Sep-1998.)">3tr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F21B00">65</SPAN></TD><TD><A NAME="60"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>)) = (((<I><FONT COLOR="#CC4400">a</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>61</TD><TD><A HREF="#60">60</A></TD><TD><A HREF="ran.html"
+TITLE="Introduce conjunct on right. (Contributed by NM, 10-Aug-1997.)">ran</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02400">78</SPAN></TD><TD><A NAME="61"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >((((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>)) &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>)) = ((((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>62</TD><TD>&nbsp;</TD><TD><A HREF="anass.html"
+TITLE="Associative law. (Contributed by NM, 12-Aug-1997.)">anass</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">76</SPAN></TD><TD><A NAME="62"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >((((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>)) &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>)) = (((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; ((<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>63</TD><TD>&nbsp;</TD><TD><A HREF="lear.html"
+TITLE="L.e. absorption. (Contributed by NM, 11-Nov-1997.)">lear</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#D15300">161</SPAN></TD><TD><A NAME="63"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &le;
+<I><FONT COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>64</TD><TD>&nbsp;</TD><TD><A HREF="leo.html"
+TITLE="L.e. absorption. (Contributed by NM, 27-Aug-1997.)">leo</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#D25200">158</SPAN></TD><TD><A NAME="64"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN ><I><FONT COLOR="#CC4400">b</FONT></I> &le; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cup; (<I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>65</TD><TD><A HREF="#63">63</A>, <A
+HREF="#64">64</A></TD><TD><A HREF="letr.html"
+TITLE="Transitive law for 'less than or equal to'. (Contributed by NM, 27-Aug-1997.)">letr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#DB4900">137</SPAN></TD><TD><A NAME="65"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &le;
+(<I><FONT COLOR="#CC4400">b</FONT></I> &cup; (<I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>66</TD><TD>&nbsp;</TD><TD><A HREF="an32.html"
+TITLE="Swap conjuncts. (Contributed by NM, 27-Aug-1997.)">an32</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EF2800">83</SPAN></TD><TD><A NAME="66"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) =
+((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>67</TD><TD>&nbsp;</TD><TD><A HREF="df-i2.html"
+TITLE="Define Dishkant conditional. (Contributed by NM, 23-Nov-1997.)">df-i2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F60C00">45</SPAN></TD><TD><A NAME="67"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>) = (<I><FONT COLOR="#CC4400">b</FONT></I> &cup;
+(<I><FONT COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>68</TD><TD><A HREF="#65">65</A>, <A HREF="#66">66</A>, <A
+HREF="#67">67</A></TD><TD><A HREF="le3tr1.html"
+TITLE="Transitive inference useful for introducing definitions. (Contributed by NM,...">le3tr1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#DA4A00">140</SPAN></TD><TD><A NAME="68"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &le;
+(<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>69</TD><TD><A HREF="#68">68</A></TD><TD><A HREF="lecom.html"
+TITLE="Comparable elements commute. Beran 84 2.3(iii) p. 40. (Contributed by NM, 30-Aug-1997.)">lecom</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#C85B00">180</SPAN></TD><TD><A NAME="69"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)<I> C
+</I>(<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>70</TD><TD>&nbsp;</TD><TD><A HREF="anass.html"
+TITLE="Associative law. (Contributed by NM, 12-Aug-1997.)">anass</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">76</SPAN></TD><TD><A NAME="70"></A>
+<SPAN CLASS=i>. . . . . . . . . 10</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) =
+(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>71</TD><TD>&nbsp;</TD><TD><A HREF="lea.html"
+TITLE="L.e. absorption. (Contributed by NM, 27-Aug-1997.)">lea</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#D15200">160</SPAN></TD><TD><A NAME="71"></A>
+<SPAN CLASS=i>. . . . . . . . . 10</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)) &le;
+<I><FONT COLOR="#CC4400">a</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>72</TD><TD><A HREF="#70">70</A>, <A
+HREF="#71">71</A></TD><TD><A HREF="bltr.html"
+TITLE="Transitive inference. (Contributed by NM, 28-Aug-1997.)">bltr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#DB4900">138</SPAN></TD><TD><A NAME="72"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &le;
+<I><FONT COLOR="#CC4400">a</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>73</TD><TD>&nbsp;</TD><TD><A HREF="leo.html"
+TITLE="L.e. absorption. (Contributed by NM, 27-Aug-1997.)">leo</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#D25200">158</SPAN></TD><TD><A NAME="73"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN ><I><FONT COLOR="#CC4400">a</FONT></I> &le; (<I><FONT
+COLOR="#CC4400">a</FONT></I> &cup; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>74</TD><TD><A HREF="#72">72</A>, <A
+HREF="#73">73</A></TD><TD><A HREF="letr.html"
+TITLE="Transitive law for 'less than or equal to'. (Contributed by NM, 27-Aug-1997.)">letr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#DB4900">137</SPAN></TD><TD><A NAME="74"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &le;
+(<I><FONT COLOR="#CC4400">a</FONT></I> &cup; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>75</TD><TD>&nbsp;</TD><TD><A HREF="oran.html"
+TITLE="Disjunction expressed with conjunction. (Contributed by NM, 10-Aug-1997.)">oran</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EE2B00">87</SPAN></TD><TD><A NAME="75"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I> &cup; <I><FONT
+COLOR="#CC4400">b</FONT></I>) = (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP>
+)<SUP>&#8869;</SUP></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>76</TD><TD><A HREF="#74">74</A>, <A
+HREF="#75">75</A></TD><TD><A HREF="lbtr.html"
+TITLE="Transitive inference. (Contributed by NM, 28-Aug-1997.)">lbtr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#DA4A00">139</SPAN></TD><TD><A NAME="76"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>) &le;
+(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP>
+)<SUP>&#8869;</SUP></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>77</TD><TD><A HREF="#76">76</A></TD><TD><A HREF="lecom.html"
+TITLE="Comparable elements commute. Beran 84 2.3(iii) p. 40. (Contributed by NM, 30-Aug-1997.)">lecom</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#C85B00">180</SPAN></TD><TD><A NAME="77"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)<I> C
+</I>(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP>
+)<SUP>&#8869;</SUP></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>78</TD><TD><A HREF="#77">77</A></TD><TD><A
+HREF="comcom7.html"
+TITLE="Commutation equivalence. Kalmbach 83 p. 23. (Contributed by NM, 26-Nov-1997.)">comcom7</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#2B9100">460</SPAN></TD><TD><A NAME="78"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)<I> C
+</I>(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>79</TD><TD><A HREF="#69">69</A>, <A
+HREF="#78">78</A></TD><TD><A HREF="fh2r.html"
+TITLE="Foulis-Holland Theorem. (Contributed by NM, 23-Nov-1997.)">fh2r</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#219200">474</SPAN></TD><TD><A NAME="79"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN >((((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)
+&cup; (<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) = ((((<I><FONT COLOR="#CC4400">a</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>)) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>80</TD><TD>&nbsp;</TD><TD><A HREF="anass.html"
+TITLE="Associative law. (Contributed by NM, 12-Aug-1997.)">anass</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">76</SPAN></TD><TD><A NAME="80"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)
+&cap; (<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) = ((<I><FONT COLOR="#CC4400">a</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>81</TD><TD>&nbsp;</TD><TD><A HREF="an4.html"
+TITLE="Swap conjuncts. (Contributed by NM, 27-Aug-1997.)">an4</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EE2A00">86</SPAN></TD><TD><A NAME="81"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&cap; (<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>))) = ((<I><FONT COLOR="#CC4400">a</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I> &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>82</TD><TD>&nbsp;</TD><TD><A HREF="ancom.html"
+TITLE="Commutative law. (Contributed by NM, 10-Aug-1997.)">ancom</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02100">74</SPAN></TD><TD><A NAME="82"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) = ((<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>83</TD><TD>&nbsp;</TD><TD><A HREF="u2lemab.html"
+TITLE="Lemma for Dishkant implication study. (Contributed by NM, 14-Dec-1997.)">u2lemab</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#00905F">611</SPAN></TD><TD><A NAME="83"></A>
+<SPAN CLASS=i>. . . . . . . . 9</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) =
+<I><FONT COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>84</TD><TD><A HREF="#82">82</A>, <A
+HREF="#83">83</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="84"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I> &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) = <I><FONT
+COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>85</TD><TD><A HREF="#84">84</A></TD><TD><A HREF="lan.html"
+TITLE="Introduce conjunct on left. (Contributed by NM, 10-Aug-1997.)">lan</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">77</SPAN></TD><TD><A NAME="85"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&cap; (<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>))) = ((<I><FONT COLOR="#CC4400">a</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>86</TD><TD>&nbsp;</TD><TD><A HREF="an32.html"
+TITLE="Swap conjuncts. (Contributed by NM, 27-Aug-1997.)">an32</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EF2800">83</SPAN></TD><TD><A NAME="86"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) =
+((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>87</TD><TD><A HREF="#85">85</A>, <A
+HREF="#86">86</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="87"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&cap; (<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>))) = ((<I><FONT COLOR="#CC4400">a</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>88</TD><TD><A HREF="#80">80</A>, <A HREF="#81">81</A>, <A
+HREF="#87">87</A></TD><TD><A HREF="3tr.html"
+TITLE="Triple transitive inference. (Contributed by NM, 20-Sep-1998.)">3tr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F21B00">65</SPAN></TD><TD><A NAME="88"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)
+&cap; (<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) = ((<I><FONT COLOR="#CC4400">a</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>)</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>89</TD><TD>&nbsp;</TD><TD><A HREF="anass.html"
+TITLE="Associative law. (Contributed by NM, 12-Aug-1997.)">anass</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">76</SPAN></TD><TD><A NAME="89"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) = (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>90</TD><TD>&nbsp;</TD><TD><A HREF="ancom.html"
+TITLE="Commutative law. (Contributed by NM, 10-Aug-1997.)">ancom</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02100">74</SPAN></TD><TD><A NAME="90"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) = ((<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>91</TD><TD>&nbsp;</TD><TD><A HREF="u2lemanb.html"
+TITLE="Lemma for Dishkant implication study. (Contributed by NM, 14-Dec-1997.)">u2lemanb</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#009062">616</SPAN></TD><TD><A NAME="91"></A>
+<SPAN CLASS=i>. . . . . . . 8</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) = (<I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>92</TD><TD><A HREF="#90">90</A>, <A
+HREF="#91">91</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="92"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) = (<I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>93</TD><TD><A HREF="#92">92</A></TD><TD><A HREF="lan.html"
+TITLE="Introduce conjunct on left. (Contributed by NM, 10-Aug-1997.)">lan</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02300">77</SPAN></TD><TD><A NAME="93"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>))) = (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>94</TD><TD>&nbsp;</TD><TD><A HREF="an12.html"
+TITLE="Swap conjuncts. (Contributed by NM, 27-Aug-1997.)">an12</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#EF2600">81</SPAN></TD><TD><A NAME="94"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) = (<I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>95</TD><TD>&nbsp;</TD><TD><A HREF="ancom.html"
+TITLE="Commutative law. (Contributed by NM, 10-Aug-1997.)">ancom</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F02100">74</SPAN></TD><TD><A NAME="95"></A>
+<SPAN CLASS=i>. . . . . . 7</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) = ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>96</TD><TD><A HREF="#94">94</A>, <A
+HREF="#95">95</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="96"></A>
+<SPAN CLASS=i>. . . . . 6</SPAN>
+<SPAN >(<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) = ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>97</TD><TD><A HREF="#89">89</A>, <A HREF="#93">93</A>, <A
+HREF="#96">96</A></TD><TD><A HREF="3tr.html"
+TITLE="Triple transitive inference. (Contributed by NM, 20-Sep-1998.)">3tr</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F21B00">65</SPAN></TD><TD><A NAME="97"></A>
+<SPAN CLASS=i>. . . . 5</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) = ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>98</TD><TD><A HREF="#88">88</A>, <A
+HREF="#97">97</A></TD><TD><A HREF="2or.html"
+TITLE="Join both sides with disjunction. (Contributed by NM, 10-Aug-1997.)">2or</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F12000">72</SPAN></TD><TD><A NAME="98"></A>
+<SPAN CLASS=i>. . . 4</SPAN>
+<SPAN >((((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)
+&cap; (<I><FONT COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>))) = (((<I><FONT COLOR="#CC4400">a</FONT></I>
+&cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>99</TD><TD><A HREF="#79">79</A>, <A
+HREF="#98">98</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="99"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN >((((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT COLOR="#CC4400">c</FONT></I>)
+&cup; (<I><FONT COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; (<I><FONT
+COLOR="#CC4400">c</FONT></I> &rarr;<SUB>2 </SUB><I><FONT
+COLOR="#CC4400">b</FONT></I>)) = (((<I><FONT COLOR="#CC4400">a</FONT></I> &cap;
+<I><FONT COLOR="#CC4400">b</FONT></I>) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I>) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>100</TD><TD><A HREF="#61">61</A>, <A HREF="#62">62</A>, <A
+HREF="#99">99</A></TD><TD><A HREF="3tr2.html"
+TITLE="Transitive inference useful for eliminating definitions. (Contributed by NM,...">3tr2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F21A00">64</SPAN></TD><TD><A NAME="100"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN >(((<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cup; (<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> )) &cap; ((<I><FONT
+COLOR="#CC4400">b</FONT></I> &rarr;<SUB>1 </SUB><I><FONT
+COLOR="#CC4400">c</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">c</FONT></I>
+&rarr;<SUB>2 </SUB><I><FONT COLOR="#CC4400">b</FONT></I>))) = (((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>101</TD><TD><A HREF="#4">4</A>, <A
+HREF="#100">100</A></TD><TD><A HREF="ax-r2.html"
+TITLE="Inference rule for ortholattices. (Contributed by NM, 9-Aug-1997.)">ax-r2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">36</SPAN></TD><TD><A NAME="101"></A>
+<SPAN CLASS=i>1</SPAN>
+<SPAN >((<I><FONT COLOR="#CC4400">a</FONT></I> &equiv; <I><FONT
+COLOR="#CC4400">b</FONT></I>) &cap; (<I><FONT COLOR="#CC4400">b</FONT></I>
+&equiv; <I><FONT COLOR="#CC4400">c</FONT></I>)) = (((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cap;
+<I><FONT COLOR="#CC4400">c</FONT></I>) &cup; ((<I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ) &cap; <I><FONT
+COLOR="#CC4400">c</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE CELLSPACING=5><TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Colors of
+variables:</B>  <FONT COLOR="#CC4400">term</FONT></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Syntax hints:</B>  &nbsp;<SPAN > =
+</SPAN><A HREF="wb.html">wb</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FB0000">1</SPAN> &nbsp;<SPAN ><SUP>&#8869;</SUP> </SPAN><A
+HREF="wn.html">wn</A>&nbsp;<SPAN CLASS=r STYLE="color:#FA0000">4</SPAN>
+&nbsp;<SPAN > &equiv; </SPAN><A HREF="tb.html">tb</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FA0100">5</SPAN> &nbsp;<SPAN > &cup; </SPAN><A
+HREF="wo.html">wo</A>&nbsp;<SPAN CLASS=r STYLE="color:#FA0100">6</SPAN>
+&nbsp;<SPAN > &cap; </SPAN><A HREF="wa.html">wa</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FA0100">7</SPAN> &nbsp;<SPAN >0</SPAN><A
+HREF="wf.html">wf</A>&nbsp;<SPAN CLASS=r STYLE="color:#FA0200">9</SPAN>
+&nbsp;<SPAN > &rarr;<SUB>1 </SUB></SPAN><A HREF="wi1.html">wi1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F90300">12</SPAN> &nbsp;<SPAN > &rarr;<SUB>2
+</SUB></SPAN><A HREF="wi2.html">wi2</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F90300">13</SPAN></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This theorem was proved from axioms:</B>
+&nbsp;<A HREF="ax-a1.html">ax-a1</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F80800">30</SPAN> &nbsp;<A HREF="ax-a2.html">ax-a2</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F80800">31</SPAN> &nbsp;<A
+HREF="ax-a3.html">ax-a3</A>&nbsp;<SPAN CLASS=r STYLE="color:#F80800">32</SPAN>
+&nbsp;<A HREF="ax-a4.html">ax-a4</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F80800">33</SPAN> &nbsp;<A HREF="ax-a5.html">ax-a5</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">34</SPAN> &nbsp;<A
+HREF="ax-r1.html">ax-r1</A>&nbsp;<SPAN CLASS=r STYLE="color:#F70900">35</SPAN>
+&nbsp;<A HREF="ax-r2.html">ax-r2</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F70900">36</SPAN> &nbsp;<A HREF="ax-r4.html">ax-r4</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70900">37</SPAN> &nbsp;<A
+HREF="ax-r5.html">ax-r5</A>&nbsp;<SPAN CLASS=r STYLE="color:#F70A00">38</SPAN>
+&nbsp;<A HREF="ax-r3.html">ax-r3</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#399000">439</SPAN></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This theorem depends on definitions:</B>
+&nbsp;<A HREF="df-b.html">df-b</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F70A00">39</SPAN> &nbsp;<A HREF="df-a.html">df-a</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70A00">40</SPAN> &nbsp;<A
+HREF="df-t.html">df-t</A>&nbsp;<SPAN CLASS=r STYLE="color:#F70B00">41</SPAN>
+&nbsp;<A HREF="df-f.html">df-f</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#F70B00">42</SPAN> &nbsp;<A HREF="df-i1.html">df-i1</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#F70B00">44</SPAN> &nbsp;<A
+HREF="df-i2.html">df-i2</A>&nbsp;<SPAN CLASS=r STYLE="color:#F60C00">45</SPAN>
+&nbsp;<A HREF="df-le1.html">df-le1</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#DE4600">130</SPAN> &nbsp;<A
+HREF="df-le2.html">df-le2</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#DE4600">131</SPAN> &nbsp;<A
+HREF="df-c1.html">df-c1</A>&nbsp;<SPAN CLASS=r STYLE="color:#DD4700">132</SPAN>
+&nbsp;<A HREF="df-c2.html">df-c2</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#DD4700">133</SPAN></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This theorem is referenced by:</B> &nbsp;<A
+HREF="bi4.html">bi4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5273FF">840</SPAN> &nbsp;<A
+HREF="mlaconj4.html">mlaconj4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5673FF">844</SPAN></FONT></TD></TR>
+</TABLE></CENTER>
+<TABLE BORDER=0 WIDTH="100%">
+<TR><TD WIDTH="25%">&nbsp;</TD>
+<TD ALIGN=CENTER VALIGN=BOTTOM>
+<FONT SIZE=-2 FACE=sans-serif>
+Copyright terms:
+<A HREF="http://us.metamath.org/copyright.html#pd">Public domain</A>
+</FONT></TD><TD ALIGN=RIGHT VALIGN=BOTTOM WIDTH="25%">
+<FONT SIZE=-2 FACE=sans-serif>
+<A HREF="http://validator.w3.org/check?uri=referer">
+W3C validator</A>
+</FONT></TD></TR></TABLE>
+</BODY></HTML>

@@ -1,0 +1,239 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<HTML LANG="EN-US">
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">
+<STYLE TYPE="text/css">
+<!--
+img { margin-bottom: -4px }
+.r { font-family: "Arial Narrow";
+     font-size: x-small;
+   }
+.i { font-family: "Arial Narrow";
+     font-size: x-small;
+     color: gray;
+   }
+-->
+</STYLE>
+
+<TITLE>df-t - Quantum Logic Explorer</TITLE>
+<LINK REL="shortcut icon" HREF="favicon.ico" TYPE="image/x-icon">
+</HEAD>
+<BODY BGCOLOR="#FFFFFF">
+<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 WIDTH="100%">
+  <TR>
+    <TD ALIGN=LEFT VALIGN=TOP WIDTH="25%"><A HREF=
+    "mmql.html"><IMG SRC="l46-7icon.gif"
+      BORDER=0
+      ALT="QLE Home"
+      TITLE="QLE Home"
+      HEIGHT=32 WIDTH=32 ALIGN=TOP STYLE="margin-bottom:0px"></A>
+    </TD>
+    <TD ALIGN=CENTER COLSPAN=2 VALIGN=TOP><FONT SIZE="+3" COLOR="#006633"><B>
+Quantum Logic Explorer
+      </B></FONT></TD>
+    <TD ALIGN=RIGHT VALIGN=TOP WIDTH="25%">
+      <FONT SIZE=-1 FACE=sans-serif>
+      <A HREF="df-a.html">
+      &lt; Previous</A>&nbsp;&nbsp;
+      <A HREF="df-f.html">Next &gt;</A>
+      </FONT><FONT FACE=sans-serif SIZE=-2>
+      <BR><A HREF="mmtheorems1.html#df-t">Nearby theorems</A>
+      </FONT>
+    </TD>
+  </TR>
+  <TR>
+    <TD COLSPAN=2 ALIGN=LEFT VALIGN=TOP><FONT SIZE=-2
+      FACE=sans-serif>
+      <A HREF="http://us.metamath.org/mm.html">Mirrors</A>&nbsp; &gt;
+      &nbsp;<A HREF="http://us.metamath.org/index.html">Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmql.html">QLE Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmtheorems.html">Th. List</A>&nbsp; &gt;
+      &nbsp;df-t
+      </FONT>
+    </TD>
+    <TD COLSPAN=2 ALIGN=RIGHT VALIGN=TOP>
+      <FONT SIZE=-2 FACE=sans-serif>
+
+      <A HREF="http://us.metamath.org/qlegif/df-t.html">GIF version</A>
+      </FONT>
+    </TD>
+  </TR>
+</TABLE>
+<HR NOSHADE SIZE=1>
+<CENTER><B><FONT SIZE="+1">Definition <FONT
+COLOR="#006633">df-t</FONT></FONT></B>&nbsp;<SPAN CLASS=r
+STYLE="color:#F70B00">41</SPAN></CENTER>
+<CENTER><TABLE><TR><TD ALIGN=LEFT><B>Description: </B>Define true. 
+(Contributed by NM, 9-Aug-1997.)</TD></TR></TABLE></CENTER>
+
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Assertion">
+<CAPTION><B>Assertion</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD><FONT COLOR="#006633"><B>df-t</B></FONT></TD><TD>
+<SPAN >1 = (<I><FONT COLOR="#CC4400">a</FONT></I> &cup; <I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+</TABLE></CENTER>
+
+
+<HR NOSHADE SIZE=1>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Detailed syntax breakdown of definition">
+<CAPTION><B>Detailed syntax breakdown of Definition <FONT
+   COLOR="#006633">df-t</FONT></B></CAPTION>
+<TR><TH>Step</TH><TH>Hyp</TH><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>1</TD><TD>&nbsp;</TD><TD><A HREF="wt.html"
+TITLE="The logical true constant is a term.">wt</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FA0100">8</SPAN></TD><TD><A NAME="1"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>1</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>2</TD><TD>&nbsp;</TD><TD>wva</TD><TD><A NAME="2"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">a</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>3</TD><TD><A HREF="#2">2</A></TD><TD><A HREF="wn.html"
+TITLE="If ` a ` is a term, so is ` a ' ` .">wn</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#FA0000">4</SPAN></TD><TD><A NAME="3"></A>
+<SPAN CLASS=i>. . 3</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>4</TD><TD><A HREF="#2">2</A>, <A HREF="#3">3</A></TD><TD><A
+HREF="wo.html"
+TITLE="If ` a ` and ` b ` are terms, so is ` ( a v b ) ` .">wo</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0100">6</SPAN></TD><TD><A NAME="4"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT>(<I><FONT
+COLOR="#CC4400">a</FONT></I> &cup; <I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>5</TD><TD><A HREF="#1">1</A>, <A HREF="#4">4</A></TD><TD><A
+HREF="wb.html"
+TITLE="If ` a ` and ` b ` are terms, ` a = b ` is a wff.">wb</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FB0000">1</SPAN></TD><TD><A NAME="5"></A>
+<SPAN CLASS=i>1</SPAN>
+<SPAN ><FONT COLOR="#00CC00">wff&nbsp; </FONT>1 = (<I><FONT
+COLOR="#CC4400">a</FONT></I> &cup; <I><FONT
+COLOR="#CC4400">a</FONT></I><SUP>&#8869;</SUP> )</SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE CELLSPACING=5><TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Colors of
+variables:</B>  <FONT COLOR="#CC4400">term</FONT></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This definition is referenced by:</B> &nbsp;<A HREF="dff2.html">dff2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#E93300">100</SPAN> &nbsp;<A HREF="or1.html">or1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#E83500">104</SPAN> &nbsp;<A HREF="biid.html">biid</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#E33D00">116</SPAN> &nbsp;<A HREF="omlem2.html">omlem2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#DF4400">128</SPAN> &nbsp;<A HREF="comm1.html">comm1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#C85A00">179</SPAN> &nbsp;<A HREF="ka4lemo.html">ka4lemo</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#AC6F00">228</SPAN> &nbsp;<A HREF="sklem.html">sklem</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#AB6F00">230</SPAN> &nbsp;<A HREF="ska3.html">ska3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#AA7000">232</SPAN> &nbsp;<A HREF="wlem1.html">wlem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#A47300">243</SPAN> &nbsp;<A HREF="lei3.html">lei3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#A27400">246</SPAN> &nbsp;<A HREF="mccune2.html">mccune2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#A27500">247</SPAN> &nbsp;<A HREF="i3id.html">i3id</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#9F7600">251</SPAN> &nbsp;<A HREF="i1id.html">i1id</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#917C00">275</SPAN> &nbsp;<A HREF="i2id.html">i2id</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#917C00">276</SPAN> &nbsp;<A HREF="bina5.html">bina5</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#8A7F00">286</SPAN> &nbsp;<A HREF="wql2lem5.html">wql2lem5</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#878000">292</SPAN> &nbsp;<A HREF="womle2a.html">womle2a</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#858000">295</SPAN> &nbsp;<A HREF="nom23.html">nom23</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#7A8400">316</SPAN> &nbsp;<A HREF="wdf-c1.html">wdf-c1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#5B8B00">383</SPAN> &nbsp;<A HREF="wlem14.html">wlem14</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3F8F00">430</SPAN> &nbsp;<A HREF="ska2.html">ska2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3E8F00">432</SPAN> &nbsp;<A HREF="ska4.html">ska4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3D8F00">433</SPAN> &nbsp;<A HREF="woml6.html">woml6</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3B9000">436</SPAN> &nbsp;<A HREF="woml7.html">woml7</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3B9000">437</SPAN> &nbsp;<A HREF="r3a.html">r3a</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#389000">440</SPAN> &nbsp;<A HREF="r3b.html">r3b</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#379000">442</SPAN> &nbsp;<A HREF="oml6.html">oml6</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#179304">488</SPAN> &nbsp;<A HREF="comcmtr1.html">comcmtr1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#139307">494</SPAN> &nbsp;<A HREF="i31.html">i31</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#019314">520</SPAN> &nbsp;<A HREF="i3abs3.html">i3abs3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009317">524</SPAN> &nbsp;<A HREF="i3th1.html">i3th1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009228">543</SPAN> &nbsp;<A HREF="i3con.html">i3con</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#00922F">551</SPAN> &nbsp;<A HREF="ud1lem1.html">ud1lem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009137">560</SPAN> &nbsp;<A HREF="ud1lem2.html">ud1lem2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009138">561</SPAN> &nbsp;<A HREF="ud1lem3.html">ud1lem3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009139">562</SPAN> &nbsp;<A HREF="ud2lem3.html">ud2lem3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#00913C">565</SPAN> &nbsp;<A HREF="ud3lem1c.html">ud3lem1c</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#00913E">568</SPAN> &nbsp;<A HREF="ud3lem1.html">ud3lem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009140">570</SPAN> &nbsp;<A HREF="ud3lem3.html">ud3lem3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009144">576</SPAN> &nbsp;<A HREF="ud4lem1c.html">ud4lem1c</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009146">579</SPAN> &nbsp;<A HREF="ud4lem1.html">ud4lem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009148">581</SPAN> &nbsp;<A HREF="ud4lem2.html">ud4lem2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009149">582</SPAN> &nbsp;<A HREF="ud4lem3b.html">ud4lem3b</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#00914A">584</SPAN> &nbsp;<A HREF="ud4lem3.html">ud4lem3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#00914B">585</SPAN> &nbsp;<A HREF="ud5lem1.html">ud5lem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#00914E">589</SPAN> &nbsp;<A HREF="ud5lem3.html">ud5lem3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009152">594</SPAN> &nbsp;<A HREF="u1lemoa.html">u1lemoa</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009065">620</SPAN> &nbsp;<A HREF="u2lemoa.html">u2lemoa</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009066">621</SPAN> &nbsp;<A HREF="u4lemoa.html">u4lemoa</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#009068">623</SPAN> &nbsp;<A HREF="u4lemona.html">u4lemona</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#00906C">628</SPAN> &nbsp;<A HREF="u3lemob.html">u3lemob</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008F6F">632</SPAN> &nbsp;<A HREF="u4lemob.html">u4lemob</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008F6F">633</SPAN> &nbsp;<A HREF="u1lemonb.html">u1lemonb</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008F71">635</SPAN> &nbsp;<A HREF="u2lemonb.html">u2lemonb</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008F72">636</SPAN> &nbsp;<A HREF="u3lemonb.html">u3lemonb</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008F72">637</SPAN> &nbsp;<A HREF="u1lemc4.html">u1lemc4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008BA9">701</SPAN> &nbsp;<A HREF="u2lemc4.html">u2lemc4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008BAA">702</SPAN> &nbsp;<A HREF="u3lemc4.html">u3lemc4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008AAC">703</SPAN> &nbsp;<A HREF="u4lemc4.html">u4lemc4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008AAD">704</SPAN> &nbsp;<A HREF="u5lemc4.html">u5lemc4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008AAE">705</SPAN> &nbsp;<A HREF="u1lem3var1.html">u1lem3var1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0086CE">731</SPAN> &nbsp;<A HREF="u1lem2.html">u1lem2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0084DD">744</SPAN> &nbsp;<A HREF="u2lem2.html">u2lem2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0084DE">745</SPAN> &nbsp;<A HREF="u2lem3.html">u2lem3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0083E2">750</SPAN> &nbsp;<A HREF="u1lem4.html">u1lem4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0182E8">757</SPAN> &nbsp;<A HREF="u4lem4.html">u4lem4</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0182EA">759</SPAN> &nbsp;<A HREF="u4lem5.html">u4lem5</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0181EE">764</SPAN> &nbsp;<A HREF="u5lem5.html">u5lem5</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0181EF">765</SPAN> &nbsp;<A HREF="u4lem6.html">u4lem6</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0181F1">768</SPAN> &nbsp;<A HREF="u5lem6.html">u5lem6</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0280F2">769</SPAN> &nbsp;<A HREF="u1lem7.html">u1lem7</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0280F5">772</SPAN> &nbsp;<A HREF="u1lem11.html">u1lem11</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#027FFC">780</SPAN> &nbsp;<A HREF="u3lem8.html">u3lem8</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#027FFE">783</SPAN> &nbsp;<A HREF="u3lem10.html">u3lem10</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#057EFF">785</SPAN> &nbsp;<A HREF="u3lem11.html">u3lem11</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#077EFF">786</SPAN> &nbsp;<A HREF="u3lem13a.html">u3lem13a</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0B7DFF">789</SPAN> &nbsp;<A HREF="u3lem13b.html">u3lem13b</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0D7DFF">790</SPAN> &nbsp;<A HREF="i2i1i1.html">i2i1i1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#1D7BFF">800</SPAN> &nbsp;<A HREF="i1abs.html">i1abs</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#1E7BFF">801</SPAN> &nbsp;<A HREF="test.html">test</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#207BFF">802</SPAN> &nbsp;<A HREF="test2.html">test2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#217BFF">803</SPAN> &nbsp;<A HREF="3vded11.html">3vded11</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3279FF">814</SPAN> &nbsp;<A HREF="3vded12.html">3vded12</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#3479FF">815</SPAN> &nbsp;<A HREF="2oalem1.html">2oalem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#4477FF">825</SPAN> &nbsp;<A HREF="neg3antlem2.html">neg3antlem2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#696EFF">865</SPAN> &nbsp;<A HREF="elimconslem.html">elimconslem</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#6B6DFF">867</SPAN> &nbsp;<A HREF="elimcons.html">elimcons</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#6B6DFF">868</SPAN> &nbsp;<A HREF="mhlem1.html">mhlem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#726BFF">877</SPAN> &nbsp;<A HREF="gomaex3lem1.html">gomaex3lem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#8962FF">914</SPAN> &nbsp;<A HREF="gomaex3lem2.html">gomaex3lem2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#8962FF">915</SPAN> &nbsp;<A HREF="gomaex3lem3.html">gomaex3lem3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#8A61FF">916</SPAN> &nbsp;<A HREF="gomaex3lem7.html">gomaex3lem7</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#8D5FFF">920</SPAN> &nbsp;<A HREF="oa3to4lem1.html">oa3to4lem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#A053FF">945</SPAN> &nbsp;<A HREF="oa3to4lem2.html">oa3to4lem2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#A053FF">946</SPAN> &nbsp;<A HREF="oa4to6lem1.html">oa4to6lem1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#AA4CFF">960</SPAN> &nbsp;<A HREF="oa4to6lem2.html">oa4to6lem2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#AA4CFF">961</SPAN> &nbsp;<A HREF="oa4to6lem3.html">oa4to6lem3</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#AA4BFF">962</SPAN> &nbsp;<A HREF="lem3.3.7i0e1.html">lem3.3.7i0e1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#CE1BF4">1057</SPAN> &nbsp;<A HREF="lem3.3.7i1e1.html">lem3.3.7i1e1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#CF1AF3">1060</SPAN> &nbsp;<A HREF="lem3.3.7i1e2.html">lem3.3.7i1e2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#CF1AF3">1061</SPAN> &nbsp;<A HREF="lem3.3.7i2e1.html">lem3.3.7i2e1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#CF19F2">1063</SPAN> &nbsp;<A HREF="lem3.3.7i2e2.html">lem3.3.7i2e2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D019F2">1064</SPAN> &nbsp;<A HREF="lem3.3.7i3e1.html">lem3.3.7i3e1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D018F1">1066</SPAN> &nbsp;<A HREF="lem3.3.7i3e2.html">lem3.3.7i3e2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#D018F1">1067</SPAN></FONT></TD></TR></TABLE></CENTER>
+<TABLE BORDER=0 WIDTH="100%">
+<TR><TD WIDTH="25%">&nbsp;</TD>
+<TD ALIGN=CENTER VALIGN=BOTTOM>
+<FONT SIZE=-2 FACE=sans-serif>
+Copyright terms:
+<A HREF="http://us.metamath.org/copyright.html#pd">Public domain</A>
+</FONT></TD><TD ALIGN=RIGHT VALIGN=BOTTOM WIDTH="25%">
+<FONT SIZE=-2 FACE=sans-serif>
+<A HREF="http://validator.w3.org/check?uri=referer">
+W3C validator</A>
+</FONT></TD></TR></TABLE>
+</BODY></HTML>

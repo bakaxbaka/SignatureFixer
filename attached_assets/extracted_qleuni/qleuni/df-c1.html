@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<HTML LANG="EN-US">
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<META NAME="viewport" CONTENT="width=device-width, initial-scale=1.0">
+<STYLE TYPE="text/css">
+<!--
+img { margin-bottom: -4px }
+.r { font-family: "Arial Narrow";
+     font-size: x-small;
+   }
+.i { font-family: "Arial Narrow";
+     font-size: x-small;
+     color: gray;
+   }
+-->
+</STYLE>
+
+<TITLE>df-c1 - Quantum Logic Explorer</TITLE>
+<LINK REL="shortcut icon" HREF="favicon.ico" TYPE="image/x-icon">
+</HEAD>
+<BODY BGCOLOR="#FFFFFF">
+<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 WIDTH="100%">
+  <TR>
+    <TD ALIGN=LEFT VALIGN=TOP WIDTH="25%"><A HREF=
+    "mmql.html"><IMG SRC="l46-7icon.gif"
+      BORDER=0
+      ALT="QLE Home"
+      TITLE="QLE Home"
+      HEIGHT=32 WIDTH=32 ALIGN=TOP STYLE="margin-bottom:0px"></A>
+    </TD>
+    <TD ALIGN=CENTER COLSPAN=2 VALIGN=TOP><FONT SIZE="+3" COLOR="#006633"><B>
+Quantum Logic Explorer
+      </B></FONT></TD>
+    <TD ALIGN=RIGHT VALIGN=TOP WIDTH="25%">
+      <FONT SIZE=-1 FACE=sans-serif>
+      <A HREF="df-le2.html">
+      &lt; Previous</A>&nbsp;&nbsp;
+      <A HREF="df-c2.html">Next &gt;</A>
+      </FONT><FONT FACE=sans-serif SIZE=-2>
+      <BR><A HREF="mmtheorems2.html#df-c1">Nearby theorems</A>
+      </FONT>
+    </TD>
+  </TR>
+  <TR>
+    <TD COLSPAN=2 ALIGN=LEFT VALIGN=TOP><FONT SIZE=-2
+      FACE=sans-serif>
+      <A HREF="http://us.metamath.org/mm.html">Mirrors</A>&nbsp; &gt;
+      &nbsp;<A HREF="http://us.metamath.org/index.html">Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmql.html">QLE Home</A>&nbsp; &gt;
+      &nbsp;<A HREF="mmtheorems.html">Th. List</A>&nbsp; &gt;
+      &nbsp;df-c1
+      </FONT>
+    </TD>
+    <TD COLSPAN=2 ALIGN=RIGHT VALIGN=TOP>
+      <FONT SIZE=-2 FACE=sans-serif>
+
+      <A HREF="http://us.metamath.org/qlegif/df-c1.html">GIF version</A>
+      </FONT>
+    </TD>
+  </TR>
+</TABLE>
+<HR NOSHADE SIZE=1>
+<CENTER><B><FONT SIZE="+1">Definition <FONT
+COLOR="#006633">df-c1</FONT></FONT></B>&nbsp;<SPAN CLASS=r
+STYLE="color:#DD4700">132</SPAN></CENTER>
+<CENTER><TABLE><TR><TD ALIGN=LEFT><B>Description: </B>Define
+&quot;commutes&quot;.  See <A HREF="df-c2.html">df-c2</A>&nbsp;<SPAN CLASS=r
+STYLE="color:#DD4700">133</SPAN> for the other direction.  (Contributed
+       by NM, 27-Aug-1997.)</TD></TR></TABLE></CENTER>
+
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Hypothesis">
+<CAPTION><B>Hypothesis</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>df-c1.1</TD><TD>
+<SPAN ><I><FONT COLOR="#CC4400">a</FONT></I> = ((<I><FONT
+COLOR="#CC4400">a</FONT></I> &cap; <I><FONT COLOR="#CC4400">b</FONT></I>) &cup;
+(<I><FONT COLOR="#CC4400">a</FONT></I> &cap; <I><FONT
+COLOR="#CC4400">b</FONT></I><SUP>&#8869;</SUP> ))</SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Assertion">
+<CAPTION><B>Assertion</B></CAPTION>
+<TR><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD><FONT COLOR="#006633"><B>df-c1</B></FONT></TD><TD>
+<SPAN ><I><FONT COLOR="#CC4400">a</FONT></I><I> C </I><I><FONT
+COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+</TABLE></CENTER>
+
+
+<HR NOSHADE SIZE=1>
+<CENTER><TABLE BORDER CELLSPACING=0 BGCOLOR="#EEFFFA"
+SUMMARY="Detailed syntax breakdown of definition">
+<CAPTION><B>Detailed syntax breakdown of Definition <FONT
+   COLOR="#006633">df-c1</FONT></B></CAPTION>
+<TR><TH>Step</TH><TH>Hyp</TH><TH>Ref
+</TH><TH>Expression</TH></TR>
+<TR ALIGN=LEFT><TD>1</TD><TD>&nbsp;</TD><TD>wva</TD><TD><A NAME="1"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">a</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>2</TD><TD>&nbsp;</TD><TD>wvb</TD><TD><A NAME="2"></A>
+<SPAN CLASS=i>. 2</SPAN>
+<SPAN ><FONT COLOR="#00CC00">term&nbsp; </FONT><I><FONT
+COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+<TR ALIGN=LEFT><TD>3</TD><TD><A HREF="#1">1</A>, <A HREF="#2">2</A></TD><TD><A
+HREF="wc.html"
+TITLE="If ` a ` and ` b ` are terms, ` a C b ` is a wff.">wc</A>&nbsp;<SPAN
+CLASS=r STYLE="color:#FA0000">3</SPAN></TD><TD><A NAME="3"></A>
+<SPAN CLASS=i>1</SPAN>
+<SPAN ><FONT COLOR="#00CC00">wff&nbsp; </FONT><I><FONT
+COLOR="#CC4400">a</FONT></I><I> C </I><I><FONT
+COLOR="#CC4400">b</FONT></I></SPAN></TD></TR>
+</TABLE></CENTER>
+<CENTER><TABLE CELLSPACING=5><TR><TD ALIGN=LEFT><FONT SIZE=-1><B>Colors of
+variables:</B>  <FONT COLOR="#CC4400">term</FONT></FONT></TD></TR>
+<TR><TD ALIGN=LEFT><FONT SIZE=-1><B>This definition is referenced by:</B> &nbsp;<A HREF="comm0.html">comm0</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#C95A00">178</SPAN> &nbsp;<A HREF="comm1.html">comm1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#C85A00">179</SPAN> &nbsp;<A HREF="lecom.html">lecom</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#C85B00">180</SPAN> &nbsp;<A HREF="bctr.html">bctr</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#C75B00">181</SPAN> &nbsp;<A HREF="cbtr.html">cbtr</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#C65C00">182</SPAN> &nbsp;<A HREF="comcom2.html">comcom2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#C65C00">183</SPAN> &nbsp;<A HREF="comcom.html">comcom</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#309100">453</SPAN> &nbsp;<A HREF="comcom5.html">comcom5</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#2C9100">458</SPAN> &nbsp;<A HREF="comdr.html">comdr</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#279200">466</SPAN> &nbsp;<A HREF="com3i.html">com3i</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#269200">467</SPAN> &nbsp;<A HREF="df2c1.html">df2c1</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#259200">468</SPAN> &nbsp;<A HREF="com2or.html">com2or</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#1B9301">483</SPAN> &nbsp;<A HREF="cmtr1com.html">cmtr1com</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#149307">493</SPAN> &nbsp;<A HREF="i0cmtrcom.html">i0cmtrcom</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#139308">495</SPAN> &nbsp;<A HREF="i3lem2.html">i3lem2</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#0C930D">505</SPAN> &nbsp;<A HREF="i1com.html">i1com</A>
+&nbsp;<SPAN CLASS=r STYLE="color:#008AB2">708</SPAN></FONT></TD></TR></TABLE></CENTER>
+<TABLE BORDER=0 WIDTH="100%">
+<TR><TD WIDTH="25%">&nbsp;</TD>
+<TD ALIGN=CENTER VALIGN=BOTTOM>
+<FONT SIZE=-2 FACE=sans-serif>
+Copyright terms:
+<A HREF="http://us.metamath.org/copyright.html#pd">Public domain</A>
+</FONT></TD><TD ALIGN=RIGHT VALIGN=BOTTOM WIDTH="25%">
+<FONT SIZE=-2 FACE=sans-serif>
+<A HREF="http://validator.w3.org/check?uri=referer">
+W3C validator</A>
+</FONT></TD></TR></TABLE>
+</BODY></HTML>

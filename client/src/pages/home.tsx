@@ -8,9 +8,10 @@ import { EducationalResources } from "@/components/educational-resources";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, X, Settings, Search, AlertCircle, Key, Globe } from "lucide-react";
+import { AlertTriangle, X, Settings, Search, AlertCircle, Key, Globe, Calculator, Blocks } from "lucide-react";
 import { useBitcoinAPIs } from "@/hooks/use-bitcoin-apis";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { Link } from "wouter";
 
 export default function Home() {
   const [showBanner, setShowBanner] = useState(true);
@@ -63,6 +64,18 @@ export default function Home() {
                   {isConnected ? 'Connected to Mainnet' : 'Disconnected'}
                 </span>
               </div>
+              <Link href="/ecdsa-workbench">
+                <Button variant="outline" size="sm" data-testid="button-ecdsa-workbench">
+                  <Calculator className="w-4 h-4 mr-2" />
+                  ECDSA Workbench
+                </Button>
+              </Link>
+              <Link href="/block-scanner">
+                <Button variant="outline" size="sm" data-testid="button-block-scanner">
+                  <Blocks className="w-4 h-4 mr-2" />
+                  Block Scanner
+                </Button>
+              </Link>
               <Button variant="ghost" size="sm">
                 <Settings className="w-5 h-5" />
               </Button>
