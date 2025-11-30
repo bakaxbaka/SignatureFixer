@@ -1166,6 +1166,222 @@ export class ECDSARecovery {
 
     return result;
   }
+
+  /**
+   * PHASE 3.1: Serialize legacy (P2PKH) transaction for signing
+   * @param tx Transaction object from blockchain.info
+   * @param inputIndex Index of input being signed
+   * @param scriptCode Script to use for this input
+   * @returns Hex string of serialized transaction
+   */
+  serializeLegacy(tx: any, inputIndex: number, scriptCode: string = ''): string {
+    try {
+      let serialized = '';
+      
+      // Version (4 bytes, little-endian)
+      serialized += this.int32ToHex(tx.ver || 1);
+      
+      // Input count (varint)
+      serialized += this.varintEncode(tx.inputs?.length || 0);
+      
+      // Inputs
+      for (let i = 0; i < (tx.inputs?.length || 0); i++) {
+        const input = tx.inputs[i];
+        
+        // Previous tx hash (32 bytes, reversed)
+        const prevHash = input.prev_out?.hash || '0'.repeat(64);
+        serialized += this.reverseHex(prevHash);
+        
+        // Previous output index (4 bytes, little-endian)
+        serialized += this.int32ToHex(input.prev_out?.n || 0);
+        
+        // Script length and script (for signing, only current input has script)
+        if (i === inputIndex) {
+          serialized += this.varintEncode(scriptCode.length / 2);
+          serialized += scriptCode;
+        } else {
+          serialized += '00'; // Empty script for other inputs
+        }
+        
+        // Sequence (4 bytes, little-endian)
+        serialized += this.int32ToHex(input.sequence || 0xffffffff);
+      }
+      
+      // Output count (varint)
+      serialized += this.varintEncode(tx.out?.length || 0);
+      
+      // Outputs
+      for (const output of tx.out || []) {
+        // Value (8 bytes, little-endian)
+        serialized += this.int64ToHex(output.value || 0);
+        
+        // Script length and script
+        const outScript = output.script || '';
+        serialized += this.varintEncode(outScript.length / 2);
+        serialized += outScript;
+      }
+      
+      // Locktime (4 bytes, little-endian)
+      serialized += this.int32ToHex(tx.lock_time || 0);
+      
+      console.log(`[Phase 3.1] Serialized legacy tx (input ${inputIndex}): ${serialized.substring(0, 64)}...`);
+      return serialized;
+    } catch (error) {
+      console.error('Legacy serialization failed:', error);
+      return '';
+    }
+  }
+
+  /**
+   * PHASE 3.1: Serialize BIP143 (SegWit) transaction for signing
+   * @param tx Transaction object from blockchain.info
+   * @param inputIndex Index of input being signed
+   * @param scriptCode Script to use for this input
+   * @param amount Input amount in satoshis
+   * @returns Hex string of serialized transaction per BIP143
+   */
+  serializeBIP143(tx: any, inputIndex: number, scriptCode: string = '', amount: number = 0): string {
+    try {
+      let serialized = '';
+      
+      // 1. nVersion (4 bytes)
+      serialized += this.int32ToHex(tx.ver || 1);
+      
+      // 2. hashPrevouts (32 bytes) - SHA256D of all prevouts
+      const prevoutsHash = this.hashPrevouts(tx);
+      serialized += prevoutsHash;
+      
+      // 3. hashSequence (32 bytes) - SHA256D of all sequences
+      const sequenceHash = this.hashSequence(tx);
+      serialized += sequenceHash;
+      
+      // 4. outpoint (32 bytes hash + 4 bytes index)
+      const input = tx.inputs?.[inputIndex];
+      const prevHash = input?.prev_out?.hash || '0'.repeat(64);
+      serialized += this.reverseHex(prevHash);
+      serialized += this.int32ToHex(input?.prev_out?.n || 0);
+      
+      // 5. scriptCode (varint length + script)
+      serialized += this.varintEncode(scriptCode.length / 2);
+      serialized += scriptCode;
+      
+      // 6. amount (8 bytes, little-endian)
+      serialized += this.int64ToHex(amount);
+      
+      // 7. nSequence (4 bytes)
+      serialized += this.int32ToHex(input?.sequence || 0xffffffff);
+      
+      // 8. hashOutputs (32 bytes) - SHA256D of all outputs
+      const outputsHash = this.hashOutputs(tx);
+      serialized += outputsHash;
+      
+      // 9. nLocktime (4 bytes)
+      serialized += this.int32ToHex(tx.lock_time || 0);
+      
+      console.log(`[Phase 3.1] Serialized BIP143 tx (input ${inputIndex}): ${serialized.substring(0, 64)}...`);
+      return serialized;
+    } catch (error) {
+      console.error('BIP143 serialization failed:', error);
+      return '';
+    }
+  }
+
+  /**
+   * PHASE 3.2: Compute message hash z using sha256d
+   * @param serializedTx Serialized transaction hex
+   * @param sighashType Sighash type (1-4)
+   * @returns Message hash z as hex string
+   */
+  computeZ(serializedTx: string, sighashType: number = 1): string {
+    try {
+      // Append sighash type (4 bytes, little-endian)
+      const sighashHex = this.int32ToHex(sighashType);
+      const data = serializedTx + sighashHex;
+      
+      // Compute sha256d
+      const hash1 = createHash('sha256').update(Buffer.from(data, 'hex')).digest('hex');
+      const hash2 = createHash('sha256').update(Buffer.from(hash1, 'hex')).digest('hex');
+      
+      console.log(`[Phase 3.2] Computed z: ${hash2.substring(0, 16)}... (sighash=${sighashType})`);
+      return hash2;
+    } catch (error) {
+      console.error('Z computation failed:', error);
+      return '0'.repeat(64);
+    }
+  }
+
+  // ===== Helper methods for serialization =====
+  
+  private int32ToHex(value: number): string {
+    return Buffer.alloc(4).writeUInt32LE(value >>> 0, 0).toString('hex');
+  }
+
+  private int64ToHex(value: number): string {
+    const buf = Buffer.alloc(8);
+    const lo = value >>> 0;
+    const hi = Math.floor(value / 0x100000000) >>> 0;
+    buf.writeUInt32LE(lo, 0);
+    buf.writeUInt32LE(hi, 4);
+    return buf.toString('hex');
+  }
+
+  private varintEncode(value: number): string {
+    if (value < 0xfd) {
+      return Buffer.from([value]).toString('hex');
+    } else if (value <= 0xffff) {
+      const buf = Buffer.alloc(3);
+      buf.writeUInt8(0xfd, 0);
+      buf.writeUInt16LE(value, 1);
+      return buf.toString('hex');
+    } else if (value <= 0xffffffff) {
+      const buf = Buffer.alloc(5);
+      buf.writeUInt8(0xfe, 0);
+      buf.writeUInt32LE(value >>> 0, 1);
+      return buf.toString('hex');
+    } else {
+      return 'ff' + this.int64ToHex(Math.floor(value));
+    }
+  }
+
+  private reverseHex(hex: string): string {
+    const buf = Buffer.from(hex, 'hex');
+    return buf.reverse().toString('hex');
+  }
+
+  private hashPrevouts(tx: any): string {
+    let prevoutsData = '';
+    for (const input of tx.inputs || []) {
+      const hash = input.prev_out?.hash || '0'.repeat(64);
+      prevoutsData += this.reverseHex(hash);
+      prevoutsData += this.int32ToHex(input.prev_out?.n || 0);
+    }
+    const hash1 = createHash('sha256').update(Buffer.from(prevoutsData, 'hex')).digest('hex');
+    const hash2 = createHash('sha256').update(Buffer.from(hash1, 'hex')).digest('hex');
+    return hash2;
+  }
+
+  private hashSequence(tx: any): string {
+    let sequenceData = '';
+    for (const input of tx.inputs || []) {
+      sequenceData += this.int32ToHex(input.sequence || 0xffffffff);
+    }
+    const hash1 = createHash('sha256').update(Buffer.from(sequenceData, 'hex')).digest('hex');
+    const hash2 = createHash('sha256').update(Buffer.from(hash1, 'hex')).digest('hex');
+    return hash2;
+  }
+
+  private hashOutputs(tx: any): string {
+    let outputsData = '';
+    for (const output of tx.out || []) {
+      outputsData += this.int64ToHex(output.value || 0);
+      const script = output.script || '';
+      outputsData += this.varintEncode(script.length / 2);
+      outputsData += script;
+    }
+    const hash1 = createHash('sha256').update(Buffer.from(outputsData, 'hex')).digest('hex');
+    const hash2 = createHash('sha256').update(Buffer.from(hash1, 'hex')).digest('hex');
+    return hash2;
+  }
 }
 
 export const cryptoAnalysis = new CryptoAnalysis();
