@@ -172,10 +172,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Vulnerability testing endpoint - uses same blockchain.info approach as analyze-address
+  // Vulnerability testing endpoint - PHASE 1: Uses paginated multi-page fetcher (NO LIMIT - fetches all)
   app.post('/api/vulnerability-test', async (req, res) => {
     try {
-      const { address, limit = 1000 } = req.body;
+      const { address, pageSize = 50 } = req.body;
 
       if (!address) {
         return res.status(400).json({
@@ -186,8 +186,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`\n========== COMPREHENSIVE VULNERABILITY ANALYSIS ==========`);
       console.log(`Address: ${address}`);
       
-      // Fetch ALL transactions from blockchain.info in a single API call (no per-transaction calls!)
-      const addressData = await bitcoinService.fetchAddressDataComplete(address, limit);
+      // PHASE 1: Fetch ALL transactions using paginated multi-page downloader (automatic pagination, no limit)
+      let addressData;
+      try {
+        addressData = await bitcoinService.fetchAllTransactionsPaginated(address, pageSize);
+      } catch (paginationError) {
+        console.log(`Pagination failed, falling back to single fetch...`);
+        addressData = await bitcoinService.fetchAddressDataComplete(address, 1000);
+      }
+      
       const transactions = addressData.txs || [];
       
       console.log(`✓ Fetched ${transactions.length} transactions from blockchain.info/rawaddr\n`);

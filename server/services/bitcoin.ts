@@ -1321,6 +1321,129 @@ class BitcoinService {
     }
   }
 
+  // PHASE 1: DATA FETCHING LAYER
+  // 1.1 Transaction Fetcher - fetch single page with retry logic
+  private async fetchPageWithRetry(address: string, offset: number = 0, limit: number = 50, retries: number = 3): Promise<any> {
+    let lastError: any;
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`[Attempt ${attempt}/${retries}] Fetching page: offset=${offset}, limit=${limit}`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout per request
+        
+        const response = await fetch(
+          `${this.BLOCKCHAIN_API}/rawaddr/${address}?offset=${offset}&limit=${limit}`,
+          { signal: controller.signal }
+        );
+        
+        clearTimeout(timeoutId);
+        
+        // Handle rate limiting (429)
+        if (response.status === 429) {
+          const waitTime = Math.min(5000 * attempt, 30000); // Exponential backoff: 5s, 10s, 30s
+          console.log(`⚠ Rate limited! Waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        // Validate response structure
+        if (!Array.isArray(data.txs)) {
+          throw new Error('Invalid response: txs is not an array');
+        }
+        
+        console.log(`✓ Successfully fetched ${data.txs.length} transactions (offset=${offset})`);
+        return {
+          txs: data.txs,
+          total_tx: data.n_tx,
+          address: data.address,
+          n_tx: data.n_tx,
+          total_received: data.total_received,
+          total_sent: data.total_sent,
+          final_balance: data.final_balance
+        };
+      } catch (error) {
+        lastError = error;
+        const waitTime = Math.min(2000 * attempt, 10000);
+        console.error(`✗ Attempt ${attempt} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        
+        if (attempt < retries) {
+          console.log(`  Retrying in ${waitTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+    
+    throw lastError || new Error('Failed to fetch page after all retries');
+  }
+
+  // 1.2 Multi-Page Downloader - automatically loop through all pages
+  async fetchAllTransactionsPaginated(address: string, pageSize: number = 50): Promise<any> {
+    console.log(`\n========== PHASE 1: MULTI-PAGE TRANSACTION FETCHING ==========`);
+    console.log(`Address: ${address}`);
+    console.log(`Page size: ${pageSize}\n`);
+    
+    let allTransactions: any[] = [];
+    let totalTxCount = 0;
+    let offset = 0;
+    let isFirstPage = true;
+
+    try {
+      while (true) {
+        // Fetch one page with retry logic
+        const pageData = await this.fetchPageWithRetry(address, offset, pageSize, 3);
+        
+        if (isFirstPage) {
+          totalTxCount = pageData.total_tx;
+          console.log(`📊 Total transactions in address: ${totalTxCount}\n`);
+          isFirstPage = false;
+        }
+
+        // Collect transactions
+        if (Array.isArray(pageData.txs)) {
+          allTransactions = allTransactions.concat(pageData.txs);
+          console.log(`📥 Collected ${allTransactions.length}/${totalTxCount} transactions`);
+        }
+
+        // Check if we've fetched all transactions
+        if (offset + pageSize >= totalTxCount || pageData.txs.length === 0) {
+          console.log(`\n✅ COMPLETE: Fetched all ${allTransactions.length} transactions\n`);
+          break;
+        }
+
+        offset += pageSize;
+        
+        // Rate limiting: wait a bit between pages to avoid hitting limits
+        console.log(`⏳ Waiting 500ms before next page...\n`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      return {
+        address,
+        n_tx: totalTxCount,
+        total_received: 0,
+        total_sent: 0,
+        final_balance: 0,
+        txs: allTransactions,
+        metadata: {
+          pagesDownloaded: Math.ceil(allTransactions.length / pageSize),
+          pageSize,
+          fetchedAt: new Date().toISOString()
+        }
+      };
+    } catch (error) {
+      console.error(`\n❌ PHASE 1 FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
+    }
+  }
+
   async fetchAddressDataComplete(address: string, limit: number = 1000): Promise<any> {
     try {
       // Use blockchain.info rawaddr API which returns complete address data with transactions
