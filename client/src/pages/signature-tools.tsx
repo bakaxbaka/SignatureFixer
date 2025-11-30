@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Copy, AlertTriangle, CheckCircle, XCircle, Zap } from "lucide-react";
 import { Cve42461Report } from "@/engines/cve42461";
+import { detectInputType, getTypeLabel, validateDetectedType } from "@/lib/input-detector";
 
 export default function SignatureTools() {
   const { toast } = useToast();
@@ -31,6 +32,8 @@ export default function SignatureTools() {
   const [cveLibraryName, setCveLibraryName] = useState("elliptic");
   const [cveLoading, setCveLoading] = useState(false);
   const [cveReport, setCveReport] = useState<Cve42461Report | null>(null);
+  const [smartInput, setSmartInput] = useState("");
+  const detectedInput = detectInputType(smartInput);
 
   const fetchTxHex = async () => {
     if (!txidInput.trim()) {
@@ -125,10 +128,101 @@ export default function SignatureTools() {
           <TabsContent value="fetch-hex" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Fetch Transaction Hex</CardTitle>
-                <CardDescription>Get raw TX hex from blockchain APIs</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-blue-500" />
+                  Smart Transaction Inspector
+                </CardTitle>
+                <CardDescription>Paste TX ID, raw hex, PSBT, signature, or script - auto-detects type</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <Textarea
+                    placeholder="Paste: Transaction ID (64 hex) • Raw TX hex • PSBT (base64) • DER Signature • Script hex"
+                    value={smartInput}
+                    onChange={(e) => setSmartInput(e.target.value)}
+                    rows={4}
+                    className="font-mono text-xs"
+                    data-testid="input-smart-inspector"
+                  />
+                  {smartInput && (
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={detectedInput.confidence > 0.7 ? "default" : "outline"}
+                        className={
+                          detectedInput.confidence > 0.7
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200 text-gray-700"
+                        }
+                      >
+                        Detected: {getTypeLabel(detectedInput.type)}
+                      </Badge>
+                      {detectedInput.details && (
+                        <span className="text-xs text-muted-foreground">{detectedInput.details}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {detectedInput.type === "txid" && (
+                  <Button
+                    onClick={async () => {
+                      setTxidInput(smartInput);
+                      setHexLoading(true);
+                      try {
+                        const res = await fetch("/api/get-tx-hex", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ txid: smartInput }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || "Failed");
+                        setTxHexResult(data.data.hex);
+                        setSmartInput("");
+                        toast({ title: "Success", description: "TX hex fetched & auto-loaded" });
+                      } catch (e) {
+                        toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+                      } finally {
+                        setHexLoading(false);
+                      }
+                    }}
+                    disabled={hexLoading}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    {hexLoading ? "Fetching..." : "Fetch & Decode TX"}
+                  </Button>
+                )}
+
+                {detectedInput.type === "raw-tx" && (
+                  <Button
+                    onClick={() => {
+                      setTxHexInput(smartInput);
+                      setSmartInput("");
+                      toast({ title: "Success", description: "Raw TX loaded into Extract Signatures" });
+                    }}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    Load into Extract Signatures →
+                  </Button>
+                )}
+
+                {detectedInput.type === "der-signature" && (
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(smartInput);
+                      setSmartInput("");
+                      toast({ title: "Copied", description: "Signature copied to clipboard" });
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Copy Signature to Clipboard
+                  </Button>
+                )}
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-sm mb-3">Or use classic input:</h4>
+                </div>
+
                 <Input placeholder="Transaction ID" value={txidInput} onChange={(e) => setTxidInput(e.target.value)} data-testid="input-txid" />
                 <Button onClick={fetchTxHex} disabled={hexLoading} className="w-full">
                   {hexLoading ? "Fetching..." : "Fetch Hex"}
