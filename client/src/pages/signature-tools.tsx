@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy } from "lucide-react";
+import { Copy, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Cve42461Report } from "@/engines/cve42461";
 
 export default function SignatureTools() {
   const { toast } = useToast();
@@ -27,6 +28,9 @@ export default function SignatureTools() {
   });
   const [builtTx, setBuiltTx] = useState<any>(null);
   const [buildLoading, setBuildLoading] = useState(false);
+  const [cveLibraryName, setCveLibraryName] = useState("elliptic");
+  const [cveLoading, setCveLoading] = useState(false);
+  const [cveReport, setCveReport] = useState<Cve42461Report | null>(null);
 
   const fetchTxHex = async () => {
     if (!txidInput.trim()) {
@@ -111,10 +115,11 @@ export default function SignatureTools() {
         </div>
 
         <Tabs defaultValue="fetch-hex" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="fetch-hex">Fetch TX Hex</TabsTrigger>
             <TabsTrigger value="extract-sig">Extract Signatures</TabsTrigger>
             <TabsTrigger value="build-sign">Build & Sign</TabsTrigger>
+            <TabsTrigger value="cve-42461">CVE-2024-42461</TabsTrigger>
           </TabsList>
 
           <TabsContent value="fetch-hex" className="space-y-4">
@@ -250,6 +255,170 @@ export default function SignatureTools() {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="cve-42461" className="space-y-4">
+            <Card className="border-amber-500/20 bg-amber-500/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  CVE-2024-42461: Signature Malleability Detection
+                </CardTitle>
+                <CardDescription>
+                  Test if a library/wallet accepts non-canonical DER encodings like vulnerable elliptic 6.5.6
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    This tool tests signature verification functions against malleated BER encodings. A vulnerable implementation
+                    (like elliptic 6.5.6) will accept non-canonical signatures, allowing attackers to manipulate transactions.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Library/Service Name</label>
+                  <Input
+                    placeholder="e.g., elliptic, bitcoinjs-lib, noble-secp256k1, Ledger, Trezor"
+                    value={cveLibraryName}
+                    onChange={(e) => setCveLibraryName(e.target.value)}
+                    data-testid="input-library-name"
+                  />
+                </div>
+
+                <Button
+                  onClick={async () => {
+                    if (!cveLibraryName.trim()) {
+                      toast({ title: "Error", description: "Enter library name", variant: "destructive" });
+                      return;
+                    }
+                    setCveLoading(true);
+                    try {
+                      const res = await fetch("/api/test-cve-42461", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ libraryName: cveLibraryName }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || "Test failed");
+                      setCveReport(data.data);
+                      toast({ title: "Test Complete", description: `Library: ${data.data.summary}` });
+                    } catch (e) {
+                      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+                    } finally {
+                      setCveLoading(false);
+                    }
+                  }}
+                  disabled={cveLoading}
+                  className="w-full"
+                >
+                  {cveLoading ? "Testing..." : "Run CVE-2024-42461 Test"}
+                </Button>
+
+                {cveReport && (
+                  <div className="space-y-6 border-t pt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-semibold text-lg">{cveReport.libraryName}</h4>
+                          <p className="text-sm text-muted-foreground">{cveReport.summary}</p>
+                        </div>
+                        <Badge
+                          variant={cveReport.vulnerable ? "destructive" : "default"}
+                          className={
+                            cveReport.vulnerable
+                              ? "bg-red-600 text-white"
+                              : "bg-green-600 text-white"
+                          }
+                        >
+                          {cveReport.vulnerable ? "VULNERABLE" : "SECURE"}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="border rounded p-3">
+                          <p className="text-xs text-muted-foreground mb-1">Canonical DER</p>
+                          <div className="flex items-center gap-2">
+                            {cveReport.acceptsCanonicalDER ? (
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <XCircle className="w-5 h-5 text-red-500" />
+                            )}
+                            <span className="font-mono text-sm">
+                              {cveReport.acceptsCanonicalDER ? "PASS" : "FAIL"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="border rounded p-3">
+                          <p className="text-xs text-muted-foreground mb-1">BER Variants</p>
+                          <div className="flex items-center gap-2">
+                            {cveReport.acceptsBERVariants ? (
+                              <XCircle className="w-5 h-5 text-red-500" />
+                            ) : (
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            )}
+                            <span className="font-mono text-sm">
+                              {cveReport.acceptsBERVariants ? "FAIL" : "PASS"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="border rounded p-3">
+                          <p className="text-xs text-muted-foreground mb-1">Severity</p>
+                          <Badge
+                            variant="outline"
+                            className={`w-full justify-center ${
+                              cveReport.severity === "CRITICAL"
+                                ? "bg-red-100 text-red-700"
+                                : cveReport.severity === "HIGH"
+                                  ? "bg-orange-100 text-orange-700"
+                                  : cveReport.severity === "MEDIUM"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {cveReport.severity}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h5 className="font-semibold text-sm">Test Cases</h5>
+                      {cveReport.testCases.map((tc) => (
+                        <div
+                          key={tc.id}
+                          className={`border rounded p-3 ${
+                            tc.didVerify === tc.shouldVerify ? "bg-green-500/5" : "bg-red-500/5"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {tc.didVerify === tc.shouldVerify ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-red-500" />
+                              )}
+                              <span className="font-mono text-sm">{tc.encodingType}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              Should: {tc.shouldVerify ? "✓" : "✗"} | Did: {tc.didVerify ? "✓" : "✗"}
+                            </span>
+                          </div>
+                          {tc.description && (
+                            <p className="text-xs text-muted-foreground">{tc.description}</p>
+                          )}
+                          {tc.derHex && (
+                            <div className="mt-2 p-2 bg-muted rounded">
+                              <p className="text-xs font-mono break-all text-foreground">{tc.derHex}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </CardContent>

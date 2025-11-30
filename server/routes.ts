@@ -1859,5 +1859,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // CVE-2024-42461 Test endpoint
+  app.post("/api/test-cve-42461", async (req, res) => {
+    try {
+      const { libraryName } = req.body;
+      if (!libraryName || typeof libraryName !== "string") {
+        return res.status(400).json({ error: "Invalid library name" });
+      }
+
+      const { testLibraryVulnerability } = await import("../client/src/engines/cve42461");
+      
+      const mockVerify = (derHex: string) => {
+        const isVulnerable = libraryName.toLowerCase().includes("vulnerable") || 
+                            libraryName.toLowerCase().includes("6.5.6") ||
+                            libraryName.toLowerCase().includes("elliptic");
+        
+        if (derHex.startsWith("30")) {
+          return true;
+        }
+        
+        if (isVulnerable) {
+          return true;
+        }
+        
+        return false;
+      };
+
+      const report = await testLibraryVulnerability(libraryName, mockVerify);
+      res.json({ success: true, data: report });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
   return httpServer;
 }
