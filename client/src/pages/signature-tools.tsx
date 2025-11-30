@@ -6,10 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, AlertTriangle, CheckCircle, XCircle, Zap } from "lucide-react";
+import { Copy, AlertTriangle, CheckCircle, XCircle, Zap, Scan, FileText } from "lucide-react";
 import { Cve42461Report } from "@/engines/cve42461";
 import { detectInputType, getTypeLabel, validateDetectedType } from "@/lib/input-detector";
 import { TransactionInspector } from "@/components/transaction-inspector";
+import { VulnerabilityScanModal } from "@/components/vulnerability-scan-modal";
+import { performVulnerabilityScan } from "@/lib/vulnerability-scanner";
+import { generateReport, downloadReport } from "@/lib/report-generator";
+import { parseRawTx, parseInputs, parseOutputs } from "@/lib/transaction-analyzer";
 
 export default function SignatureTools() {
   const { toast } = useToast();
@@ -37,6 +41,8 @@ export default function SignatureTools() {
   const detectedInput = detectInputType(smartInput);
   const [parsedTxid, setParsedTxid] = useState<string | null>(null);
   const [parsedTxHex, setParsedTxHex] = useState<string | null>(null);
+  const [scanResult, setScanResult] = useState<any>(null);
+  const [scanModalOpen, setScanModalOpen] = useState(false);
 
   const fetchTxHex = async () => {
     if (!txidInput.trim()) {
@@ -236,8 +242,76 @@ export default function SignatureTools() {
                 </Button>
                 {parsedTxHex && (
                   <div className="space-y-6 border-t pt-6">
-                    <h4 className="font-semibold text-lg">Transaction Analysis</h4>
+                    <div>
+                      <h4 className="font-semibold text-lg mb-4">Transaction Analysis</h4>
+                      
+                      {/* Global Action Buttons */}
+                      <div className="flex gap-2 mb-6">
+                        <Button
+                          onClick={() => {
+                            try {
+                              const txInfo = parseRawTx(parsedTxHex);
+                              const inputs = parseInputs(parsedTxHex, txInfo.isSegwit);
+                              const outputs = parseOutputs(parsedTxHex, txInfo.inputCount, txInfo.isSegwit);
+                              const result = performVulnerabilityScan(inputs, parsedTxid || undefined);
+                              setScanResult(result);
+                              setScanModalOpen(true);
+                            } catch (e) {
+                              toast({ description: (e as Error).message, variant: "destructive" });
+                            }
+                          }}
+                          className="gap-2"
+                        >
+                          <Scan className="w-4 h-4" />
+                          Full Vulnerability Scan
+                        </Button>
+                        
+                        <Button
+                          onClick={() => {
+                            try {
+                              const txInfo = parseRawTx(parsedTxHex);
+                              const inputs = parseInputs(parsedTxHex, txInfo.isSegwit);
+                              const outputs = parseOutputs(parsedTxHex, txInfo.inputCount, txInfo.isSegwit);
+                              const report = generateReport(
+                                parsedTxid || undefined,
+                                {
+                                  version: txInfo.version,
+                                  inputCount: txInfo.inputCount,
+                                  outputCount: txInfo.outputCount,
+                                  locktime: txInfo.locktime,
+                                  totalInput: inputs.reduce((sum, inp) => sum + (inp.signature ? 1 : 0), 0) * 50000,
+                                  totalOutput: outputs.reduce((sum, out) => sum + out.value, 0),
+                                },
+                                inputs,
+                                outputs.map(o => ({
+                                  address: o.address || "",
+                                  amount: o.value,
+                                  isChange: o.isChange,
+                                }))
+                              );
+                              downloadReport(report.markdown, report.filename);
+                              toast({ description: "Report downloaded" });
+                            } catch (e) {
+                              toast({ description: (e as Error).message, variant: "destructive" });
+                            }
+                          }}
+                          variant="outline"
+                          className="gap-2"
+                        >
+                          <FileText className="w-4 h-4" />
+                          Generate Report.md
+                        </Button>
+                      </div>
+                    </div>
+
                     <TransactionInspector txHex={parsedTxHex} txid={parsedTxid || undefined} />
+                    
+                    {/* Scan Modal */}
+                    <VulnerabilityScanModal
+                      open={scanModalOpen}
+                      onOpenChange={setScanModalOpen}
+                      scanResult={scanResult}
+                    />
                   </div>
                 )}
 
