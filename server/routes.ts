@@ -8,6 +8,7 @@ import { ecdsaRecovery, cryptoAnalysis } from "./services/crypto";
 import { blockScanner } from "./services/scanner";
 import { fetchAddressDataWithTor, clearCache, clearAllCache } from "./services/networking/torFetcher";
 import { getTxHex } from "./services/explorers/txHexFetcher";
+import { buildAndSignTx, extractSignaturesFromTxHex } from "./services/signer";
 import { generateAllMutations } from "./services/derMutator";
 import { insertAnalysisResultSchema, insertBatchAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
@@ -1744,6 +1745,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: 'Failed to fetch transaction hex',
         details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Build and sign a new transaction using bitcoinjs-lib
+  app.post('/api/build-and-sign', async (req, res) => {
+    try {
+      const { wif, prevTxId, prevVout, prevValue, prevScriptHex, destValue, destScriptHex } = req.body;
+      
+      if (!wif || !prevTxId || prevVout === undefined || !prevValue || !prevScriptHex || !destValue || !destScriptHex) {
+        return res.status(400).json({ error: 'Missing required signing parameters' });
+      }
+
+      const result = buildAndSignTx({
+        wif,
+        prevTxId,
+        prevVout,
+        prevValue: Number(prevValue),
+        prevScriptHex,
+        destValue: Number(destValue),
+        destScriptHex,
+      });
+
+      if (result.error) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to build and sign transaction',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  // Extract signatures from a transaction hex
+  app.post('/api/extract-signatures', async (req, res) => {
+    try {
+      const { txHex } = req.body;
+      if (!txHex || typeof txHex !== 'string') {
+        return res.status(400).json({ error: 'Transaction hex (txHex) required' });
+      }
+
+      const signatures = extractSignaturesFromTxHex(txHex);
+      res.json({ success: true, data: { count: signatures.length, signatures } });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to extract signatures',
+        details: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });

@@ -1,0 +1,149 @@
+1️⃣ Install dependencies
+
+In your project:
+
+npm install bitcoinjs-lib
+
+
+(If you don’t have a Node project yet: npm init -y first.)
+
+2️⃣ sign_tx.js – full signing script
+
+Create a file sign_tx.js:
+
+// sign_tx.js
+const bitcoin = require("bitcoinjs-lib");
+
+// =========================
+// CONFIGURE THESE VALUES
+// =========================
+
+// Mainnet network
+const network = bitcoin.networks.bitcoin;
+
+// WIF of the key that owns the prevout (KEEP THIS SECRET!)
+const WIF = "YOUR_PRIVATE_KEY_WIF_HERE"; // <-- put your WIF here
+
+// Previous transaction (the UTXO you are spending)
+const prevTxId = "d49d9fdc89f0ccce64b85445372bd690d1dde0ff0545717b7f0d3d15e087c9e5";
+const prevVout = 0;
+
+// This is from your tx d49d9f... vout 0 (P2WPKH)
+const prevValueSats = 500000; // value of the UTXO you are spending
+const prevScriptPubKeyHex = "0014720d75154d2ac75d19ed92615d815de95e7f41b9"; // P2WPKH
+
+// New output (the one you specified)
+const destValueSats = 20000; // sats to send
+const destScriptPubKeyHex = "76a914f9accabdd9ec4cb146315fa9eb87f5146cf1e44b88ac"; // P2PKH 1PmAFZ...
+
+// Optionally: change address / fee handling (simple: send rest to some other address)
+
+// =========================
+// BUILD & SIGN TRANSACTION
+// =========================
+
+function main() {
+  const keyPair = bitcoin.ECPair.fromWIF(WIF, network);
+  const psbt = new bitcoin.Psbt({ network });
+
+  // 1) Add input (SegWit P2WPKH)
+  psbt.addInput({
+    hash: prevTxId,
+    index: prevVout,
+    // For segwit spend you need witnessUtxo: script + value
+    witnessUtxo: {
+      script: Buffer.from(prevScriptPubKeyHex, "hex"),
+      value: prevValueSats,
+    },
+  });
+
+  // 2) Add output (your 20,000-sat payment)
+  psbt.addOutput({
+    value: destValueSats,
+    script: Buffer.from(destScriptPubKeyHex, "hex"),
+  });
+
+  // (Optional) If you want to send change back, add another output:
+  // const changeValue = prevValueSats - destValueSats - fee;
+  // psbt.addOutput({ value: changeValue, address: "yourChangeAddress..." });
+
+  // 3) Sign input 0
+  psbt.signInput(0, keyPair);
+
+  // 4) (Optional) Verify signatures
+  psbt.validateSignaturesOfInput(0);
+  psbt.finalizeAllInputs();
+
+  // 5) Extract final transaction hex
+  const tx = psbt.extractTransaction();
+  const txHex = tx.toHex();
+  const txId = tx.getId();
+
+  console.log("Signed transaction hex:");
+  console.log(txHex);
+  console.log("TXID:", txId);
+}
+
+main();
+
+
+Run it:
+
+node sign_tx.js
+
+
+You’ll get:
+
+Final raw tx hex
+
+The TXID
+
+You can then paste the hex into your SignatureFixer app or into a broadcaster (mempool.space, etc.).
+
+3️⃣ How this relates to your extracted signatures
+
+The transaction you pasted earlier:
+
+0100000002 ... (2 inputs, 3 outputs)
+
+
+already contains valid signatures:
+
+Input 0 signature (r,s) = the first DER you showed
+
+Input 1 signature (r,s) = the second DER
+
+The script above instead creates a new transaction with:
+
+1 input (spending d49d9f...:0)
+
+1 output (20,000 sats to 1PmAFZ...)
+
+and signs fresh using your WIF.
+So:
+
+Your SignatureFixer app can analyze this new tx
+
+You can compare r,s,sighash against your preimage logic
+
+You can generate malleability variants for the fresh signature
+
+4️⃣ Wire this into SignatureFixer if you want
+
+You can turn this into an API endpoint:
+
+// server/routes.ts
+import { buildAndSignTx } from "./services/signer";
+
+app.post("/api/build-and-sign", async (req, res) => {
+  try {
+    const { wif, prevTxId, prevVout, prevValue, prevScriptHex, destValue, destScriptHex } = req.body;
+    const { txHex, txId } = buildAndSignTx({ wif, prevTxId, prevVout, prevValue, prevScriptHex, destValue, destScriptHex });
+    res.json({ txHex, txId });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+
+And your buildAndSignTx basically wraps the PSBT logic above.
