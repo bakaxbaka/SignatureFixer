@@ -5,14 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Plus, Trash2, Eye } from "lucide-react";
+import { Copy, Plus, Trash2, Eye, Loader2, ChevronDown } from "lucide-react";
 
 interface TxInput {
   txid: string;
   vout: number;
   sequence: number;
   scriptSig: string;
-  witnessData?: string[];
+  value?: number;
 }
 
 interface TxOutput {
@@ -21,128 +21,146 @@ interface TxOutput {
   address?: string;
 }
 
+interface UTXO {
+  txid: string;
+  vout: number;
+  value: number;
+  scriptPubKey: string;
+  confirmed: boolean;
+  address?: string;
+}
+
 export default function RawTxBuilder() {
   const { toast } = useToast();
+  const [addressInput, setAddressInput] = useState("");
+  const [utxos, setUtxos] = useState<UTXO[]>([]);
+  const [utxosLoading, setUtxosLoading] = useState(false);
+  const [showUtxos, setShowUtxos] = useState(false);
+  
   const [version, setVersion] = useState("02");
   const [inputs, setInputs] = useState<TxInput[]>([
-    { txid: "", vout: 0, sequence: 0xfffffffe, scriptSig: "", witnessData: [] }
+    { txid: "", vout: 0, sequence: 0xfffffffe, scriptSig: "" }
   ]);
   const [outputs, setOutputs] = useState<TxOutput[]>([
     { value: 0, scriptPubKey: "" }
   ]);
   const [locktime, setLocktime] = useState("00000000");
   const [useSegwit, setUseSegwit] = useState(true);
-  const [showPreview, setShowPreview] = useState(false);
   const [builtTxHex, setBuiltTxHex] = useState("");
 
-  // Calculate transaction size
-  const txSize = useMemo(() => {
-    let size = 4; // version
-    if (useSegwit) size += 2; // marker + flag
-    size += 1; // input count
-    inputs.forEach(inp => {
-      size += 32 + 4 + 1 + inp.scriptSig.length / 2 + 4; // txid + vout + script_len + script + sequence
-    });
-    size += 1; // output count
-    outputs.forEach(out => {
-      size += 8 + 1 + out.scriptPubKey.length / 2; // value + script_len + script
-    });
-    if (useSegwit) {
-      inputs.forEach(inp => {
-        size += 1; // witness item count
-        if (inp.witnessData) {
-          inp.witnessData.forEach(item => {
-            size += 1 + item.length / 2;
-          });
-        }
-      });
+  // Fetch UTXOs
+  const fetchUtxos = async () => {
+    if (!addressInput.trim()) {
+      toast({ title: "Error", description: "Enter Bitcoin address", variant: "destructive" });
+      return;
     }
-    size += 4; // locktime
+    setUtxosLoading(true);
+    try {
+      const res = await fetch("/api/get-utxos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: addressInput }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setUtxos(data.data.utxos);
+      setShowUtxos(true);
+      toast({ title: "Success", description: `Found ${data.data.count} UTXOs` });
+    } catch (e) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setUtxosLoading(false);
+    }
+  };
+
+  // Add UTXO to inputs
+  const addUtxoAsInput = (utxo: UTXO) => {
+    setInputs([...inputs, {
+      txid: utxo.txid,
+      vout: utxo.vout,
+      sequence: 0xfffffffe,
+      scriptSig: utxo.scriptPubKey || "",
+      value: utxo.value,
+    }]);
+    toast({ title: "Added", description: `Input added: ${utxo.txid.slice(0, 16)}...` });
+  };
+
+  // Calculate tx size
+  const txSize = useMemo(() => {
+    let size = 4;
+    if (useSegwit) size += 2;
+    size += 1;
+    inputs.forEach(inp => {
+      size += 32 + 4 + 1 + (inp.scriptSig.length / 2) + 4;
+    });
+    size += 1;
+    outputs.forEach(out => {
+      size += 8 + 1 + (out.scriptPubKey.length / 2);
+    });
+    size += 4;
     return size;
   }, [inputs, outputs, useSegwit]);
 
-  // Estimate fee
-  const estimatedFee = useMemo(() => {
-    const satPerByte = 1;
-    return txSize * satPerByte;
-  }, [txSize]);
+  const estimatedFee = txSize * 1;
 
-  // Add input
+  // Add/Remove functions
   const addInput = () => {
     setInputs([...inputs, { txid: "", vout: 0, sequence: 0xfffffffe, scriptSig: "" }]);
   };
 
-  // Remove input
   const removeInput = (idx: number) => {
     if (inputs.length > 1) {
       setInputs(inputs.filter((_, i) => i !== idx));
     }
   };
 
-  // Add output
   const addOutput = () => {
     setOutputs([...outputs, { value: 0, scriptPubKey: "" }]);
   };
 
-  // Remove output
   const removeOutput = (idx: number) => {
     if (outputs.length > 1) {
       setOutputs(outputs.filter((_, i) => i !== idx));
     }
   };
 
-  // Update input
   const updateInput = (idx: number, field: keyof TxInput, value: any) => {
     const newInputs = [...inputs];
     newInputs[idx][field] = value;
     setInputs(newInputs);
   };
 
-  // Update output
   const updateOutput = (idx: number, field: keyof TxOutput, value: any) => {
     const newOutputs = [...outputs];
     newOutputs[idx][field] = value;
     setOutputs(newOutputs);
   };
 
-  // Build transaction hex
+  // Build TX
   const buildTxHex = () => {
     try {
-      // Simple hex builder - this would need proper implementation
       let hex = version;
-      
-      if (useSegwit) {
-        hex += "0001"; // marker + flag
-      }
-
-      // Input count
+      if (useSegwit) hex += "0001";
       hex += inputs.length.toString(16).padStart(2, "0");
-
-      // Add inputs
+      
       inputs.forEach(inp => {
-        // Reverse txid for little-endian
-        hex += inp.txid; // Should be reversed
+        hex += inp.txid;
         hex += inp.vout.toString(16).padStart(8, "0");
         hex += inp.scriptSig.length / 2 > 0 
-          ? inp.scriptSig.length / 2 .toString(16).padStart(2, "0") + inp.scriptSig 
+          ? (inp.scriptSig.length / 2).toString(16).padStart(2, "0") + inp.scriptSig 
           : "00";
         hex += inp.sequence.toString(16).padStart(8, "0");
       });
 
-      // Output count
       hex += outputs.length.toString(16).padStart(2, "0");
-
-      // Add outputs
       outputs.forEach(out => {
         hex += out.value.toString(16).padStart(16, "0");
         hex += out.scriptPubKey.length / 2 > 0
-          ? out.scriptPubKey.length / 2 .toString(16).padStart(2, "0") + out.scriptPubKey
+          ? (out.scriptPubKey.length / 2).toString(16).padStart(2, "0") + out.scriptPubKey
           : "00";
       });
 
-      // Locktime
       hex += locktime;
-
       setBuiltTxHex(hex);
       toast({ title: "Success", description: "Transaction built" });
     } catch (e) {
@@ -155,203 +173,204 @@ export default function RawTxBuilder() {
     toast({ title: "Copied" });
   };
 
+  const totalInputValue = useMemo(() => 
+    inputs.reduce((sum, inp) => sum + (inp.value || 0), 0), 
+    [inputs]
+  );
+
+  const totalOutputValue = useMemo(() => 
+    outputs.reduce((sum, out) => sum + out.value, 0), 
+    [outputs]
+  );
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold">Raw Transaction Builder</h1>
-          <p className="text-muted-foreground mt-2">Advanced transaction construction with multi-input/output support</p>
+          <p className="text-muted-foreground mt-2">Advanced TX construction with UTXO selection</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        {/* UTXO Selector */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Select Inputs from Address</CardTitle>
+            <CardDescription>Enter a Bitcoin address to fetch available UTXOs</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Bitcoin address (1..., 3..., bc1...)"
+                value={addressInput}
+                onChange={(e) => setAddressInput(e.target.value)}
+                className="flex-1"
+              />
+              <Button onClick={fetchUtxos} disabled={utxosLoading}>
+                {utxosLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Fetch UTXOs"}
+              </Button>
+            </div>
+
+            {showUtxos && utxos.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Available UTXOs ({utxos.length})</p>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setShowUtxos(!showUtxos)}
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {showUtxos && (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {utxos.map((utxo, idx) => (
+                      <div key={idx} className="flex items-center justify-between border rounded p-3 bg-muted/30">
+                        <div className="space-y-1 flex-1">
+                          <p className="text-xs font-mono">{utxo.txid.slice(0, 20)}:{ utxo.vout}</p>
+                          <div className="flex gap-2">
+                            <Badge variant="outline">{utxo.value} sat</Badge>
+                            {utxo.confirmed ? (
+                              <Badge variant="default">Confirmed</Badge>
+                            ) : (
+                              <Badge variant="secondary">Unconfirmed</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          onClick={() => addUtxoAsInput(utxo)}
+                        >
+                          <Plus className="w-4 h-4 mr-1" /> Use
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Stats */}
+        <div className="grid grid-cols-5 gap-4 mb-8">
           <Card>
             <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">TX Size</p>
-              <p className="text-2xl font-bold">{txSize} bytes</p>
+              <p className="text-xs text-muted-foreground">TX Size</p>
+              <p className="text-xl font-bold">{txSize} B</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Estimated Fee (1 sat/byte)</p>
-              <p className="text-2xl font-bold">{estimatedFee} sat</p>
+              <p className="text-xs text-muted-foreground">Fee Est.</p>
+              <p className="text-xl font-bold">{estimatedFee} sat</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Inputs / Outputs</p>
-              <p className="text-2xl font-bold">{inputs.length} / {outputs.length}</p>
+              <p className="text-xs text-muted-foreground">Input Value</p>
+              <p className="text-xl font-bold">{totalInputValue} sat</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground">Output Value</p>
+              <p className="text-xl font-bold">{totalOutputValue} sat</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground">Change</p>
+              <p className={`text-xl font-bold ${totalInputValue >= totalOutputValue ? 'text-green-500' : 'text-red-500'}`}>
+                {totalInputValue - totalOutputValue} sat
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="space-y-6">
-          {/* Transaction Settings */}
+        {/* TX Settings */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Transaction Settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Input value={version} onChange={(e) => setVersion(e.target.value)} placeholder="Version" />
+              <Input value={locktime} onChange={(e) => setLocktime(e.target.value)} placeholder="Locktime" />
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={useSegwit} onChange={(e) => setUseSegwit(e.target.checked)} />
+              <span className="text-sm">Use SegWit</span>
+            </label>
+          </CardContent>
+        </Card>
+
+        {/* Inputs */}
+        <Card className="mb-8">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Inputs ({inputs.length})</CardTitle>
+            <Button size="sm" onClick={addInput}><Plus className="w-4 h-4 mr-2" /> Add</Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {inputs.map((inp, idx) => (
+              <div key={idx} className="border rounded p-4 space-y-3 bg-muted/30">
+                <div className="flex justify-between items-center">
+                  <p className="font-medium text-sm">Input #{idx}{inp.value && ` (${inp.value} sat)`}</p>
+                  <Button size="sm" variant="destructive" onClick={() => removeInput(idx)} disabled={inputs.length === 1}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Input placeholder="TXID" value={inp.txid} onChange={(e) => updateInput(idx, "txid", e.target.value)} className="font-mono text-xs" />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Vout" type="number" value={inp.vout} onChange={(e) => updateInput(idx, "vout", parseInt(e.target.value))} />
+                  <Input placeholder="Sequence" value={inp.sequence.toString(16)} onChange={(e) => updateInput(idx, "sequence", parseInt(e.target.value, 16))} />
+                </div>
+                <Input placeholder="ScriptSig (hex)" value={inp.scriptSig} onChange={(e) => updateInput(idx, "scriptSig", e.target.value)} className="font-mono text-xs" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Outputs */}
+        <Card className="mb-8">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Outputs ({outputs.length})</CardTitle>
+            <Button size="sm" onClick={addOutput}><Plus className="w-4 h-4 mr-2" /> Add</Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {outputs.map((out, idx) => (
+              <div key={idx} className="border rounded p-4 space-y-3 bg-muted/30">
+                <div className="flex justify-between items-center">
+                  <p className="font-medium text-sm">Output #{idx}</p>
+                  <Button size="sm" variant="destructive" onClick={() => removeOutput(idx)} disabled={outputs.length === 1}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Input placeholder="Value (satoshis)" type="number" value={out.value} onChange={(e) => updateOutput(idx, "value", parseInt(e.target.value))} />
+                <Input placeholder="ScriptPubKey (hex)" value={out.scriptPubKey} onChange={(e) => updateOutput(idx, "scriptPubKey", e.target.value)} className="font-mono text-xs" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Build */}
+        <Button onClick={buildTxHex} className="w-full mb-8">Build Transaction</Button>
+
+        {/* Result */}
+        {builtTxHex && (
           <Card>
             <CardHeader>
-              <CardTitle>Transaction Settings</CardTitle>
+              <CardTitle>Built Transaction</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Version</label>
-                  <Input value={version} onChange={(e) => setVersion(e.target.value)} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Locktime</label>
-                  <Input value={locktime} onChange={(e) => setLocktime(e.target.value)} />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
-                  checked={useSegwit} 
-                  onChange={(e) => setUseSegwit(e.target.checked)}
-                  id="segwit-toggle"
-                />
-                <label htmlFor="segwit-toggle" className="text-sm">Use SegWit (P2WPKH)</label>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Inputs */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Inputs ({inputs.length})</CardTitle>
-              <Button size="sm" onClick={addInput}>
-                <Plus className="w-4 h-4 mr-2" /> Add Input
+              <Button size="sm" onClick={() => copyToClipboard(builtTxHex)}>
+                <Copy className="w-4 h-4 mr-2" /> Copy Hex
               </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {inputs.map((inp, idx) => (
-                <div key={idx} className="border rounded p-4 space-y-3 bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm">Input #{idx}</p>
-                    <Button 
-                      size="sm" 
-                      variant="destructive" 
-                      onClick={() => removeInput(idx)}
-                      disabled={inputs.length === 1}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input 
-                      placeholder="Previous TX ID" 
-                      value={inp.txid} 
-                      onChange={(e) => updateInput(idx, "txid", e.target.value)}
-                      className="font-mono text-xs"
-                    />
-                    <Input 
-                      placeholder="Output Index" 
-                      type="number" 
-                      value={inp.vout} 
-                      onChange={(e) => updateInput(idx, "vout", parseInt(e.target.value))}
-                    />
-                  </div>
-                  <Input 
-                    placeholder="Script Sig (hex)" 
-                    value={inp.scriptSig} 
-                    onChange={(e) => updateInput(idx, "scriptSig", e.target.value)}
-                    className="font-mono text-xs"
-                  />
-                  <Input 
-                    placeholder="Sequence (hex)" 
-                    value={inp.sequence.toString(16)} 
-                    onChange={(e) => updateInput(idx, "sequence", parseInt(e.target.value, 16))}
-                    className="font-mono text-xs"
-                  />
-                </div>
-              ))}
+              <Textarea value={builtTxHex} readOnly rows={6} className="font-mono text-xs" />
             </CardContent>
           </Card>
-
-          {/* Outputs */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Outputs ({outputs.length})</CardTitle>
-              <Button size="sm" onClick={addOutput}>
-                <Plus className="w-4 h-4 mr-2" /> Add Output
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {outputs.map((out, idx) => (
-                <div key={idx} className="border rounded p-4 space-y-3 bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm">Output #{idx}</p>
-                    <Button 
-                      size="sm" 
-                      variant="destructive" 
-                      onClick={() => removeOutput(idx)}
-                      disabled={outputs.length === 1}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <Input 
-                    placeholder="Value (satoshis)" 
-                    type="number" 
-                    value={out.value} 
-                    onChange={(e) => updateOutput(idx, "value", parseInt(e.target.value))}
-                  />
-                  <Input 
-                    placeholder="ScriptPubKey (hex)" 
-                    value={out.scriptPubKey} 
-                    onChange={(e) => updateOutput(idx, "scriptPubKey", e.target.value)}
-                    className="font-mono text-xs"
-                  />
-                  {out.address && (
-                    <Badge variant="outline">{out.address}</Badge>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Build & Preview */}
-          <div className="flex gap-2">
-            <Button onClick={buildTxHex} className="flex-1">Build Transaction</Button>
-            <Button variant="outline" onClick={() => setShowPreview(!showPreview)}>
-              <Eye className="w-4 h-4 mr-2" /> Preview
-            </Button>
-          </div>
-
-          {/* Built Transaction */}
-          {builtTxHex && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Built Transaction Hex</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button size="sm" onClick={() => copyToClipboard(builtTxHex)}>
-                  <Copy className="w-4 h-4 mr-2" /> Copy Hex
-                </Button>
-                <Textarea value={builtTxHex} readOnly rows={6} className="font-mono text-xs" />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Preview */}
-          {showPreview && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Transaction Preview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                <div>
-                  <p className="font-medium">Structure:</p>
-                  <code className="block bg-muted p-2 rounded mt-1">
-                    Version: {version}<br/>
-                    Inputs: {inputs.length}<br/>
-                    Outputs: {outputs.length}<br/>
-                    Size: {txSize} bytes<br/>
-                    Locktime: {locktime}
-                  </code>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { ecdsaRecovery, cryptoAnalysis } from "./services/crypto";
 import { blockScanner } from "./services/scanner";
 import { fetchAddressDataWithTor, clearCache, clearAllCache } from "./services/networking/torFetcher";
 import { getTxHex } from "./services/explorers/txHexFetcher";
+import { getUTXOs } from "./services/explorers/utxoFetcher";
 import { buildAndSignTx, extractSignaturesFromTxHex } from "./services/signer";
 import { generateAllMutations } from "./services/derMutator";
 import { insertAnalysisResultSchema, insertBatchAnalysisSchema } from "@shared/schema";
@@ -1794,6 +1795,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({
         error: 'Failed to extract signatures',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  // Get unspent outputs (UTXOs) from an address
+  app.post('/api/get-utxos', async (req, res) => {
+    try {
+      const { address } = req.body;
+      if (!address || typeof address !== 'string') {
+        return res.status(400).json({ error: 'Bitcoin address required' });
+      }
+
+      const utxos = await getUTXOs(address);
+      res.json({ success: true, data: { address, count: utxos.length, utxos } });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to fetch UTXOs',
         details: error instanceof Error ? error.message : 'Unknown error',
       });
     }
