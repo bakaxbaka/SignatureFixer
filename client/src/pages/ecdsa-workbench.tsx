@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 import { BitcoinCrypto, getSecp256k1Params } from "@/lib/crypto";
+import { MalleabilityDemo } from "@/components/malleability-demo";
 
 const nonceReuseSchema = z.object({
   r: z.string().min(1, "R value is required").regex(/^[0-9a-fA-F]+$/, "Must be valid hex"),
@@ -547,7 +548,7 @@ export default function ECDSAWorkbench() {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-6 w-full">
+          <TabsList className="grid grid-cols-7 w-full">
             <TabsTrigger value="auto-recovery" data-testid="tab-auto-recovery">
               <Zap className="w-4 h-4 mr-2" />
               Auto Recovery
@@ -567,6 +568,10 @@ export default function ECDSAWorkbench() {
             <TabsTrigger value="signature-lab" data-testid="tab-signature-lab">
               <Hash className="w-4 h-4 mr-2" />
               Sign/Verify
+            </TabsTrigger>
+            <TabsTrigger value="malleability" data-testid="tab-malleability">
+              <Zap className="w-4 h-4 mr-2" />
+              DER Malleable
             </TabsTrigger>
             <TabsTrigger value="curve-info" data-testid="tab-curve-info">
               <Binary className="w-4 h-4 mr-2" />
@@ -1457,6 +1462,10 @@ export default function ECDSAWorkbench() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="malleability" className="space-y-6">
+            <MalleabilityDemo />
           </TabsContent>
         </Tabs>
       </div>
