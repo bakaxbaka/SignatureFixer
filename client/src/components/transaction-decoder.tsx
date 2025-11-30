@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Code, Zap, Copy } from "lucide-react";
+import { MalleabilityDemo } from "@/components/malleability-demo";
 
 const transactionSchema = z.object({
   rawTransaction: z.string().min(1, "Raw transaction hex is required").regex(/^[0-9a-fA-F]+$/, "Invalid hex format"),
@@ -549,6 +550,16 @@ export function TransactionDecoder() {
                   </div>
                 </div>
               )}
+
+              {/* DER Malleability Testing */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-foreground">DER Signature Malleability Testing</h4>
+                <Card className="border-yellow-500/20 bg-yellow-50/5">
+                  <CardContent className="pt-6">
+                    <MalleabilityDemo />
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Transaction Inputs */}
               <div className="space-y-4">
