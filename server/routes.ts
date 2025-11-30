@@ -881,5 +881,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Address vulnerability summary endpoint
+  app.get('/api/address-vulnerability-summary', async (req, res) => {
+    try {
+      const allLogs = await storage.getAllVulnerabilityLogs(1000);
+      
+      // Group by address
+      const addressMap = new Map<string, any>();
+      for (const log of allLogs) {
+        if (!addressMap.has(log.bitcoinAddress)) {
+          addressMap.set(log.bitcoinAddress, {
+            address: log.bitcoinAddress,
+            vulnerabilityTypes: new Set<string>(),
+            totalCount: 0,
+            criticalCount: 0,
+            transactions: new Set<string>(),
+            firstDetected: log.detectedAt,
+            lastDetected: log.detectedAt
+          });
+        }
+        
+        const entry = addressMap.get(log.bitcoinAddress)!;
+        entry.vulnerabilityTypes.add(log.vulnerabilityType);
+        entry.totalCount++;
+        if (log.severity === 'critical') entry.criticalCount++;
+        if (log.transactionHash) entry.transactions.add(log.transactionHash);
+        entry.lastDetected = log.detectedAt;
+      }
+
+      // Convert to array format
+      const summary = Array.from(addressMap.values()).map(entry => ({
+        address: entry.address,
+        vulnerabilityTypes: Array.from(entry.vulnerabilityTypes),
+        totalCount: entry.totalCount,
+        criticalCount: entry.criticalCount,
+        transactionCount: entry.transactions.size,
+        transactions: Array.from(entry.transactions),
+        firstDetected: entry.firstDetected,
+        lastDetected: entry.lastDetected
+      }));
+
+      res.json({ success: true, data: summary });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch address vulnerability summary' });
+    }
+  });
+
   return httpServer;
 }
