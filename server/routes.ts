@@ -9,6 +9,7 @@ import { blockScanner } from "./services/scanner";
 import { fetchAddressDataWithTor, clearCache, clearAllCache } from "./services/networking/torFetcher";
 import { getTxHex } from "./services/explorers/txHexFetcher";
 import { getUTXOs } from "./services/explorers/utxoFetcher";
+import { broadcastTransaction, getTxStatus } from "./services/explorers/broadcaster";
 import { buildAndSignTx, extractSignaturesFromTxHex } from "./services/signer";
 import { generateAllMutations } from "./services/derMutator";
 import { insertAnalysisResultSchema, insertBatchAnalysisSchema } from "@shared/schema";
@@ -1813,6 +1814,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({
         error: 'Failed to fetch UTXOs',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  // Broadcast transaction to blockchain
+  app.post('/api/broadcast-tx', async (req, res) => {
+    try {
+      const { txHex } = req.body;
+      if (!txHex || typeof txHex !== 'string') {
+        return res.status(400).json({ error: 'Transaction hex required' });
+      }
+
+      const result = await broadcastTransaction(txHex);
+      
+      if (result.success) {
+        res.json({ success: true, data: result });
+      } else {
+        res.status(500).json({ error: result.error, details: result.message });
+      }
+    } catch (error) {
+      res.status(500).json({
+        error: 'Broadcast failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  // Get transaction status
+  app.get('/api/tx-status/:txid', async (req, res) => {
+    try {
+      const { txid } = req.params;
+      if (!txid || typeof txid !== 'string') {
+        return res.status(400).json({ error: 'TXID required' });
+      }
+
+      const status = await getTxStatus(txid);
+      res.json({ success: true, data: status });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Status check failed',
         details: error instanceof Error ? error.message : 'Unknown error',
       });
     }
