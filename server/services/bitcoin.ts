@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { createHash } from "crypto";
+import * as fs from "fs";
+import * as path from "path";
 
 interface UTXOData {
   utxos: Array<{
@@ -70,6 +72,82 @@ class BitcoinService {
   private readonly BLOCKCHAIN_API = 'https://blockchain.info';
   private readonly BLOCKSTREAM_API = 'https://blockstream.info/api';
   private readonly SOCHAIN_API = 'https://sochain.com/api/v2';
+  private readonly DATA_DIR = path.join(process.cwd(), 'data');
+  private readonly RAW_TXS_DIR = path.join(this.DATA_DIR, 'raw_txs');
+  private readonly PROGRESS_FILE = path.join(this.DATA_DIR, 'progress.json');
+
+  constructor() {
+    // Ensure data directories exist
+    if (!fs.existsSync(this.DATA_DIR)) {
+      fs.mkdirSync(this.DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(this.RAW_TXS_DIR)) {
+      fs.mkdirSync(this.RAW_TXS_DIR, { recursive: true });
+    }
+  }
+
+  // 1.3 Progress tracking and persistence
+  private loadProgress(): any {
+    try {
+      if (fs.existsSync(this.PROGRESS_FILE)) {
+        const data = fs.readFileSync(this.PROGRESS_FILE, 'utf-8');
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('Failed to load progress:', error);
+    }
+    return { last_offset: 0, completed_phases: [], address: null };
+  }
+
+  private saveProgress(address: string, lastOffset: number, phases: string[]): void {
+    try {
+      const progress = {
+        address,
+        last_offset: lastOffset,
+        completed_phases: phases,
+        lastUpdated: new Date().toISOString()
+      };
+      fs.writeFileSync(this.PROGRESS_FILE, JSON.stringify(progress, null, 2));
+      console.log(`💾 Progress saved: offset=${lastOffset}, phases=${phases.join(', ')}`);
+    } catch (error) {
+      console.error('Failed to save progress:', error);
+    }
+  }
+
+  private savePage(address: string, offset: number, pageData: any): void {
+    try {
+      const filename = `page_${offset}.json`;
+      const filepath = path.join(this.RAW_TXS_DIR, filename);
+      fs.writeFileSync(filepath, JSON.stringify(pageData, null, 2));
+      console.log(`📄 Saved: ${filename} (${pageData.txs?.length || 0} transactions)`);
+    } catch (error) {
+      console.error(`Failed to save page ${offset}:`, error);
+    }
+  }
+
+  private loadPage(offset: number): any {
+    try {
+      const filename = `page_${offset}.json`;
+      const filepath = path.join(this.RAW_TXS_DIR, filename);
+      if (fs.existsSync(filepath)) {
+        const data = fs.readFileSync(filepath, 'utf-8');
+        console.log(`📖 Loaded cached: ${filename}`);
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.error(`Failed to load page ${offset}:`, error);
+    }
+    return null;
+  }
+
+  private getPageFiles(): string[] {
+    try {
+      const files = fs.readdirSync(this.RAW_TXS_DIR);
+      return files.filter(f => f.startsWith('page_') && f.endsWith('.json')).sort();
+    } catch (error) {
+      return [];
+    }
+  }
 
   async fetchUTXOs(address: string, networkType: string = 'mainnet'): Promise<UTXOData> {
     const errors: string[] = [];
@@ -1384,21 +1462,44 @@ class BitcoinService {
     throw lastError || new Error('Failed to fetch page after all retries');
   }
 
-  // 1.2 Multi-Page Downloader - automatically loop through all pages
+  // 1.2 Multi-Page Downloader - automatically loop through all pages with persistence
   async fetchAllTransactionsPaginated(address: string, pageSize: number = 50): Promise<any> {
     console.log(`\n========== PHASE 1: MULTI-PAGE TRANSACTION FETCHING ==========`);
     console.log(`Address: ${address}`);
-    console.log(`Page size: ${pageSize}\n`);
+    console.log(`Page size: ${pageSize}`);
+    console.log(`Data dir: ${this.RAW_TXS_DIR}\n`);
     
+    // Load progress
+    const progress = this.loadProgress();
+    let startOffset = 0;
+    const phases: string[] = progress.completed_phases || [];
+
+    // Resume check
+    if (progress.address === address && progress.last_offset > 0) {
+      console.log(`🔄 RESUME MODE: Last offset was ${progress.last_offset}`);
+      console.log(`Completed phases: ${phases.join(', ')}\n`);
+      startOffset = progress.last_offset;
+    }
+
     let allTransactions: any[] = [];
     let totalTxCount = 0;
-    let offset = 0;
-    let isFirstPage = true;
+    let offset = startOffset;
+    let isFirstPage = startOffset === 0;
 
     try {
       while (true) {
-        // Fetch one page with retry logic
-        const pageData = await this.fetchPageWithRetry(address, offset, pageSize, 3);
+        // Check if page already cached
+        const cachedPage = this.loadPage(offset);
+        let pageData;
+
+        if (cachedPage) {
+          pageData = cachedPage;
+        } else {
+          // Fetch one page with retry logic
+          pageData = await this.fetchPageWithRetry(address, offset, pageSize, 3);
+          // Save page to disk (1.3 Local Persistence)
+          this.savePage(address, offset, pageData);
+        }
         
         if (isFirstPage) {
           totalTxCount = pageData.total_tx;
@@ -1412,9 +1513,14 @@ class BitcoinService {
           console.log(`📥 Collected ${allTransactions.length}/${totalTxCount} transactions`);
         }
 
+        // Save progress after each page
+        this.saveProgress(address, offset, ['phase1_fetching']);
+
         // Check if we've fetched all transactions
         if (offset + pageSize >= totalTxCount || pageData.txs.length === 0) {
           console.log(`\n✅ COMPLETE: Fetched all ${allTransactions.length} transactions\n`);
+          // Mark phase 1 as completed
+          this.saveProgress(address, offset, ['phase1_fetching_complete']);
           break;
         }
 
@@ -1423,6 +1529,13 @@ class BitcoinService {
         // Rate limiting: wait a bit between pages to avoid hitting limits
         console.log(`⏳ Waiting 500ms before next page...\n`);
         await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Show cached pages summary
+      const cachedFiles = this.getPageFiles();
+      if (cachedFiles.length > 0) {
+        console.log(`📦 Cached pages available: ${cachedFiles.length} files`);
+        console.log(`   ${cachedFiles.slice(0, 5).join(', ')}${cachedFiles.length > 5 ? '...' : ''}\n`);
       }
 
       return {
@@ -1435,11 +1548,15 @@ class BitcoinService {
         metadata: {
           pagesDownloaded: Math.ceil(allTransactions.length / pageSize),
           pageSize,
-          fetchedAt: new Date().toISOString()
+          fetchedAt: new Date().toISOString(),
+          dataDir: this.RAW_TXS_DIR,
+          progressFile: this.PROGRESS_FILE
         }
       };
     } catch (error) {
       console.error(`\n❌ PHASE 1 FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Save failure state
+      this.saveProgress(address, offset, ['phase1_failed']);
       throw error;
     }
   }
