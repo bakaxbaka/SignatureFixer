@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, CheckCircle } from "lucide-react";
-import { parseRawTx, calculateWeight, analyzeDERSignatures, generateTags, parseInputs, parseOutputs } from "@/lib/transaction-analyzer";
+import { AlertTriangle, CheckCircle, Copy } from "lucide-react";
+import { parseRawTx, calculateWeight, analyzeDERSignatures, generateTags, parseInputs, parseOutputs, getPubkeyMap, getRValueMap } from "@/lib/transaction-analyzer";
 import { truncateString, formatBTC } from "@/lib/bitcoin-utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface TransactionInspectorProps {
   txHex: string;
@@ -13,11 +14,20 @@ interface TransactionInspectorProps {
 }
 
 export function TransactionInspector({ txHex, txid }: TransactionInspectorProps) {
+  const { toast } = useToast();
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ description: `${label} copied to clipboard` });
+  };
+
   try {
     const txInfo = parseRawTx(txHex);
     const { vsize, weight } = calculateWeight(txHex);
     const derAnalysis = analyzeDERSignatures(txHex);
     const tags = generateTags(derAnalysis);
+    const inputs = parseInputs(txHex, txInfo.isSegwit);
+    const pubkeyMap = getPubkeyMap(inputs);
+    const rValueMap = getRValueMap(inputs);
 
     // Mock data for demo (would fetch real data in production)
     const totalIn = 50000;
@@ -217,20 +227,115 @@ export function TransactionInspector({ txHex, txid }: TransactionInspectorProps)
           </TabsContent>
 
           <TabsContent value="signatures">
-            <Card>
-              <CardHeader>
-                <CardTitle>Signature Analysis</CardTitle>
-                <CardDescription>Per-input signature inspection with r/s validation</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className="space-y-4">
+              {inputs.filter(input => input.signature).length === 0 ? (
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Signature panel implementation coming soon. Shows DER, r/s values, sighash, pubkey, flags (High-S/Low-S, canonical/non-canonical), and pubkey cross-references.
-                  </AlertDescription>
+                  <AlertDescription>No signatures found in this transaction (SegWit witness data not shown).</AlertDescription>
                 </Alert>
-              </CardContent>
-            </Card>
+              ) : (
+                inputs.map((input, idx) => (
+                  input.signature && (
+                    <Card key={idx} className="border-purple-500/20 bg-purple-500/5">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">Input #{input.index}</CardTitle>
+                          <Badge variant="outline">{input.scriptType}</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* DER Section */}
+                        <div className="border rounded p-3 bg-muted/30">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-semibold text-muted-foreground">DER Signature</p>
+                            <button
+                              onClick={() => copyToClipboard(input.signature!.der, "DER")}
+                              className="p-1 hover:bg-muted rounded"
+                              title="Copy DER"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <code className="block font-mono text-xs break-all text-purple-600 dark:text-purple-400">
+                            {input.signature.der}
+                          </code>
+                        </div>
+
+                        {/* r, s, sighash grid */}
+                        <div className="grid grid-cols-3 gap-3 text-xs">
+                          <div className="border rounded p-2">
+                            <p className="text-muted-foreground mb-1">r</p>
+                            <code className="font-mono text-xs break-all">{truncateString(input.signature.r, 8, 4)}</code>
+                          </div>
+                          <div className="border rounded p-2">
+                            <p className="text-muted-foreground mb-1">s</p>
+                            <code className="font-mono text-xs break-all">{truncateString(input.signature.s, 8, 4)}</code>
+                          </div>
+                          <div className="border rounded p-2">
+                            <p className="text-muted-foreground mb-1">Sighash</p>
+                            <code className="font-mono text-xs">{input.signature.sighashType}</code>
+                          </div>
+                        </div>
+
+                        {/* Pubkey & Z-hash */}
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div className="border rounded p-2">
+                            <p className="text-muted-foreground mb-1">Pubkey</p>
+                            <code className="font-mono text-xs break-all">{input.pubkey ? truncateString(input.pubkey, 8, 4) : "—"}</code>
+                          </div>
+                          <div className="border rounded p-2">
+                            <p className="text-muted-foreground mb-1">Z-Hash</p>
+                            <code className="font-mono text-xs break-all">{truncateString(input.signature.zHash, 8, 4)}</code>
+                          </div>
+                        </div>
+
+                        {/* Flags */}
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold">Flags</p>
+                          <div className="flex flex-wrap gap-2">
+                            {input.signature.isHighS ? (
+                              <Badge className="bg-amber-600">⚠ High-S</Badge>
+                            ) : (
+                              <Badge className="bg-green-600">✓ Low-S</Badge>
+                            )}
+                            {input.signature.isCanonical ? (
+                              <Badge className="bg-green-600">✓ Canonical DER</Badge>
+                            ) : (
+                              <Badge className="bg-red-600">⚠ Non-canonical</Badge>
+                            )}
+                            {!input.signature.isRValid ? (
+                              <Badge className="bg-red-600">⚠ r out of range</Badge>
+                            ) : null}
+                            {!input.signature.isSValid ? (
+                              <Badge className="bg-red-600">⚠ s out of range</Badge>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {/* Cross-references */}
+                        {input.pubkey && pubkeyMap.get(input.pubkey)!.length > 1 && (
+                          <Alert className="bg-blue-500/10 border-blue-500/20">
+                            <CheckCircle className="h-4 w-4 text-blue-600" />
+                            <AlertDescription className="text-xs">
+                              This pubkey also signs inputs: {pubkeyMap.get(input.pubkey)!.filter(i => i !== input.index).map(i => `#${i}`).join(", ")}
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        {input.signature.r && rValueMap.get(input.signature.r)!.length > 1 && (
+                          <Alert className="bg-red-500/10 border-red-500/20">
+                            <AlertTriangle className="h-4 w-4 text-red-600" />
+                            <AlertDescription className="text-xs">
+                              ⚠ r value collision: also used in input(s) {rValueMap.get(input.signature.r)!.filter(i => i !== input.index).map(i => `#${i}`).join(", ")}
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                ))
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>

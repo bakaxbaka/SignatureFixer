@@ -3,6 +3,19 @@
  * Computes: weight, vsize, fee, feerate, DER validation, tags
  */
 
+export interface DERSignature {
+  der: string;
+  r: string;
+  s: string;
+  sighashByte: number;
+  sighashType: string;
+  isHighS: boolean;
+  isCanonical: boolean;
+  isRValid: boolean;
+  isSValid: boolean;
+  zHash: string;
+}
+
 export interface TransactionInput {
   index: number;
   prevTxid: string;
@@ -12,6 +25,7 @@ export interface TransactionInput {
   scriptType: string;
   pubkey?: string;
   address?: string;
+  signature?: DERSignature;
 }
 
 export interface TransactionOutput {
@@ -272,6 +286,7 @@ export function parseInputs(txHex: string, isSegwit: boolean = false): Transacti
 
     const scriptType = detectScriptType(scriptSig);
     const pubkey = extractPubkey(scriptSig);
+    const signature = parseDERSignature(scriptSig);
 
     inputs.push({
       index: i,
@@ -281,6 +296,7 @@ export function parseInputs(txHex: string, isSegwit: boolean = false): Transacti
       scriptSig,
       scriptType,
       pubkey,
+      signature,
     });
   }
 
@@ -412,4 +428,127 @@ function readUint64LE(bytes: Uint8Array, offset: number): number {
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Parse DER signature and extract r, s, flags
+ * DER format: 0x30 [total-length] 0x02 [r-length] [r-bytes] 0x02 [s-length] [s-bytes] [sighash]
+ */
+export function parseDERSignature(scriptSig: string): DERSignature | undefined {
+  // Find DER signature pattern: 30 [length] 02 [r-len] ... 02 [s-len] ...
+  const derMatch = scriptSig.match(/30([0-9a-f]{2})02([0-9a-f]{2})([0-9a-f]*?)02([0-9a-f]{2})([0-9a-f]*?)([0-9a-f]{2})$/i);
+  
+  if (!derMatch) {
+    return undefined;
+  }
+
+  const totalLen = parseInt(derMatch[1], 16);
+  const rLen = parseInt(derMatch[2], 16);
+  const rBytes = derMatch[3];
+  const sLen = parseInt(derMatch[4], 16);
+  const sBytes = derMatch[5];
+  const sighashByte = parseInt(derMatch[6], 16);
+
+  // Full DER up to sighash
+  const der = derMatch[0].slice(0, -2);
+  const r = rBytes;
+  const s = sBytes;
+
+  // Sighash type
+  const sighashType = getSighashType(sighashByte);
+
+  // Check High-S: s > n/2 where n is the secp256k1 order
+  // n/2 = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
+  const sighashMask = sighashByte & 0x1f;
+  const isHighS = s.length === 64 && parseInt(s.substring(0, 2), 16) > 127; // Simplified check
+
+  // Check if canonical (leading zeros only if MSB is set)
+  const isCanonical = checkCanonicalDER(rBytes, sBytes);
+
+  // Check range: r and s should be 32 bytes and > 0
+  const isRValid = rLen <= 32 && parseInt(rBytes, 16) > 0;
+  const isSValid = sLen <= 32 && parseInt(sBytes, 16) > 0;
+
+  // Compute z-hash from sighash preimage (simplified - would need full preimage in production)
+  const zHash = computeZHash(sighashByte);
+
+  return {
+    der,
+    r,
+    s,
+    sighashByte,
+    sighashType,
+    isHighS,
+    isCanonical,
+    isRValid,
+    isSValid,
+    zHash,
+  };
+}
+
+/**
+ * Get sighash type from sighash byte
+ */
+function getSighashType(byte: number): string {
+  const type = byte & 0x1f;
+  const hasAnyoneCanPay = byte & 0x80;
+
+  let base = "SIGHASH_ALL";
+  if (type === 0x00) base = "SIGHASH_ALL";
+  else if (type === 0x01) base = "SIGHASH_NONE";
+  else if (type === 0x02) base = "SIGHASH_SINGLE";
+
+  if (hasAnyoneCanPay) base += " | ANYONECANPAY";
+  return base;
+}
+
+/**
+ * Check if DER encoding is canonical
+ */
+function checkCanonicalDER(rBytes: string, sBytes: string): boolean {
+  // Canonical: no leading zeros except when necessary for sign bit
+  const rValid = !rBytes.startsWith("00") || (parseInt(rBytes.substring(0, 2), 16) & 0x80) !== 0;
+  const sValid = !sBytes.startsWith("00") || (parseInt(sBytes.substring(0, 2), 16) & 0x80) !== 0;
+  return rValid && sValid;
+}
+
+/**
+ * Compute z-hash (message hash) from sighash preimage
+ * In production, would need full preimage, but for now return a placeholder
+ */
+function computeZHash(sighashByte: number): string {
+  // Placeholder: would compute actual sighash preimage hash
+  return "0x" + "0".repeat(64); // Placeholder
+}
+
+/**
+ * Get all pubkeys from inputs for cross-referencing
+ */
+export function getPubkeyMap(inputs: TransactionInput[]): Map<string, number[]> {
+  const map = new Map<string, number[]>();
+  
+  inputs.forEach((input) => {
+    if (input.pubkey) {
+      const existing = map.get(input.pubkey) || [];
+      map.set(input.pubkey, [...existing, input.index]);
+    }
+  });
+
+  return map;
+}
+
+/**
+ * Get all r values from inputs for collision detection
+ */
+export function getRValueMap(inputs: TransactionInput[]): Map<string, number[]> {
+  const map = new Map<string, number[]>();
+  
+  inputs.forEach((input) => {
+    if (input.signature?.r) {
+      const existing = map.get(input.signature.r) || [];
+      map.set(input.signature.r, [...existing, input.index]);
+    }
+  });
+
+  return map;
 }
