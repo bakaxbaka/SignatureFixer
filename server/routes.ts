@@ -9,7 +9,6 @@ import { blockScanner } from "./services/scanner";
 import { fetchAddressDataWithTor, clearCache, clearAllCache } from "./services/networking/torFetcher";
 import { getTxHex } from "./services/explorers/txHexFetcher";
 import { getUTXOs } from "./services/explorers/utxoFetcher";
-import { getUTXOsFast } from "./services/explorers/fastUtxoFetcher";
 import { broadcastTransaction, getTxStatus } from "./services/explorers/broadcaster";
 import { buildAndSignTx, extractSignaturesFromTxHex } from "./services/signer";
 import { generateAllMutations } from "./services/derMutator";
@@ -1810,7 +1809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Bitcoin address required' });
       }
 
-      const utxos = await getUTXOsFast(address);
+      const utxoData = await bitcoinService.fetchUTXOs(address); const utxos = utxoData.utxos.map((u: any) => ({ txid: u.txid, vout: u.vout, value: u.value, scriptPubKey: u.script, confirmed: u.confirmations > 0, address })) || [];
       res.json({ success: true, data: { address, count: utxos.length, utxos } });
     } catch (error) {
       res.status(500).json({
