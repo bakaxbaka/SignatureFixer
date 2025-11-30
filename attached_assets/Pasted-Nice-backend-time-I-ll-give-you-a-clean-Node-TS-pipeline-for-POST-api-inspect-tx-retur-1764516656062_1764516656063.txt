@@ -1,0 +1,309 @@
+Nice, backend time 😎
+
+I’ll give you a clean Node/TS pipeline for:
+
+POST /api/inspect-tx → returns the InspectTxResponse shape we defined.
+
+You can adapt to your framework (Express, Fastify, Next API route, whatever), but I’ll write it as Express + plain services.
+
+1. High‑level pipeline
+For a request { rawTxHex?: string; txid?: string }:
+
+Normalize input
+
+If txid → fetch raw transaction hex (multi‑endpoint fetcher + cache)
+
+If rawTxHex → sanitize (strip spaces, lowercase)
+
+Decode TX
+
+Parse version, inputs, outputs, locktime
+
+Compute size / vsize / weight
+
+Compute txid
+
+Enrich UTXOs
+
+For each input (non‑coinbase):
+
+fetch previous tx once
+
+extract prev output’s value + scriptPubKey
+
+decode address + script type
+
+Extract signatures & pubkeys
+
+From:
+
+scriptSig (P2PKH, P2SH‑P2WPKH redeemScript, etc.)
+
+witness (P2WPKH, P2WSH)
+
+Parse DER → r, s, sighash byte
+
+Identify pubkey
+
+Compute sighash preimage z
+
+For each input with sig:
+
+Re‑serialize BIP143 (segwit) or legacy (non‑segwit)
+
+Append sighash type
+
+double SHA256 → z
+
+Analyze signatures
+
+isHighS? (s > n/2)
+
+range checks: 1 ≤ r, s ≤ n‑1
+
+strict DER vs loose DER → canonical or not
+
+sighash type name
+
+Compute summary flags + fee
+
+totalInputSats, totalOutputSats, fee, feeRate
+
+flags: hasHighS, hasNonCanonicalDer, etc.
+
+Return InspectTxResponse.
+
+2. Service layout
+Example folder:
+
+src/
+  services/
+    inspectTx.ts
+    txDecode.ts
+    utxoFetcher.ts
+    script.ts
+    signature.ts
+    sighash.ts
+    der.ts
+  routes/
+    inspectTxRoute.ts
+  types/
+    txInspector.ts
+3. Core service: inspectTx.ts
+// src/services/inspectTx.ts
+import { InspectTxRequest, InspectTxResponse } from "../types/txInspector";
+import { decodeRawTx } from "./txDecode";
+import { fetchPrevTx } from "./utxoFetcher";
+import { classifyScriptPubKey, decodeAddressFromScript } from "./script";
+import { extractInputSignature } from "./signature";
+import { computeSighashZ } from "./sighash";
+import { analyzeDerSignature } from "./der";
+import { NETWORK } from "../config/network";
+
+export async function inspectTx(
+  req: InspectTxRequest
+): Promise<InspectTxResponse> {
+  try {
+    if (!req.txid && !req.rawTxHex) {
+      return { ok: false, error: "txid or rawTxHex is required" };
+    }
+
+    let rawTxHex = req.rawTxHex?.trim();
+    if (!rawTxHex && req.txid) {
+      // 1) fetch raw tx by txid via your multi-endpoint fetcher
+      rawTxHex = await fetchRawTxByTxid(req.txid);
+      if (!rawTxHex) {
+        return { ok: false, error: "Could not fetch transaction by txid" };
+      }
+    }
+
+    if (!rawTxHex) {
+      return { ok: false, error: "Empty rawTxHex after fetch" };
+    }
+
+    // 2) decode tx (you can use bitcoinjs-lib or your own decoder)
+    const decoded = decodeRawTx(rawTxHex);
+
+    // decoded should contain:
+    // { txid, version, locktime, inputs, outputs, sizeBytes, vsizeBytes, weight }
+
+    // 3) enrich UTXOs
+    const enrichedInputs = await Promise.all(
+      decoded.inputs.map(async (inp) => {
+        if (inp.isCoinbase) return inp;
+
+        const prevTx = await fetchPrevTx(inp.prevTxid);
+        const prevOut = prevTx?.outputs[inp.prevVout];
+
+        if (!prevOut) return inp;
+
+        const scriptType = classifyScriptPubKey(prevOut.scriptPubKeyHex);
+        const address = decodeAddressFromScript(prevOut.scriptPubKeyHex, NETWORK);
+
+        return {
+          ...inp,
+          valueSats: prevOut.valueSats,
+          scriptType,
+          address,
+        };
+      })
+    );
+
+    // 4) extract signatures & pubkeys per input
+    const signatureAnalyses = await Promise.all(
+      enrichedInputs.map(async (inp, index) => {
+        if (inp.isCoinbase) return null;
+
+        const sigInfo = extractInputSignature(inp);
+        if (!sigInfo) return null;
+
+        const { derHex, pubkeyHex, sighashType } = sigInfo;
+
+        // 5) compute sighash preimage z for this input
+        const zHex = computeSighashZ({
+          rawTxHex,
+          decodedTx: decoded,
+          inputIndex: index,
+          sighashType,
+          prevOutputScriptHex: sigInfo.prevOutputScriptHex,
+          prevOutputValueSats: sigInfo.prevOutputValueSats,
+        });
+
+        // 6) DER/range/highS analysis
+        const derAnalysis = analyzeDerSignature(derHex, sighashType);
+
+        return {
+          derHex,
+          rHex: derAnalysis.rHex,
+          sHex: derAnalysis.sHex,
+          zHex,
+          sighashType,
+          sighashName: derAnalysis.sighashName,
+          pubkeyHex,
+          isHighS: derAnalysis.isHighS,
+          isCanonicalDer: derAnalysis.isCanonical,
+          rangeValid: derAnalysis.rangeValid,
+          derIssues: derAnalysis.derIssues,
+          warnings: derAnalysis.warnings,
+        };
+      })
+    );
+
+    // 7) stitch signature info back into inputs
+    const finalInputs = enrichedInputs.map((inp, i) => ({
+      ...inp,
+      signature: signatureAnalyses[i],
+    }));
+
+    // 8) compute summary flags and fee
+    const totalInputSats = finalInputs
+      .map((i) => i.valueSats ?? 0)
+      .reduce((a, b) => a + b, 0);
+    const totalOutputSats = decoded.outputs
+      .map((o) => o.valueSats)
+      .reduce((a, b) => a + b, 0);
+    const feeSats =
+      totalInputSats > 0 && totalOutputSats >= 0
+        ? totalInputSats - totalOutputSats
+        : undefined;
+    const feeRateSatPerVbyte =
+      feeSats != null && decoded.vsizeBytes
+        ? feeSats / decoded.vsizeBytes
+        : undefined;
+
+    const summaryFlags = {
+      hasHighS: signatureAnalyses.some((s) => s?.isHighS),
+      hasNonCanonicalDer: signatureAnalyses.some(
+        (s) => s && !s.isCanonicalDer
+      ),
+      hasWeirdSighash: signatureAnalyses.some(
+        (s) => s && s.sighashName !== "SIGHASH_ALL"
+      ),
+      hasRangeViolations: signatureAnalyses.some(
+        (s) => s && !s.rangeValid
+      ),
+      hasMultiInputSameKey: detectMultiInputSameKey(finalInputs),
+      hasRReuseWithinTx: detectRReuseWithinTx(signatureAnalyses),
+    };
+
+    return {
+      ok: true,
+      network: NETWORK,
+      txid: decoded.txid,
+      rawTxHex,
+      version: decoded.version,
+      locktime: decoded.locktime,
+      sizeBytes: decoded.sizeBytes,
+      vsizeBytes: decoded.vsizeBytes,
+      weight: decoded.weight,
+      totalInputSats,
+      totalOutputSats,
+      feeSats,
+      feeRateSatPerVbyte,
+      inputs: finalInputs,
+      outputs: decoded.outputs,
+      summaryFlags,
+    };
+  } catch (err: any) {
+    console.error("inspectTx error:", err);
+    return {
+      ok: false,
+      error: err.message || "Unexpected error in inspectTx",
+    };
+  }
+}
+
+// simple helpers
+function detectMultiInputSameKey(inputs: any[]): boolean {
+  const seen = new Map<string, number[]>();
+  inputs.forEach((inp, idx) => {
+    const pk = inp.signature?.pubkeyHex;
+    if (!pk) return;
+    const arr = seen.get(pk) || [];
+    arr.push(idx);
+    seen.set(pk, arr);
+  });
+  return Array.from(seen.values()).some((indices) => indices.length > 1);
+}
+
+function detectRReuseWithinTx(sigs: (any | null)[]): boolean {
+  const seen = new Map<string, number[]>();
+  sigs.forEach((s, idx) => {
+    if (!s) return;
+    const r = s.rHex;
+    const arr = seen.get(r) || [];
+    arr.push(idx);
+    seen.set(r, arr);
+  });
+  return Array.from(seen.values()).some((indices) => indices.length > 1);
+}
+
+// TODO: implement this using your multi-endpoint + cache layer
+async function fetchRawTxByTxid(txid: string): Promise<string | null> {
+  // call your existing BitcoinService.fetchRawTx or similar
+  throw new Error("fetchRawTxByTxid not implemented");
+}
+4️⃣ Express route: inspectTxRoute.ts
+// src/routes/inspectTxRoute.ts
+import type { Request, Response } from "express";
+import { inspectTx } from "../services/inspectTx";
+
+export async function inspectTxRoute(req: Request, res: Response) {
+  try {
+    const { rawTxHex, txid } = req.body || {};
+    const result = await inspectTx({ rawTxHex, txid });
+    res.json(result);
+  } catch (err: any) {
+    console.error("inspectTxRoute error:", err);
+    res.status(500).json({
+      ok: false,
+      error: "Internal server error in /api/inspect-tx",
+    });
+  }
+}
+Then wire it in your main server:
+
+// server/routes.ts or similar
+import { inspectTxRoute } from "./routes/inspectTxRoute";
+
+app.post("/api/inspect-tx", inspectTxRoute);

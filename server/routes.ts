@@ -1893,5 +1893,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Transaction Inspection Pipeline
+  app.post("/api/inspect-tx", async (req, res) => {
+    try {
+      const { inspectTxPipeline } = await import("./services/inspectTxPipeline");
+      const result = await inspectTxPipeline(req.body);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ ok: false, error: (err as Error).message });
+    }
+  });
+
   return httpServer;
 }

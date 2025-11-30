@@ -1,0 +1,449 @@
+2️⃣ React front‑page inspector skeleton
+This is a simple but structured component that:
+
+Lets user paste raw hex or txid
+
+Hits /api/inspect-tx
+
+Renders Overview, Inputs, Outputs, Signatures
+
+Put something like this in src/components/TxInspector/TxInspectorPage.tsx:
+
+// src/components/TxInspector/TxInspectorPage.tsx
+import React, { useState } from "react";
+import type {
+  InspectTxResponse,
+  TxInputAnalysis,
+  TxOutputAnalysis,
+  SignatureAnalysis,
+} from "../../types/txInspector";
+
+interface TxInspectorPageProps {
+  initialTxid?: string;
+  initialRawTxHex?: string;
+}
+
+const TxInspectorPage: React.FC<TxInspectorPageProps> = ({
+  initialTxid = "",
+  initialRawTxHex = "",
+}) => {
+  const [inputMode, setInputMode] = useState<"auto" | "txid" | "raw">("auto");
+  const [inputValue, setInputValue] = useState(
+    initialRawTxHex || initialTxid || ""
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<InspectTxResponse | null>(null);
+
+  function detectMode(value: string): "txid" | "raw" {
+    const trimmed = value.trim();
+    const isHex = /^[0-9a-fA-F]+$/.test(trimmed);
+
+    if (isHex && trimmed.length === 64) return "txid";
+    // very naive heuristic; you can refine later
+    if (isHex && trimmed.length > 64) return "raw";
+    return "raw";
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setResult(null);
+
+    const trimmed = inputValue.trim();
+    if (!trimmed) {
+      setError("Please paste a txid or raw transaction hex.");
+      return;
+    }
+
+    const mode = inputMode === "auto" ? detectMode(trimmed) : inputMode;
+    const body =
+      mode === "txid"
+        ? { txid: trimmed }
+        : { rawTxHex: trimmed.toLowerCase() };
+
+    try {
+      setLoading(true);
+
+      const res = await fetch("/api/inspect-tx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json: InspectTxResponse = await res.json();
+      if (!json.ok) {
+        setError(json.error || "Unknown error from inspector.");
+      } else {
+        setResult(json);
+      }
+    } catch (err: any) {
+      setError(err.message || "Network error while calling /api/inspect-tx.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="tx-inspector-page">
+      <h1>Raw Transaction Inspector</h1>
+
+      {/* INPUT PANEL */}
+      <form onSubmit={handleSubmit} className="tx-inspector-input">
+        <label htmlFor="tx-input">TxID / Raw Hex</label>
+        <textarea
+          id="tx-input"
+          rows={4}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="Paste a Bitcoin txid or raw transaction hex here…"
+        />
+
+        <div className="tx-inspector-input-row">
+          <div className="tx-inspector-modes">
+            <span>Interpret as:</span>
+            <label>
+              <input
+                type="radio"
+                name="mode"
+                value="auto"
+                checked={inputMode === "auto"}
+                onChange={() => setInputMode("auto")}
+              />
+              Auto
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="mode"
+                value="txid"
+                checked={inputMode === "txid"}
+                onChange={() => setInputMode("txid")}
+              />
+              TxID
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="mode"
+                value="raw"
+                checked={inputMode === "raw"}
+                onChange={() => setInputMode("raw")}
+              />
+              Raw Tx Hex
+            </label>
+          </div>
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Inspecting…" : "Inspect Transaction"}
+          </button>
+        </div>
+
+        {error && <div className="tx-inspector-error">{error}</div>}
+      </form>
+
+      {/* RESULT PANEL */}
+      {result && result.ok && result.txid && (
+        <div className="tx-inspector-result">
+          <OverviewCard result={result} />
+          <InputsCard inputs={result.inputs || []} />
+          <OutputsCard outputs={result.outputs || []} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TxInspectorPage;
+2.1 Overview card
+interface OverviewCardProps {
+  result: InspectTxResponse;
+}
+
+const OverviewCard: React.FC<OverviewCardProps> = ({ result }) => {
+  const flags = result.summaryFlags;
+
+  return (
+    <section className="tx-overview-card">
+      <h2>Overview</h2>
+      <div className="tx-overview-grid">
+        <div>
+          <strong>TxID</strong>
+          <div className="mono">{result.txid}</div>
+        </div>
+        <div>
+          <strong>Network</strong>
+          <div>{result.network || "unknown"}</div>
+        </div>
+        <div>
+          <strong>Version</strong>
+          <div>{result.version}</div>
+        </div>
+        <div>
+          <strong>Locktime</strong>
+          <div>{result.locktime}</div>
+        </div>
+        <div>
+          <strong>Size / vSize</strong>
+          <div>
+            {result.sizeBytes} bytes / {result.vsizeBytes} vB
+          </div>
+        </div>
+        <div>
+          <strong>Fee</strong>
+          <div>
+            {result.feeSats != null ? `${result.feeSats} sats` : "—"}
+          </div>
+        </div>
+        <div>
+          <strong>Feerate</strong>
+          <div>
+            {result.feeRateSatPerVbyte != null
+              ? `${result.feeRateSatPerVbyte.toFixed(2)} sat/vB`
+              : "—"}
+          </div>
+        </div>
+        <div>
+          <strong>Total In / Out</strong>
+          <div>
+            {result.totalInputSats ?? "?"} / {result.totalOutputSats ?? "?"} sats
+          </div>
+        </div>
+      </div>
+
+      {flags && (
+        <div className="tx-overview-flags">
+          <h3>Quick Signature Health</h3>
+          <ul>
+            <li>
+              {flags.hasHighS ? "⚠ High-S signatures present" : "✅ Low-S only"}
+            </li>
+            <li>
+              {flags.hasNonCanonicalDer
+                ? "⚠ Non-canonical DER detected"
+                : "✅ All signatures canonical DER"}
+            </li>
+            <li>
+              {flags.hasWeirdSighash
+                ? "⚠ Non-standard sighash types detected"
+                : "✅ Standard SIGHASH_ALL only"}
+            </li>
+            <li>
+              {flags.hasMultiInputSameKey
+                ? "⚠ Multiple inputs share same pubkey"
+                : "✅ No multi-input same-key patterns"}
+            </li>
+            <li>
+              {flags.hasRReuseWithinTx
+                ? "⚠ r-value reuse within this tx"
+                : "✅ No r-value reuse within this tx"}
+            </li>
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+};
+2.2 Inputs card
+interface InputsCardProps {
+  inputs: TxInputAnalysis[];
+}
+
+const InputsCard: React.FC<InputsCardProps> = ({ inputs }) => {
+  if (!inputs.length) return null;
+
+  return (
+    <section className="tx-inputs-card">
+      <h2>Inputs</h2>
+      <table className="tx-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Prev Out</th>
+            <th>Value (sats)</th>
+            <th>Address</th>
+            <th>Script Type</th>
+            <th>Signature</th>
+          </tr>
+        </thead>
+        <tbody>
+          {inputs.map((inp) => (
+            <tr key={inp.index}>
+              <td>{inp.index}</td>
+              <td className="mono">
+                {inp.prevTxid}:{inp.prevVout}
+              </td>
+              <td>{inp.valueSats ?? "?"}</td>
+              <td>{inp.address || "—"}</td>
+              <td>{inp.scriptType}</td>
+              <td>
+                {inp.signature ? (
+                  <SignatureBadge sig={inp.signature} />
+                ) : inp.isCoinbase ? (
+                  "Coinbase"
+                ) : (
+                  "No signature parsed"
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {inputs.map(
+        (inp) =>
+          inp.signature && (
+            <SignatureDetails key={`sig-${inp.index}`} index={inp.index} sig={inp.signature} />
+          )
+      )}
+    </section>
+  );
+};
+Signature badges/details:
+
+interface SignatureBadgeProps {
+  sig: SignatureAnalysis;
+}
+
+const SignatureBadge: React.FC<SignatureBadgeProps> = ({ sig }) => {
+  const issues = sig.derIssues.length + sig.warnings.length;
+  return (
+    <span className="sig-badge">
+      {sig.sighashName} · {sig.isHighS ? "High-S" : "Low-S"}{" "}
+      {issues > 0 && <span className="sig-badge-warning">⚠ {issues}</span>}
+    </span>
+  );
+};
+
+interface SignatureDetailsProps {
+  index: number;
+  sig: SignatureAnalysis;
+}
+
+const SignatureDetails: React.FC<SignatureDetailsProps> = ({ index, sig }) => {
+  return (
+    <details className="sig-details">
+      <summary>Input #{index} – Signature details</summary>
+      <div className="sig-details-body">
+        <div>
+          <strong>DER</strong>
+          <pre className="mono small">{sig.derHex}</pre>
+        </div>
+        <div className="sig-grid">
+          <div>
+            <strong>r</strong>
+            <div className="mono small">{sig.rHex}</div>
+          </div>
+          <div>
+            <strong>s</strong>
+            <div className="mono small">{sig.sHex}</div>
+          </div>
+          <div>
+            <strong>z (sighash)</strong>
+            <div className="mono small">{sig.zHex}</div>
+          </div>
+          <div>
+            <strong>Pubkey</strong>
+            <div className="mono small">{sig.pubkeyHex || "—"}</div>
+          </div>
+          <div>
+            <strong>SIGHASH</strong>
+            <div>
+              {sig.sighashName} (0x{sig.sighashType.toString(16)})
+            </div>
+          </div>
+          <div>
+            <strong>High-S?</strong>
+            <div>{sig.isHighS ? "Yes" : "No"}</div>
+          </div>
+        </div>
+
+        {(sig.derIssues.length > 0 || sig.warnings.length > 0) && (
+          <div className="sig-warnings">
+            <strong>Issues</strong>
+            <ul>
+              {sig.derIssues.map((iss, i) => (
+                <li key={`der-${i}`}>
+                  [{iss.code}] {iss.message}
+                </li>
+              ))}
+              {sig.warnings.map((w, i) => (
+                <li key={`warn-${i}`}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="sig-actions">
+          <button
+            type="button"
+            onClick={() => {
+              // TODO: hook into your existing DER playground
+              // e.g. openMalleabilityPlayground(sig);
+              console.log("Forge malleable variants for sig", index);
+            }}
+          >
+            Forge Malleable Variants
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              // TODO: hook into CVE-42461 panel with this (msg,z,sig,pubkey)
+              console.log("Run CVE-42461 tests for sig", index);
+            }}
+          >
+            Run CVE‑2024‑42461 Tests
+          </button>
+        </div>
+      </div>
+    </details>
+  );
+};
+2.3 Outputs card
+interface OutputsCardProps {
+  outputs: TxOutputAnalysis[];
+}
+
+const OutputsCard: React.FC<OutputsCardProps> = ({ outputs }) => {
+  if (!outputs.length) return null;
+
+  return (
+    <section className="tx-outputs-card">
+      <h2>Outputs</h2>
+      <table className="tx-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Value (sats)</th>
+            <th>Address</th>
+            <th>Script Type</th>
+            <th>ScriptPubKey</th>
+          </tr>
+        </thead>
+        <tbody>
+          {outputs.map((out) => (
+            <tr key={out.index}>
+              <td>{out.index}</td>
+              <td>{out.valueSats}</td>
+              <td>
+                {out.address || "—"}
+                {out.isChangeGuess && <span className="badge-change">change?</span>}
+              </td>
+              <td>{out.scriptType}</td>
+              <td className="mono small">{out.scriptPubKeyHex}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+};
+If you plug:
+
+this API response shape into your backend
+
+and this React skeleton into your front page,
+
+you’ve basically turned the raw tx inspector into the central cockpit that all the advanced stuff (malleability playground, CVE panel, Wycheproof runner, etc.) can hang off.
+
+If you want, next I can sketch the backend pipeline for /api/inspect-tx in Node/TS: parsing, fetching previous txs, computing z, and filling these types.
