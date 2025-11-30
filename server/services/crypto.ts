@@ -410,7 +410,241 @@ export class CryptoAnalysis {
   }
 
   /**
-   * Detects signature malleability attacks
+   * PHASE 4.1: ECDSA Semantic Malleability Detection
+   * Same valid ECDSA signature, different representation: s' = n - s
+   * Bitcoin fixed this with low-S rule (BIP62), but old libs may still accept both
+   */
+  detectSemanticMalleability(signatures: ECDSASignature[]): {
+    hasMalleability: boolean;
+    malleableSignatures: Array<{ sig: ECDSASignature; sCanonical: string; sMalleated: string }>;
+    details: string;
+  } {
+    const malleableSignatures: Array<{ sig: ECDSASignature; sCanonical: string; sMalleated: string }> = [];
+    
+    for (const sig of signatures) {
+      try {
+        const s = BigInt('0x' + sig.s);
+        
+        // If s > n/2, it can be malleated to n - s
+        if (s > CURVE_ORDER / 2n) {
+          const sMalleated = (CURVE_ORDER - s).toString(16).padStart(64, '0');
+          malleableSignatures.push({
+            sig,
+            sCanonical: sig.s,
+            sMalleated
+          });
+        }
+      } catch (error) {
+        console.error('Error checking semantic malleability:', error);
+      }
+    }
+
+    return {
+      hasMalleability: malleableSignatures.length > 0,
+      malleableSignatures,
+      details: malleableSignatures.length > 0 
+        ? `${malleableSignatures.length} signatures with high S (>${(CURVE_ORDER / 2n).toString(16).substring(0, 16)}...). Can be malleated: (r, s) → (r, n-s).`
+        : 'No semantic malleability detected. All S values are in lower half (canonical form).'
+    };
+  }
+
+  /**
+   * PHASE 4.2: DER Encoding Malleability Detection
+   * Detects violations of strict DER rules that may pass buggy parsers
+   */
+  detectDEREncodingMalleability(derHex: string): {
+    isCanonical: boolean;
+    violations: string[];
+    details: string;
+  } {
+    const violations: string[] = [];
+    
+    try {
+      const der = Buffer.from(derHex.replace(/^0x/, ''), 'hex');
+      
+      // 1. Check sequence marker
+      if (der[0] !== 0x30) {
+        violations.push('Invalid sequence marker (not 0x30)');
+        return { isCanonical: false, violations, details: 'Not DER format' };
+      }
+      
+      // 2. Check length encoding
+      const totalLen = der[1];
+      if (totalLen !== der.length - 2) {
+        violations.push(`Length mismatch: declared=${totalLen}, actual=${der.length - 2}`);
+      }
+      
+      let pos = 2;
+      
+      // Parse R value
+      if (der[pos] !== 0x02) {
+        violations.push('Invalid R marker (not 0x02)');
+      }
+      pos++;
+      const rLen = der[pos];
+      pos++;
+      
+      // Check R has no unnecessary leading zeros
+      if (rLen > 1 && der[pos] === 0x00 && !(der[pos + 1] & 0x80)) {
+        violations.push('R has non-minimal encoding (unnecessary leading zero)');
+      }
+      
+      // Check R high bit (should be padded with 0x00 if high bit set)
+      if (rLen > 0 && (der[pos] & 0x80) && pos > 2 && der[pos - 1] !== 0x00) {
+        violations.push('R missing padding for high bit set');
+      }
+      
+      pos += rLen;
+      
+      // Parse S value
+      if (der[pos] !== 0x02) {
+        violations.push('Invalid S marker (not 0x02)');
+      }
+      pos++;
+      const sLen = der[pos];
+      pos++;
+      
+      // Check S has no unnecessary leading zeros
+      if (sLen > 1 && der[pos] === 0x00 && !(der[pos + 1] & 0x80)) {
+        violations.push('S has non-minimal encoding (unnecessary leading zero)');
+      }
+      
+      // Check S high bit
+      if (sLen > 0 && (der[pos] & 0x80) && pos > 2 && der[pos - 1] !== 0x00) {
+        violations.push('S missing padding for high bit set');
+      }
+      
+      pos += sLen;
+      
+      // 3. Check for trailing garbage
+      if (pos < der.length - 1) {
+        violations.push(`Trailing bytes detected: ${der.length - pos} extra bytes`);
+      }
+      
+      // 4. Check for negative-looking integers (high bit set without 0x00 padding)
+      // Already checked above in bit checking
+      
+      // 5. Check minimal length requirements
+      if (rLen === 0 || sLen === 0) {
+        violations.push('R or S has zero length');
+      }
+      
+      const isCanonical = violations.length === 0;
+      
+      return {
+        isCanonical,
+        violations,
+        details: isCanonical 
+          ? 'Canonical DER encoding (strict)'
+          : `Non-canonical DER encoding: ${violations.join('; ')}`
+      };
+    } catch (error) {
+      violations.push(`Parse error: ${error instanceof Error ? error.message : 'Unknown'}`);
+      return { isCanonical: false, violations, details: 'Failed to parse DER' };
+    }
+  }
+
+  /**
+   * PHASE 4.3: Generate Malformed DER Signatures for Testing
+   * Creates various malformed encodings to test if libs are strict or buggy
+   */
+  generateMalformedDERSignatures(rHex: string, sHex: string): Array<{
+    name: string;
+    der: string;
+    violation: string;
+    buggyLibsAccept?: string;
+  }> {
+    const results: Array<{ name: string; der: string; violation: string; buggyLibsAccept?: string }> = [];
+    
+    try {
+      const r = BigInt('0x' + rHex.replace(/^0x/, ''));
+      const s = BigInt('0x' + sHex.replace(/^0x/, ''));
+      
+      // 1. Canonical form (baseline)
+      const canonical = this.craftDERSignature(rHex, sHex, false);
+      results.push({
+        name: 'canonical',
+        der: canonical.derEncoded,
+        violation: 'None (baseline)'
+      });
+      
+      // 2. Non-minimal R encoding (extra leading zero)
+      let rBytes = Buffer.from(r.toString(16).padStart(64, '0'), 'hex');
+      rBytes = Buffer.concat([Buffer.from([0x00, 0x00]), rBytes]);
+      const der2 = Buffer.concat([
+        Buffer.from([0x30]),
+        Buffer.from([rBytes.length + sHex.length / 2 + 4]),
+        Buffer.from([0x02]),
+        Buffer.from([rBytes.length]),
+        rBytes,
+        Buffer.from([0x02]),
+        Buffer.from([sHex.length / 2]),
+        Buffer.from(sHex, 'hex')
+      ]);
+      results.push({
+        name: 'extra_leading_zeros_r',
+        der: der2.toString('hex'),
+        violation: 'Extra leading zeros in R',
+        buggyLibsAccept: 'Some older parsers'
+      });
+      
+      // 3. Negative-looking S (high bit set, no padding)
+      let sBytes = Buffer.from(s.toString(16).padStart(64, '0'), 'hex');
+      if (sBytes[0] & 0x80) {
+        // Remove the padding if it has one
+        if (sBytes[0] === 0x00) {
+          sBytes = sBytes.slice(1);
+        }
+      }
+      const der3 = Buffer.concat([
+        Buffer.from([0x30]),
+        Buffer.from([rHex.length / 2 + sBytes.length + 4]),
+        Buffer.from([0x02]),
+        Buffer.from([rHex.length / 2]),
+        Buffer.from(rHex, 'hex'),
+        Buffer.from([0x02]),
+        Buffer.from([sBytes.length]),
+        sBytes
+      ]);
+      results.push({
+        name: 'negative_looking_s',
+        der: der3.toString('hex'),
+        violation: 'S appears negative (high bit without 0x00 padding)',
+        buggyLibsAccept: 'elliptic PR #317 fixed this'
+      });
+      
+      // 4. Wrong length field
+      const canonicalBytes = Buffer.from(canonical.derEncoded, 'hex');
+      const der4 = Buffer.concat([
+        Buffer.from([0x30]),
+        Buffer.from([canonicalBytes.length + 5]), // Wrong length
+        canonicalBytes.slice(2)
+      ]);
+      results.push({
+        name: 'wrong_length_field',
+        der: der4.toString('hex'),
+        violation: 'Declared length exceeds actual',
+        buggyLibsAccept: 'Wycheproof invalid vectors'
+      });
+      
+      // 5. Trailing garbage bytes
+      const der5 = canonical.derEncoded + 'deadbeef';
+      results.push({
+        name: 'trailing_garbage',
+        der: der5,
+        violation: 'Extra bytes after signature',
+        buggyLibsAccept: 'Permissive parsers'
+      });
+      
+    } catch (error) {
+      console.error('Error generating malformed signatures:', error);
+    }
+    
+    return results;
+  }
+
+  /**
+   * Detects signature malleability attacks (legacy method, enhanced)
    * ECDSA signatures (r, s) can be malleated to (r, n-s) which is still valid
    */
   detectSignatureMalleability(signatures: ECDSASignature[]): {
