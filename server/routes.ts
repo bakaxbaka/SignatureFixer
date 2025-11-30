@@ -226,18 +226,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pubkeyMap = new Map<string, number>(); // Track pubkey usage
       const sighashTypeMap = new Map<number, number>(); // Track sighash types
       const txInputMap = new Map<string, any[]>(); // Track inputs per tx
+      const scriptTypeMap = new Map<string, number>(); // Track script types (P2PKH vs P2WPKH)
       let totalExtracted = 0;
 
       console.log(`========== ANALYZING ${transactions.length} TRANSACTIONS ==========`);
-      console.log(`🔍 VULNERABILITY CHECKS:`);
-      console.log(`  ✓ Same pubkey in thousands of transactions`);
-      console.log(`  ✓ Mix of legacy (P2PKH) and SegWit signing`);
-      console.log(`  ✓ Nonce reuse across multiple inputs`);
-      console.log(`  ✓ Few-bit entropy & low-k patterns`);
-      console.log(`  ✓ Massive history attack surface`);
-      console.log(`  ✓ SIGHASH type patterns`);
-      console.log(`  ✓ Wallet implementation bugs`);
-      console.log(`  ✓ Multi-input same pubkey transactions\n`);
+      console.log(`🔍 PHASE 2: SIGNATURE EXTRACTION & SCRIPT-TYPE DETECTION`);
+      console.log(`  ✓ 2.1 P2PKH (Legacy) scriptSig detection`);
+      console.log(`  ✓ 2.1 P2WPKH (SegWit) witness detection`);
+      console.log(`  ✓ 8 comprehensive vulnerability checks\n`);
       
       for (let txIndex = 0; txIndex < transactions.length; txIndex++) {
         const tx = transactions[txIndex];
@@ -259,16 +255,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           for (let inputIdx = 0; inputIdx < tx.inputs.length; inputIdx++) {
             const input = tx.inputs[inputIdx];
-            const script = input.script || input.scriptSig || '';
             
-            if (!script) continue;
+            // PHASE 2.1: Script-Type Detection
+            const scriptTypeDetection = cryptoAnalysis.detectScriptType(input);
+            const scriptType = scriptTypeDetection.type;
+            const scriptSource = scriptTypeDetection.sigSource;
+            
+            console.log(`    [Input ${inputIdx}] Script Type: ${scriptType} (from ${scriptSource})`);
+            
+            // Track script type distribution
+            const typeCount = (scriptTypeMap.get(scriptType) || 0) + 1;
+            scriptTypeMap.set(scriptType, typeCount);
+            
+            // Determine which script to parse based on type
+            let scriptToParse = '';
+            if (scriptType === 'P2WPKH' && scriptTypeDetection.signature) {
+              scriptToParse = scriptTypeDetection.signature;
+            } else if (scriptType === 'P2PKH') {
+              scriptToParse = input.script || input.scriptSig || '';
+            } else {
+              continue;
+            }
+            
+            if (!scriptToParse) continue;
 
             try {
-              const sig = cryptoAnalysis.parseBitcoinSignature(script);
+              const sig = cryptoAnalysis.parseBitcoinSignature(scriptToParse);
               
               if (sig.isValid && sig.r && sig.s) {
                 totalExtracted++;
-                console.log(`    ✓ Input ${inputIdx}: R=${sig.r.substring(0, 16)}... PubKey=${sig.publicKey?.substring(0, 16)}...`);
+                console.log(`      ✓ Signature extracted: R=${sig.r.substring(0, 16)}... PubKey=${sig.publicKey?.substring(0, 16)}...`);
                 
                 // Track pubkey usage (vulnerability #1)
                 const pubkeyCount = (pubkeyMap.get(sig.publicKey || '') || 0) + 1;
@@ -354,9 +370,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log(`\n========== SIGNATURE EXTRACTION COMPLETE ==========`);
-      console.log(`Total signatures: ${totalExtracted}`);
-      console.log(`Unique R values: ${rValueMap.size}`);
+      console.log(`\n========== PHASE 2: SIGNATURE EXTRACTION COMPLETE ==========`);
+      console.log(`✓ Total signatures extracted: ${totalExtracted}`);
+      console.log(`✓ Unique R values: ${rValueMap.size}`);
+      console.log(`\n📊 PHASE 2.1 SCRIPT-TYPE DISTRIBUTION:`);
+      for (const [type, count] of scriptTypeMap.entries()) {
+        console.log(`   ${type}: ${count} input(s)`);
+      }
 
       // Detect nonce reuse
       console.log(`\n========== ANALYZING NONCE REUSE ==========`);

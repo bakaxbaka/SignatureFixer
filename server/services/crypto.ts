@@ -568,6 +568,63 @@ export class CryptoAnalysis {
   }
 
   /**
+   * PHASE 2.1: Script-Type Detection
+   * Detects if input is P2PKH (scriptSig) or P2WPKH (witness)
+   */
+  detectScriptType(input: any): {
+    type: 'P2PKH' | 'P2WPKH' | 'UNKNOWN';
+    sigSource: 'scriptSig' | 'witness' | 'none';
+    signature?: string;
+    publicKey?: string;
+    details: string;
+  } {
+    try {
+      // Check for P2WPKH (SegWit): witness array with [signature, pubkey]
+      if (input.witness && Array.isArray(input.witness) && input.witness.length >= 2) {
+        const signature = input.witness[0];
+        const pubkey = input.witness[1];
+        
+        // Validate witness signature starts with 0x30 (DER) and pubkey starts with 02/03/04
+        if (signature && signature.startsWith('30') && pubkey && (pubkey.startsWith('02') || pubkey.startsWith('03') || pubkey.startsWith('04'))) {
+          return {
+            type: 'P2WPKH',
+            sigSource: 'witness',
+            signature,
+            publicKey: pubkey,
+            details: `P2WPKH (SegWit): witness[0]=${signature.substring(0, 16)}..., witness[1]=${pubkey.substring(0, 16)}...`
+          };
+        }
+      }
+
+      // Check for P2PKH (Legacy): scriptSig contains DER signature
+      if (input.script || input.scriptSig) {
+        const script = input.script || input.scriptSig;
+        if (script && script.startsWith('47') || script.startsWith('48') || script.startsWith('49')) {
+          // Script likely starts with signature length (0x47-0x49 for typical DER sigs)
+          return {
+            type: 'P2PKH',
+            sigSource: 'scriptSig',
+            signature: script,
+            details: `P2PKH (Legacy): scriptSig=${script.substring(0, 16)}...`
+          };
+        }
+      }
+
+      return {
+        type: 'UNKNOWN',
+        sigSource: 'none',
+        details: 'Could not determine script type'
+      };
+    } catch (error) {
+      return {
+        type: 'UNKNOWN',
+        sigSource: 'none',
+        details: `Error detecting script type: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+
+  /**
    * Parse Bitcoin signature with r, s, sighash type, and extract public key
    * According to Bitcoin DER signature structure:
    * 0x30 [total-len] 0x02 [R-len] [R] 0x02 [S-len] [S] [sighash-type]
