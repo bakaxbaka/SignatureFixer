@@ -1,3 +1,4 @@
+import React from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,8 +7,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import ECDSAWorkbench from "@/pages/ecdsa-workbench";
 import BlockScanner from "@/pages/block-scanner";
-import VulnerabilityHistory from "@/pages/vulnerability-history";
 import NotFound from "@/pages/not-found";
+
+const VulnerabilityHistory = React.lazy(() => import("@/pages/vulnerability-history"));
 
 function Router() {
   return (
@@ -15,7 +17,13 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/ecdsa-workbench" component={ECDSAWorkbench} />
       <Route path="/block-scanner" component={BlockScanner} />
-      <Route path="/vulnerability-history" component={VulnerabilityHistory} />
+      <Route path="/vulnerability-history">
+        {() => (
+          <React.Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+            <VulnerabilityHistory />
+          </React.Suspense>
+        )}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
