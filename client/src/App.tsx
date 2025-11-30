@@ -11,6 +11,7 @@ import NotFound from "@/pages/not-found";
 
 const SignatureTools = React.lazy(() => import("@/pages/signature-tools"));
 const VulnerabilityHistory = React.lazy(() => import("@/pages/vulnerability-history"));
+const CryptoLab = React.lazy(() => import("@/pages/crypto-lab"));
 
 function Router() {
   return (
@@ -29,6 +30,13 @@ function Router() {
         {() => (
           <React.Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
             <VulnerabilityHistory />
+          </React.Suspense>
+        )}
+      </Route>
+      <Route path="/crypto-lab">
+        {() => (
+          <React.Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+            <CryptoLab />
           </React.Suspense>
         )}
       </Route>

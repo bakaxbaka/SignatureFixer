@@ -14,8 +14,14 @@ import { buildAndSignTx, extractSignaturesFromTxHex } from "./services/signer";
 import { generateAllMutations } from "./services/derMutator";
 import { insertAnalysisResultSchema, insertBatchAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
+import { inspectTx } from "./services/inspectTx";
+import cveRoutes from "./routes/cveRoutes";
+import wycheproofRoutes from "./routes/wycheproofRoutes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Wire CVE and Wycheproof routes
+  app.use(cveRoutes);
+  app.use(wycheproofRoutes);
   const httpServer = createServer(app);
 
   // WebSocket server for real-time updates

@@ -1,0 +1,215 @@
+ Strict + Loose DER Validators
+3.1 src/crypto/derStrict.ts – Bitcoin‑style rules
+// src/crypto/derStrict.ts
+import type { SignatureDerIssue, SighashTypeName } from "../types/txInspector";
+import { classifySighashType } from "./sighashTypes";
+
+// secp256k1 order
+const curveN = BigInt(
+  "0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141"
+);
+const halfN = curveN >> 1n;
+
+export interface DerStrictResult {
+  rHex: string;
+  sHex: string;
+  isCanonical: boolean;
+  rangeValid: boolean;
+  isHighS: boolean;
+  sighashType?: number;
+  sighashName?: SighashTypeName;
+  derIssues: SignatureDerIssue[];
+  warnings: string[];
+}
+
+/**
+ * Strict DER validation as per Bitcoin/Core:
+ *  - SEQUENCE 0x30
+ *  - Correct length
+ *  - INTEGER R/S, minimal encoding
+ *  - No trailing garbage
+ *  - R,S in [1, n-1]
+ */
+export function analyzeDerStrict(
+  sigWithOptionalSighashHex: string
+): DerStrictResult {
+  const issues: SignatureDerIssue[] = [];
+  const warnings: string[] = [];
+
+  let rHex = "";
+  let sHex = "";
+  let isCanonical = true;
+  let rangeValid = true;
+  let isHighS = false;
+  let sighashType: number | undefined;
+  let sighashName: SighashTypeName | undefined;
+
+  try {
+    const full = Buffer.from(sigWithOptionalSighashHex, "hex");
+
+    // Assume last byte is sighash type if length >= 9x
+    if (full.length > 9) {
+      sighashType = full[full.length - 1];
+    }
+
+    const sig = sighashType !== undefined ? full.slice(0, -1) : full;
+
+    if (sig[0] !== 0x30) {
+      isCanonical = false;
+      issues.push({
+        code: "BAD_SEQ_TAG",
+        message: "Signature does not start with 0x30 (SEQUENCE)",
+      });
+    }
+
+    const totalLen = sig[1];
+    if (totalLen + 2 !== sig.length) {
+      isCanonical = false;
+      issues.push({
+        code: "BAD_LENGTH",
+        message: "SEQUENCE length mismatch",
+      });
+    }
+
+    let offset = 2;
+
+    // R
+    if (sig[offset] !== 0x02) {
+      isCanonical = false;
+      issues.push({
+        code: "BAD_LENGTH",
+        message: "R INTEGER does not start with 0x02",
+      });
+    }
+    offset++;
+    const lenR = sig[offset++];
+    const rBytes = sig.slice(offset, offset + lenR);
+    offset += lenR;
+
+    // S
+    if (sig[offset] !== 0x02) {
+      isCanonical = false;
+      issues.push({
+        code: "BAD_LENGTH",
+        message: "S INTEGER does not start with 0x02",
+      });
+    }
+    offset++;
+    const lenS = sig[offset++];
+    const sBytes = sig.slice(offset, offset + lenS);
+    offset += lenS;
+
+    if (offset !== sig.length) {
+      isCanonical = false;
+      issues.push({
+        code: "TRAILING_GARBAGE",
+        message: "Trailing data after S INTEGER",
+      });
+    }
+
+    // Minimal encoding: no unnecessary leading zeros
+    if (rBytes.length > 1 && rBytes[0] === 0x00 && (rBytes[1] & 0x80) === 0) {
+      isCanonical = false;
+      issues.push({
+        code: "EXTRA_PADDING_R",
+        message: "Unnecessary leading zero in R",
+      });
+    }
+    if (sBytes.length > 1 && sBytes[0] === 0x00 && (sBytes[1] & 0x80) === 0) {
+      isCanonical = false;
+      issues.push({
+        code: "EXTRA_PADDING_S",
+        message: "Unnecessary leading zero in S",
+      });
+    }
+
+    rHex = rBytes.toString("hex");
+    sHex = sBytes.toString("hex");
+
+    const r = BigInt("0x" + rHex);
+    const s = BigInt("0x" + sHex);
+
+    if (r <= 0n || r >= curveN) {
+      rangeValid = false;
+      issues.push({
+        code: "OUT_OF_RANGE_R",
+        message: "R is not in [1, n-1]",
+      });
+    }
+    if (s <= 0n || s >= curveN) {
+      rangeValid = false;
+      issues.push({
+        code: "OUT_OF_RANGE_S",
+        message: "S is not in [1, n-1]",
+      });
+    }
+
+    isHighS = s > halfN;
+    if (isHighS) {
+      warnings.push("High-S value (non-canonical under BIP62)");
+    }
+
+    if (sighashType !== undefined) {
+      sighashName = classifySighashType(sighashType);
+    }
+  } catch (e: any) {
+    isCanonical = false;
+    warnings.push("DER parse error: " + e.message);
+  }
+
+  return {
+    rHex,
+    sHex,
+    isCanonical,
+    rangeValid,
+    isHighS,
+    sighashType,
+    sighashName,
+    derIssues: issues,
+    warnings,
+  };
+}
+3.2 src/crypto/derLoose.ts – emulate legacy “too tolerant” parsers
+// src/crypto/derLoose.ts
+/**
+ * Loose ASN.1-ish parser that:
+ *  - allows extra padding
+ *  - allows length mismatches
+ *  - ignores trailing garbage
+ * This is to emulate OpenSSL / old elliptic behavior.
+ */
+
+export interface DerLooseResult {
+  ok: boolean;
+  rHex: string;
+  sHex: string;
+  error?: string;
+}
+
+export function parseDerLoose(sigHex: string): DerLooseResult {
+  try {
+    const buf = Buffer.from(sigHex, "hex");
+
+    if (buf[0] !== 0x30) {
+      // accept wrong tag anyway, just slice
+    }
+    // naive: try to find first 0x02, treat next as R, second 0x02 as S
+    let firstInt = buf.indexOf(0x02, 2);
+    if (firstInt < 0) throw new Error("No R integer tag (0x02) found");
+    let lenR = buf[firstInt + 1];
+    const rBytes = buf.slice(firstInt + 2, firstInt + 2 + lenR);
+
+    const secondInt = buf.indexOf(0x02, firstInt + 2 + lenR);
+    if (secondInt < 0) throw new Error("No S integer tag (0x02) found");
+    let lenS = buf[secondInt + 1];
+    const sBytes = buf.slice(secondInt + 2, secondInt + 2 + lenS);
+
+    return {
+      ok: true,
+      rHex: rBytes.toString("hex"),
+      sHex: sBytes.toString("hex"),
+    };
+  } catch (e: any) {
+    return { ok: false, rHex: "", sHex: "", error: e.message };
+  }
+}
