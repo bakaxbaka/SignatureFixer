@@ -1,0 +1,106 @@
+1. Extend DER builder / mutator (you already discussed this earlier)
+
+Add a function that given parsed (r, s), returns a “high-S” variant: s' = N − s.
+
+Add functions to produce malleated DER encodings: extra leading zeros, wrong INTEGER length, extra padding / trailing bytes, wrong length field, non-minimal encoding, etc.
+
+That gives you a set of alternative valid / possibly-invalid signatures for the same message hash.
+
+2. Add a function to re-serialize the transaction with a new signature
+
+Use your existing tx-serialization logic (legacy or segwit)
+
+Replace the old signature / witness with the new DER (or mutated) signature
+
+Maintain all original inputs, outputs, fees, etc.
+
+Recompute the tx hash (TXID / wtxid)
+
+This lets you simulate a malleated transaction.
+
+3. In UI, provide a “Forge & Test” mode
+
+User flow:
+
+Load a historical transaction (raw tx + full data)
+
+Display original signature(s)
+
+Let user choose a mutation type (high-S, extra padding, DER-mangle, etc.)
+
+Auto-generate mutated signature
+
+Rebuild transaction (unsigned / “re-signed” with mutated sig) — but you don’t need private key, signature is just mutated copy.
+
+Show new raw tx hexadecimal + new TXID / wtxid (simulate).
+
+Provide “copy raw tx” / “export” for offline testing with external node / sandbox
+
+Useful for testing:
+
+If your local parser accepts malformed DER
+
+How wallets / explorers / nodes behave if someone intentionally crafts weird signatures
+
+Demonstrate legacy malleability (before segwit / non-low-S)
+
+4. Optionally, integrate a “fuzz suite” — generate many random DER-mutations from many historical signatures, save results, and report which variants pass or fail parsing or verification.
+🧑‍💻 Code Blueprint (TypeScript)
+
+Here’s a sketch — adapt into your crypto.ts + UI.
+
+// crypto.ts — DER / forge utilities
+
+// assuming you already have: parseDerSignature(), buildStrictDer(r,s), bigIntFromBytes(), etc.
+
+const SECP256K1_N = BigInt("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
+
+export type DerMutation = "HIGH_S" | "ZERO_PAD_R" | "ZERO_PAD_S" | "TRAILING_GARBAGE";
+
+// Given original DER sig (hex), produces mutated DER sig (hex)
+export function mutateDer(
+  origDerHex: string,
+  mutation: DerMutation
+): string {
+  const parsed = parseDerSignature(origDerHex);  // get r, s, sighash
+  let newR = parsed.r;
+  let newS = parsed.s;
+
+  if (mutation === "HIGH_S") {
+    const sBI = bigIntFromBytes(parsed.s);
+    const sPrime = SECP256K1_N - sBI;
+    newS = bigIntToBytes(sPrime);
+  } else if (mutation === "ZERO_PAD_R") {
+    newR = Uint8Array.from([0x00, ...parsed.r]);
+  } else if (mutation === "ZERO_PAD_S") {
+    newS = Uint8Array.from([0x00, ...parsed.s]);
+  }
+  // rebuild DER (naively) — may or may not pass strict parsing
+  let derNoSighash = buildDerNonStrict(newR, newS); 
+  if (mutation === "TRAILING_GARBAGE") {
+    derNoSighash += "deadbeef";
+  }
+  return derNoSighash + parsed.sighash;
+}
+
+
+You’d need also a non-strict DER builder (e.g. not enforcing minimal integer encoding), or manually build the raw bytes.
+
+Then:
+
+// In UI / Playground
+const origSig = "..."; // DER + sighash
+const mutated = mutateDer(origSig, "HIGH_S");
+// Then re-serialize tx, replace signature, output raw tx
+
+🧪 What you cannot reliably do today (with ECDSA / Bitcoin)
+
+Guarantee that a “malleated” tx will be accepted by miners or standard nodes — modern Bitcoin enforces strict DER + low-S; many clients reject non-canonical signatures. 
+BIPs
++1
+
+Use mutated signatures to do real attacks or steal funds (unless you know private key).
+
+Forge new valid signatures for a new message or different pubkey — that’s cryptographically impossible without private key.
+
+So your module should remain a research / audit tool.

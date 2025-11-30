@@ -7,6 +7,7 @@ import { vulnerabilityService } from "./services/vulnerability";
 import { ecdsaRecovery, cryptoAnalysis } from "./services/crypto";
 import { blockScanner } from "./services/scanner";
 import { fetchAddressData } from "./services/multiEndpointFetcher";
+import { generateAllMutations } from "./services/derMutator";
 import { insertAnalysisResultSchema, insertBatchAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
 
