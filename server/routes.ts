@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { bitcoinService } from "./services/bitcoin";
 import { vulnerabilityService } from "./services/vulnerability";
-import { ecdsaRecovery } from "./services/crypto";
+import { ecdsaRecovery, cryptoAnalysis } from "./services/crypto";
 import { blockScanner } from "./services/scanner";
 import { insertAnalysisResultSchema, insertBatchAnalysisSchema } from "@shared/schema";
 import { z } from "zod";
@@ -365,6 +365,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('DER signing error:', error);
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
+  });
+
+  // Signature malleability detection endpoint - REAL formulas, no mock data
+  app.post('/api/signature-malleability', async (req, res) => {
+    try {
+      const { signatures } = req.body;
+
+      if (!signatures || !Array.isArray(signatures)) {
+        return res.status(400).json({
+          error: 'Array of signatures required with r, s, publicKey fields'
+        });
+      }
+
+      // Use real ECDSA crypto analysis with proper formulas
+      const result = cryptoAnalysis.detectSignatureMalleability(signatures);
+
+      res.json({
+        success: true,
+        data: result
+      });
+
+    } catch (error) {
+      console.error('Signature malleability check error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Invalid signature format'
+      });
+    }
+  });
+
+  // DER signature crafting endpoint - real DER encoding, no mock data
+  app.post('/api/der-signature', async (req, res) => {
+    try {
+      const { r, s, makeNonCanonical = false } = req.body;
+
+      if (!r || !s) {
+        return res.status(400).json({
+          error: 'R and S values required as hex strings'
+        });
+      }
+
+      // Use real DER encoding with proper byte construction
+      const result = cryptoAnalysis.craftDERSignature(r, s, makeNonCanonical);
+
+      res.json({
+        success: true,
+        data: result
+      });
+
+    } catch (error) {
+      console.error('DER crafting error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Invalid R/S values'
+      });
+    }
+  });
+
+  // DER signature validation endpoint - real parsing, no mock data
+  app.post('/api/validate-der', async (req, res) => {
+    try {
+      const { derHex } = req.body;
+
+      if (!derHex) {
+        return res.status(400).json({
+          error: 'DER encoded signature hex string required'
+        });
+      }
+
+      // Use real DER parsing with proper byte-level validation
+      const result = cryptoAnalysis.validateDERSignature(derHex);
+
+      res.json({
+        success: true,
+        data: result
+      });
+
+    } catch (error) {
+      console.error('DER validation error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Invalid DER signature'
       });
     }
   });
