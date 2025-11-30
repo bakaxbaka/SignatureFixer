@@ -6,6 +6,12 @@ This is a Bitcoin signature vulnerability analysis tool designed for cybersecuri
 
 Preferred communication style: Simple, everyday language.
 
+**Data Display:**
+- Always show FULL information: transaction IDs, public keys, signatures, hashes, etc.
+- Never truncate or shorten data with ellipsis (...) or slice operations in UI
+- Display complete hex values, addresses, and transaction components
+- Use scrollable containers or expandable sections if space is constrained, but never hide data
+
 # System Architecture
 
 ## Frontend Architecture

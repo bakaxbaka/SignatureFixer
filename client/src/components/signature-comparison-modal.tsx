@@ -35,8 +35,8 @@ export function SignatureComparisonModal({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>📊 Signature Comparison</DialogTitle>
-          <DialogDescription>
-            Analysis of all signatures for pubkey {pubkey.substring(0, 16)}...
+          <DialogDescription className="overflow-x-auto">
+            Analysis of all signatures for pubkey <code className="bg-muted p-1 rounded text-xs">{pubkey}</code>
           </DialogDescription>
         </DialogHeader>
 
@@ -103,14 +103,14 @@ export function SignatureComparisonModal({
                         }`}
                       >
                         <td className="p-2 font-semibold">{sig.index}</td>
-                        <td className="p-2 font-mono text-xs">
-                          {sig.signature?.r.substring(0, 8)}...
+                        <td className="p-2 font-mono text-xs break-all max-w-xs">
+                          {sig.signature?.r}
                           {duplicateRs.some(([r]) => r === sig.signature?.r) && (
                             <Badge className="ml-2 bg-red-600 text-xs">DUP</Badge>
                           )}
                         </td>
-                        <td className="p-2 font-mono text-xs">{sig.signature?.s.substring(0, 8)}...</td>
-                        <td className="p-2 font-mono text-xs">{sig.signature?.zHash.substring(0, 8)}...</td>
+                        <td className="p-2 font-mono text-xs break-all max-w-xs">{sig.signature?.s}</td>
+                        <td className="p-2 font-mono text-xs break-all max-w-xs">{sig.signature?.zHash}</td>
                         <td className="p-2">
                           <div className="flex flex-wrap gap-1">
                             {sig.signature?.isHighS && (
@@ -138,7 +138,7 @@ export function SignatureComparisonModal({
               <CardContent className="space-y-2">
                 {duplicateRs.map(([r, count], idx) => (
                   <div key={idx} className="text-xs p-2 border rounded">
-                    <p className="font-semibold mb-1">r = {r.substring(0, 16)}... (used {count} times)</p>
+                    <p className="font-semibold mb-1 break-all">r = {r} (used {count} times)</p>
                     <p className="text-muted-foreground">
                       Signatures: {signatures
                         .map((s, i) => s.signature?.r === r ? i : null)

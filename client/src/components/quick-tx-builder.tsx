@@ -98,8 +98,8 @@ export function QuickTxBuilder() {
             <label className="text-sm font-medium">Available UTXOs ({utxos.length})</label>
             <div className="max-h-40 overflow-y-auto space-y-2">
               {utxos.map((u, i) => (
-                <div key={i} className="flex items-center justify-between border rounded p-2 bg-muted/30 text-xs">
-                  <span className="font-mono">{u.txid.slice(0, 16)}:{u.vout}</span>
+                <div key={i} className="flex items-center justify-between border rounded p-2 bg-muted/30 text-xs gap-2">
+                  <span className="font-mono break-all">{u.txid}:{u.vout}</span>
                   <div className="flex gap-2">
                     <Badge variant="outline">{u.value} sat</Badge>
                     {u.confirmed ? <Badge>✓</Badge> : <Badge variant="secondary">pending</Badge>}

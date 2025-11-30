@@ -241,7 +241,7 @@ export function AddressAnalyzer() {
                   <div>
                     <span className="text-muted-foreground">Address:</span>
                     <span className="ml-2 font-mono text-xs text-foreground break-all" data-testid="current-address">
-                      {currentAddress.slice(0, 8)}...{currentAddress.slice(-8)}
+                      {currentAddress}
                     </span>
                   </div>
                 </div>
