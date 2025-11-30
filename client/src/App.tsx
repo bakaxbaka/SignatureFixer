@@ -9,6 +9,7 @@ import ECDSAWorkbench from "@/pages/ecdsa-workbench";
 import BlockScanner from "@/pages/block-scanner";
 import NotFound from "@/pages/not-found";
 
+const SignatureTools = React.lazy(() => import("@/pages/signature-tools"));
 const VulnerabilityHistory = React.lazy(() => import("@/pages/vulnerability-history"));
 
 function Router() {
@@ -17,6 +18,13 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/ecdsa-workbench" component={ECDSAWorkbench} />
       <Route path="/block-scanner" component={BlockScanner} />
+      <Route path="/signature-tools">
+        {() => (
+          <React.Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+            <SignatureTools />
+          </React.Suspense>
+        )}
+      </Route>
       <Route path="/vulnerability-history">
         {() => (
           <React.Suspense fallback={<div className="p-8 text-center">Loading...</div>}>

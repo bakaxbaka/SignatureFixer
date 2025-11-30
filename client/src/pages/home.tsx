@@ -76,6 +76,12 @@ export default function Home() {
                   Block Scanner
                 </Button>
               </Link>
+              <Link href="/signature-tools">
+                <Button variant="outline" size="sm" data-testid="button-signature-tools">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Signature Tools
+                </Button>
+              </Link>
               <Button variant="ghost" size="sm">
                 <Settings className="w-5 h-5" />
               </Button>
