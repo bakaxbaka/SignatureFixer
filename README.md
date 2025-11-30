@@ -5,136 +5,112 @@ SignatureFixer is a full-stack Bitcoin signature-forensics platform designed to 
 Bitcoin transactions for vulnerabilities, signature malleability, key-reuse dangers,
 wallet implementation flaws, and malformed DER encodings.
 
-⸜(｡˃ ᵕ ˂ )⸝ Buy me a coffee : 1PmAFZaBpokiMZ8TxhwMBW78s4Y1U9mEwK ⸜(｡˃ ᵕ ˂ )⸝
+                                                                   
+                        ⸜(｡˃ ᵕ ˂ )⸝ Buy me a coffee : 1PmAFZaBpokiMZ8TxhwMBW78s4Y1U9mEwK ⸜(｡˃ ᵕ ˂ )⸝
+                                   ┌──────────────────────────────────────────┐
+                                   │                FRONTEND                  │
+                                   │        React / Vite / TypeScript         │
+                                   ├──────────────────────────────────────────┤
+                                   │  RawTX Inspector UI                      │
+                                   │  DER Malleability Playground             │
+                                   │  CVE‑2024‑42461 Test Panel               │
+                                   │  Wycheproof Lab                          │
+                                   │  Signature Analysis Dashboard            │
+                                   │  Alerts & Vulnerability Visualizer       │
+                                   └───────────────▲──────────────────────────┘
+                                                   │ REST API Calls
+                                                   │ /api/* (JSON)
+                                                   ▼
+        ┌──────────────────────────────────────────────────────────────────────────────┐
+        │                              EXPRESS BACKEND                                 │
+        │                           Node.js + TypeScript                                │
+        ├──────────────────────────────────────────────────────────────────────────────┤
+        │ Routes:                                                                        │
+        │   /api/inspect-tx → InspectTxRoute                                             │
+        │   /api/parse-der → DerParseRoute                                               │
+        │   /api/cve-test → CveTestRoute                                                 │
+        │   /api/wycheproof → WycheproofRoute                                            │
+        │   /api/fetch → MultiEndpointFetcherRoute                                       │
+        └───────────────────────▲────────────────────────────────────────────────────────┘
+                                │ Uses Services
+                                ▼
 
- Core Modules Explained
-1. Raw Transaction Inspector (src/backend/services/inspectTx)
-Responsible for turning raw Bitcoin transaction hex into a complete enriched dataset:
-parse version, inputs, outputs
-compute size, vsize, weight
-fetch previous outputs
-resolve addresses
-extract signatures (scriptSig + witness)
-compute sighash preimages
-run DER validator
-produce vulnerability flags
-output analysis in structured form
-Output example;
-interface InspectTxResponse {
-  txid: string;
-  version: number;
-  sizeBytes: number;
-  vsizeBytes: number;
-  inputs: InputAnalysis[];
-  outputs: OutputAnalysis[];
-  summaryFlags: {
-    hasHighS: boolean;
-    hasNonCanonicalDer: boolean;
-    hasWeirdSighash: boolean;
-    hasRReuseWithinTx: boolean;
-    hasMultiInputSameKey: boolean;
-  };
-}
-2. DER & BER Engine (src/backend/services/der)
-Includes:
-derStrict.ts
-Implements Bitcoin Core’s strict DER rules, ensuring:
-no padding
-correct length fields
-no trailing garbage
-r/s in range
-canonical S
-derLoose.ts
-Emulates pre‑fix elliptic library behavior:
-accepts BER encodings
-accepts wrong length fields
-may accept garbage padding
-derMutations.ts
-Used for:
-CVE testing
-signature malleability playground
-Produces variants:
-leading‑zero padding
-shortened integers
-wrong sequence length
-wrong integer length
-bad type tags
-appended garbage (deadbeef)
-3. CVE‑2024‑42461 Detector (src/backend/services/cve42461)
-Powered by the above DER engine.
-Pipeline:
-Input signature → generate 15+ CVE‑style BER variants → verify with target library → produce vulnerability matrix
-Output example
-interface Cve42461Report {
-  libraryName: string;
-  vulnerable: boolean;
-  acceptsCanonicalDER: boolean;
-  acceptsBERVariants: boolean;
-  testCases: TestCaseResult[];
-}
-4. Wycheproof Engine (src/backend/services/wycheproof)
-Provides:
+┌────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    BACKEND SERVICES                                         │
+│  Modular, testable, cryptography‑grade analysis pipeline                                     │
+├────────────────────────────────────────────────────────────────────────────────────────────┤
 
-load Google Wycheproof vectors
+│ 1. Multi‑Endpoint + Tor‑Aware Fetching Layer (fetchers/)                                     │
+│    ├ multiEndpointFetcher.ts                                                                 │
+│    │   → blockchain.info                                                                     │
+│    │   → blockstream.info                                                                    │
+│    │   → mempool.space                                                                       │
+│    │   → blockcypher.com                                                                     │
+│    ├ torFetcher.ts                                                                           │
+│    ├ cache.ts (memory + disk)                                                                │
+│    └ rateLimiter.ts                                                                          │
+│       → Provides normalized transaction + UTXO data                                          │
 
-test library verification correctness
+│ 2. Transaction Inspector (inspectTx/)                                                        │
+│    ├ decodeRawTx.ts       → parse hex into structured tx                                     │
+│    ├ enrichUtxos.ts       → match previous outputs                                           │
+│    ├ extractSignatures.ts → grab DER, pubkey, sighash, witness                              │
+│    ├ computeSighash.ts    → legacy + BIP143 reconstruction                                   │
+│    ├ summarize.ts         → high‑S, r‑reuse, sighash flags                                   │
+│    └ index.ts             → unified inspection pipeline                                      │
 
-test your own strict and loose parsers
+│ 3. DER / ASN.1 Engine (der/)                                                                 │
+│    ├ derStrict.ts       → Bitcoin‑Core canonical rules                                       │
+│    ├ derLoose.ts        → Elliptic.js pre‑patch behavior                                    │
+│    ├ canonicalRules.ts  → r/s bounds, zero‑padding rules                                     │
+│    ├ derMutations.ts    → generate malleability variants                                     │
+│    └ berVariants.ts     → CVE‑2024‑42461 mutation suite                                      │
 
-compare against expected verdict
+│ 4. CVE‑2024‑42461 Engine (cve42461/)                                                         │
+│    ├ cveGenerator.ts  → Create BER/ASN.1 malformed signatures                                │
+│    ├ cveTester.ts     → Test signature variants against libraries                            │
+│    └ cveReport.ts     → Consolidate results into vulnerability matrix                       │
 
-You get:
+│ 5. Wycheproof Engine (wycheproof/)                                                           │
+│    ├ loader.ts        → load JSON test vectors                                               │
+│    ├ runner.ts        → execute test cases                                                   │
+│    ├ compare.ts       → evaluate expected vs actual                                          │
+│    └ resultTypes.ts   → structured output                                                    │
 
-valid → rejected?   → bug  
-invalid → accepted? → vulnerability  
-5. Multi‑Library Verification (src/backend/services/libraries)
-Wrappers unify:
+│ 6. Library Adapters (libraries/)                                                             │
+│    ├ ellipticWrapper.ts                                                                      │
+│    ├ nobleWrapper.ts                                                                         │
+│    ├ bitcoinjsWrapper.ts                                                                     │
+│    └ hwWrapper.ts (optional)                                                                 │
+│       → Provides a unified verify(msg, sig, pubkey) API                                      │
 
-elliptic
+│ 7. Bitcoin Internals (bitcoin/)                                                              │
+│    ├ script.ts     → script parsing, ASM, decoding                                           │
+│    ├ addresses.ts  → base58/bech32 detection                                                 │
+│    ├ sighash.ts    → legacy, BIP143, Taproot upcoming                                        │
+│    ├ secp256k1.ts  → curve constants + n (for r/s checks)                                    │
+│    └ network.ts    → mainnet/testnet                                                         │
 
-noble-secp256k1
+│ 8. Utils (utils/)                                                                            │
+│    ├ hex.ts      → conversion helpers                                                        │
+│    ├ bigint.ts   → safe bigint arithmetic                                                    │
+│    ├ asn1.ts     → ASN.1 elements                                                            │
+│    ├ logger.ts                                                                            │
+│    └ types.ts    → global TypeScript interfaces                                              │
+└────────────────────────────────────────────────────────────────────────────────────────────┘
 
-bitcoinjs-lib
+                            ▲
+                            │
+                            ▼
 
-optional hardware wallets
-
-Each wrapper exposes:
-
-verify(msgHash, signature, pubkey): boolean
-Allows cross‑lib comparison.
-
-6. Malleability Playground (src/frontend/components/DerPlayground)
-decode/parse DER
-
-forge variants
-
-re‑encode
-
-test with chosen library
-
-visual diff of R/S values
-
-Perfect for debugging or demonstrating exploitation.
-
-⚡ CI / Regression Workflows
-Under .github/workflows/:
-
-1. run-tests.yml
-Runs Jest/Mocha/uvu tests.
-
-2. run-wycheproof.yml
-loads Wycheproof vectors
-
-runs full suite
-
-generates compliance score
-
-3. cve-regression.yml
-takes a bundle of BER malformed signatures
-
-verifies expected behavior
-
-fails if any library accepts malformed DER
+┌───────────────────────────────────────────────────────┐
+│                    CI WORKFLOWS                       │
+│                (.github/workflows/)                   │
+├───────────────────────────────────────────────────────┤
+│ run-tests.yml          → backend unit tests           │
+│ run-wycheproof.yml     → verify across all vectors    │
+│ cve-regression.yml     → detect malleability regressions│
+└───────────────────────────────────────────────────────┘
 
 🚀 Installation & Run
 Install
