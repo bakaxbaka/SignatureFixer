@@ -1,5 +1,25 @@
 import { createHash } from 'crypto';
 
+// ===== UTILITY FUNCTIONS =====
+
+// Converts hex → Uint8Array
+export function hexToBytes(hex: string): Uint8Array {
+  if (hex.length % 2 !== 0) hex = "0" + hex;
+  const len = hex.length / 2;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return bytes;
+}
+
+// Uint8Array → hex
+export function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 // secp256k1 curve parameters
 const CURVE_ORDER = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
 const CURVE_P = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F');
