@@ -17,6 +17,9 @@ import { z } from "zod";
 import { inspectTx } from "./services/inspectTx";
 import cveRoutes from "./routes/cveRoutes";
 import wycheproofRoutes from "./routes/wycheproofRoutes";
+import { asyncHandler } from "./lib/asyncHandler";
+import { addressSchema, networkSchema, parseBody, rawTxSchema, txIdSchema } from "./lib/validation";
+import { logger } from "./lib/logger";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Wire CVE and Wycheproof routes
@@ -54,29 +57,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // UTXO Analysis endpoint
-  app.post('/api/utxos', async (req, res) => {
-    try {
-      const { address, networkType = 'mainnet' } = req.body;
-
-      if (!address) {
-        return res.status(400).json({ error: 'Bitcoin address is required' });
-      }
+  app.post(
+    "/api/utxos",
+    asyncHandler(async (req, res) => {
+      const { address, networkType = "mainnet" } = parseBody(
+        z.object({
+          address: addressSchema,
+          networkType: networkSchema.optional().default("mainnet"),
+        }),
+        req.body,
+      );
 
       const startTime = Date.now();
       const utxoData = await bitcoinService.fetchUTXOs(address, networkType);
       const responseTime = Date.now() - startTime;
 
-      // Record API metrics
       await storage.recordApiMetric({
-        apiProvider: 'multiple',
-        endpoint: '/api/utxos',
+        apiProvider: "multiple",
+        endpoint: "/api/utxos",
         responseTime,
         statusCode: 200,
         requestCount: 1,
         errorCount: 0,
       });
 
-      // Save analysis result
       const analysisResult = await storage.saveAnalysisResult({
         bitcoinAddress: address,
         networkType,
@@ -87,9 +91,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recoveredKeys: null,
       });
 
-      // Broadcast update
       broadcast({
-        type: 'utxo_analysis',
+        type: "utxo_analysis",
         address,
         utxoCount: utxoData?.utxos?.length || 0,
       });
@@ -100,34 +103,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         analysisId: analysisResult.id,
         responseTime,
       });
-    } catch (error) {
-      console.error('UTXO analysis error:', error);
-
-      // Record error metric
-      await storage.recordApiMetric({
-        apiProvider: 'multiple',
-        endpoint: '/api/utxos',
-        responseTime: 0,
-        statusCode: 500,
-        requestCount: 1,
-        errorCount: 1,
-      });
-
-      res.status(500).json({ 
-        error: 'Failed to analyze UTXOs',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+    }),
+  );
 
   // Get Raw Transaction endpoint
-  app.post('/api/get-raw-transaction', async (req, res) => {
-    try {
-      const { txid, networkType = 'mainnet' } = req.body;
-
-      if (!txid) {
-        return res.status(400).json({ error: 'Transaction ID is required' });
-      }
+  app.post(
+    "/api/get-raw-transaction",
+    asyncHandler(async (req, res) => {
+      const { txid, networkType = "mainnet" } = parseBody(
+        z.object({
+          txid: txIdSchema,
+          networkType: networkSchema.optional().default("mainnet"),
+        }),
+        req.body,
+      );
 
       const startTime = Date.now();
       const rawTransaction = await bitcoinService.getRawTransaction(txid, networkType);
@@ -142,29 +131,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         responseTime,
       });
-    } catch (error) {
-      console.error('Get raw transaction error:', error);
-      res.status(500).json({ 
-        error: 'Failed to get raw transaction',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+    }),
+  );
 
   // Transaction Decoder endpoint
-  app.post('/api/decode-transaction', async (req, res) => {
-    try {
-      const { rawTransaction } = req.body;
-
-      if (!rawTransaction) {
-        return res.status(400).json({ error: 'Raw transaction hex is required' });
-      }
+  app.post(
+    "/api/decode-transaction",
+    asyncHandler(async (req, res) => {
+      const { rawTransaction } = parseBody(z.object({ rawTransaction: rawTxSchema }), req.body);
 
       const startTime = Date.now();
       const decodedData = await bitcoinService.decodeTransaction(rawTransaction);
       const responseTime = Date.now() - startTime;
 
-      // Analyze signatures for vulnerabilities
       const vulnerabilityAnalysis = await vulnerabilityService.analyzeSignatures(decodedData.signatures || []);
 
       res.json({
@@ -175,14 +154,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         responseTime,
       });
-    } catch (error) {
-      console.error('Transaction decode error:', error);
-      res.status(500).json({ 
-        error: 'Failed to decode transaction',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+    }),
+  );
 
   // Vulnerability testing endpoint - PHASE 1: Uses paginated multi-page fetcher (NO LIMIT - fetches all)
   app.post('/api/vulnerability-test', async (req, res) => {
