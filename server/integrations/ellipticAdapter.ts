@@ -1,4 +1,4 @@
-import type { EC } from "elliptic";
+import type { ec } from "elliptic";
 
 export interface LibraryVerifyParams {
   curve: string;
@@ -13,7 +13,7 @@ export type LibraryVerifyFn = (params: LibraryVerifyParams) => Promise<boolean>;
  * Create an adapter around elliptic's ec("secp256k1") instance.
  * You can have multiple versions by resolving different node_modules or bundling.
  */
-export function makeEllipticVerifyAdapter(ecInstance: EC): LibraryVerifyFn {
+export function makeEllipticVerifyAdapter(ecInstance: ec): LibraryVerifyFn {
   return async ({ curve, msgHashHex, derHex, pubkeyHex }) => {
     const msg = Buffer.from(msgHashHex, "hex");
     const sig = Buffer.from(derHex, "hex");

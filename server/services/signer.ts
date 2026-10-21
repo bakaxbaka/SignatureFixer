@@ -1,5 +1,11 @@
 import * as bitcoin from "bitcoinjs-lib";
+import * as ecc from "@bitcoinerlab/secp256k1";
+import { ECPairFactory } from "ecpair";
 import { generateAllMutations, type MutationResult } from "./derMutator";
+
+// Register the secp256k1 implementation for ECPair (bitcoinjs-lib v7 removed built-in ECPair)
+bitcoin.initEccLib(ecc);
+const ECPair = ECPairFactory(ecc);
 
 export interface SigningParams {
   wif: string;
@@ -22,8 +28,8 @@ export interface SigningResult {
 export function buildAndSignTx(params: SigningParams): SigningResult {
   try {
     const network = bitcoin.networks.bitcoin;
-    const keyPair = bitcoin.ECPair.fromWIF(params.wif, network);
-    
+    const keyPair = ECPair.fromWIF(params.wif, network);
+
     const psbt = new bitcoin.Psbt({ network });
 
     psbt.addInput({
@@ -31,19 +37,19 @@ export function buildAndSignTx(params: SigningParams): SigningResult {
       index: params.prevVout,
       witnessUtxo: {
         script: Buffer.from(params.prevScriptHex, "hex"),
-        value: params.prevValue,
+        value: BigInt(params.prevValue),
       },
     });
 
     psbt.addOutput({
-      value: params.destValue,
+      value: BigInt(params.destValue),
       script: Buffer.from(params.destScriptHex, "hex"),
     });
 
     psbt.signInput(0, keyPair);
 
     try {
-      psbt.validateSignaturesOfInput(0);
+      psbt.validateSignaturesOfInput(0, (pubkey, sig) => keyPair.verify(pubkey, sig));
     } catch (e) {
       console.warn("Signature validation warning:", (e as Error).message);
     }
@@ -200,7 +206,7 @@ export function extractSignaturesFromTxHex(txHex: string): Array<{
           if (input.script && input.script.length > 0) {
             signatures.push({
               index: idx,
-              signature: input.script.toString("hex"),
+              signature: Buffer.from(input.script).toString("hex"),
               pubkey: "",
               type: "Legacy",
             });
