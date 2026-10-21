@@ -33,6 +33,9 @@ router.post("/api/wycheproof", async (req, res) => {
     const json = { testGroups: [] };
 
     const cases = mapRawWycheproofJson(json, curve);
+    if (!secp) {
+      return res.status(503).json({ error: "elliptic library not available" });
+    }
     const verifyFn = makeEllipticVerifyAdapter(secp);
 
     const summary = await runWycheproofSuite(cases, {

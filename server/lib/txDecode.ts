@@ -1,4 +1,4 @@
-import { Transaction } from "bitcoinjs-lib";
+import { Transaction } from "./bjl";
 import type { TxInputAnalysis, TxOutputAnalysis } from "../../client/src/types/txInspector";
 
 export interface DecodedTx {
