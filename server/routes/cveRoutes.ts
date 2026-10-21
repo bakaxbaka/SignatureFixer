@@ -30,6 +30,9 @@ router.post("/api/cve42461", async (req, res) => {
     }
 
     const { libraryName, curve, msgHashHex, canonicalDerHex, pubkeyHex } = parsed.data;
+    if (!secp) {
+      return res.status(503).json({ error: "elliptic library not available" });
+    }
     const verifyFn = makeEllipticVerifyAdapter(secp);
 
     const report = await runCve42461Suite({

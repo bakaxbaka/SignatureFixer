@@ -1,4 +1,4 @@
-import { Transaction } from "bitcoinjs-lib";
+import { Transaction } from "./bjl";
 import type { DecodedTx } from "./txDecode";
 
 export interface SighashContext {
