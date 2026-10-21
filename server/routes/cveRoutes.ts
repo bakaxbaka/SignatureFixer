@@ -1,13 +1,13 @@
 import { Router, type Express } from "express";
 import { runCve42461Suite } from "../engines/cve42461";
 import { makeEllipticVerifyAdapter } from "../integrations/ellipticAdapter";
+import { ec as EllipticEC } from "elliptic";
 import { z } from "zod";
 
-let secp: any;
+let secp: InstanceType<typeof EllipticEC> | undefined;
 
 try {
-  const { ec: EC } = require("elliptic");
-  secp = new EC("secp256k1");
+  secp = new EllipticEC("secp256k1");
 } catch (e) {
   console.warn("elliptic not available for CVE tests");
 }

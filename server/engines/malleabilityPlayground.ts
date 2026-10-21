@@ -1,5 +1,13 @@
 import { analyzeDerStrict } from "../crypto/derStrict";
-import type { CveEncodingType } from "./cve42461";
+
+export type CveEncodingType =
+  | "canonical"
+  | "BER-padding-r"
+  | "BER-padding-s"
+  | "BER-padding-both"
+  | "BER-length-mismatch"
+  | "wrong-seq-tag"
+  | "trailing-garbage";
 
 export interface MalleabilityVariant {
   id: string;

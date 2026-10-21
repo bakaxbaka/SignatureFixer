@@ -1,1 +1,7 @@
-package-lock.json
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
