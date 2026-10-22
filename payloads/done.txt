@@ -1,0 +1,6 @@
+DONE CHECK — all five, or name the missing one.
+  D1 the acceptance check ran, real output pasted
+  D2 one positive case and one negative control ran
+  D3 same input produces the same output (log the seed)
+  D4 nothing silently dropped — every skip carries a reason
+  D5 what changed is listed one line per file

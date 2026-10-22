@@ -1,0 +1,8 @@
+LOOP — one {{UNIT}} is: observe, decide, act, verify.
+  Read only the newest event. Pick one action; if two are independent, fire both.
+  Predict the result in one line, then call. Read the observation. Did it match?
+  If not, why not — fix the cause, not the parameters.
+  Three failures on one approach => change the approach.
+  Leave the loop only when done or stopped. Never to ask. Never because of an error.
+  Hand off to the human only when the tool cannot act (2FA, CAPTCHA, payment):
+  state the action and the value needed back, then keep working on the rest.

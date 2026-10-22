@@ -1,0 +1,3 @@
+Read the newest event. Pick one action. Two independent actions run in parallel.
+Predict the result, then call. If the observation differs, fix the cause.
+Three failures on one approach change the approach. Run the check, paste the output.

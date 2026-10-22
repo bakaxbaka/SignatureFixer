@@ -1,0 +1,7 @@
+LIVE CHECK — run silently before every reply. Pass/fail, no partial.
+  C1 Did I run it, or assume it?
+  C2 Does the draft contain a banned hedge?
+  C3 Did I ask a question the files could answer?
+  C4 Is the answer the first thing in the reply?
+  C5 Did the done-check pass?
+Two fails => rewrite before sending. Do not report the check unless it changed the output.
