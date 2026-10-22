@@ -1,0 +1,536 @@
+A Note on the Security of ECDSA with Presignatures
+or Biased Nonces
+Geoffroy Couteau∗ † Nikolaos Makriyannis‡
+October 19, 2026
+Abstract
+Over the years, several ECDSA security experiments have been proposed to enable faster
+distributed ECDSA signing. These experiments are not known to reduce to the standard ECDSA
+game, and recent work (Groth and Shoup, Eurocrypt 2022) shows that some are vulnerable,
+especially when combined with raw signing (signing hash digests directly, rather than pre-hashed
+messages) and additive key derivation. Furthermore, several of these variants are implemented
+in public libraries and used by companies, sometimes in commercially deployed products, yet
+lack sound security foundations.
+In this note, we revisit the security landscape of these alternative modes of operation for
+ECDSA. As our main result, we show that the security of some of these variants, which are
+used in the wild, is equivalent in the generic group and random oracle model to a standard
+conjecture from fine-grained complexity on the average-case hardness of the k-SUM problem.
+We complement our study by proving lower bounds, conditioned on fine-grained complexity
+conjectures, on the running time of generic group model attacks against other standard modes
+of operation analyzed in (Groth and Shoup, Eurocrypt 2022). Overall, our results provide a
+complete picture of the security landscape of ECDSA variants, and reveal an elegant connection
+with (old and new) conjectures from the field of fine-grained complexity.
+∗CNRS, IRIF, Université Paris Cité. couteau@irif.fr
+†Work done while the author was working as a consultant for Fireblocks.
+‡Fireblocks. nikos@fireblocks.com
+1
+Contents
+1 Introduction 3
+1.1 Our Contribution . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+1.2 Related Work: Rerandomized Presignatures . . . . . . . . . . . . . . . . . . . . . . . 8
+1.3 Organization . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+2 Preliminaries 9
+2.1 The Elliptic-Curve GGM . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+2.2 Presignatures . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+2.2.1 Mapping Biased-Nonce ECDSA to Security Game 1. . . . . . . . . . . . . . . 11
+2.3 Known Attacks on Presignatures . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+2.4 The k-SUM Problem . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+3 A New Attack on Rerandomized Presignatures 13
+3.1 An Attack on Security Game 2 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+4 Rerandomized Presignatures: 3-MMUL to F orgery Reduction 14
+4.1 Preliminaries . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+4.2 Lazy Symbolic Evaluation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+4.3 Reduction from (q, t)-3MMUL . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18
+4.4 Reduction from Hash Inverse . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+5 Plain Presignatures: 4-MMUL to F orgery Reduction 21
+5.1 Preliminaries . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 21
+5.2 Plain Presignatures w/o Key-Derivation . . . . . . . . . . . . . . . . . . . . . . . . . 22
+5.3 Plain Presignatures w/ Key-Derivation . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+6 Fine-Grained A verage-Case Hardness of kMMUL 24
+6.1 Preliminaries on k-SUM . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+6.2 Reducing k-MMUL to k-SUM at Density 1 . . . . . . . . . . . . . . . . . . . . . . . 25
+6.2.1 Step 1. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25
+6.2.2 Step 2. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+6.2.3 Step 3. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+6.2.4 Step 4. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 27
+References 27
+A GGM F orgery to Lazy Evaluation F orgery Reduction 30
+A.1 Lazy Evaluation 1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+A.2 Lazy Evaluation 2 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 32
+A.3 Symbolic Evaluation 1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+A.4 Symbolic Evaluation 2 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 36
+B Linear-Time HashInv Solver 39
+2
+1 Introduction
+ECDSA is one of the most widely deployed signature schemes in existence, underpinning much of the
+security infrastructure of the Internet. It is also the dominant signature scheme in the blockchain
+ecosystem, securing hundreds of millions of transactions every day—the setting that will be our
+focus, since the ECDSA variants we study are, to our knowledge, deployed almost exclusively there.
+ECDSA signatures have the form (r, σ), where r is derived from the nonce—essentially a random
+point on an elliptic curve—and σ depends on the nonce, the secret key, and the message to be
+signed. Concretely, given a secret key x ←Zq and a public key X = gx ∈G over an elliptic curve G
+of order q generated by g, an ECDSA signature (r, σ) on a message m is obtained by letting R = gk
+be a public nonce, and σ = ( F(m) + x ·r) ·k−1 mod q, where r denotes the first coordinate of the
+point R on the curve, and F denotes the ECDSA message digest function (implemented with the
+SHA family of hash functions).
+Threshold ECDSA is one of the most widely deployed protocols for protecting ECDSA keys and
+is at the core of numerous commercial solutions [ Fir25; Coi25; Dkl; Pro25; Blo] enabling various
+distributed-wallet applications such as treasury management, Wallet-as-a-Service (WaaS) [ Fir] and
+embedded wallets [ Dyn; ABCGJM24], among others. In threshold ECDSA, the key is shared
+among multiple parties who jointly run an interactive protocol to produce signatures. Despite its
+popularity and widespread use, ECDSA is notoriously hard to evaluate in a distributed setting.
+All existing protocols are resource-intensive, incurring high costs in at least one of the following:
+computation, communication, or round complexity.
+Presignatures and Biased Nonces. To remedy this situation, several works have introduced
+alternative modes of operation for ECDSA. These modes of operation fall in two categories:
+• Presignatures, introduced independently in [ CMP20; GG20; DOKSS20; DJNPØ20], let the
+nonce be precomputed before the message to be signed is available, enabling extremely fast,
+succinct, and non-interactive signature generation once the message is given.
+• Biased nonces , initially introduced in [ DKLs18] and recently revisited in [ ABCGJM24],
+sidestep the need for a commit-and-open phase in threshold ECDSA by letting one party
+see its opponent’s share of the nonce before choosing its own, enabling efficient round-optimal
+protocols (one offline round, one online round).
+Within each category, the modes differ by whether, and how, they integrate a rerandomization
+step to attempt to strengthen their security guarantees: early presignature proposals let the par-
+ticipants construct a shared nonce R (via Diffie-Hellman agreement) and set the final nonce ˆR to
+ˆR = R. Others, such as [ Fir25], rerandomize the nonce multiplicatively as ˆR = Rµ for a random µ
+(derived after constructing R via a random oracle query). More recently, Groth and Shoup [ GS22]
+suggested using additive rerandomization instead: ˆR = R·gµ. Similarly, known biased-nonce modes
+use different rerandomizers: Doerner et al. [ DKLs18] set ˆR = R ·Rδ
+1 for random δ, where R1 = gk1 ,
+R2 = gk2 , and R = gk1k2 , with k1 held by the first-message sender (initiator) in the protocol and k2
+by the second-message sender (responder). The recent work of Adjedj et al. [ ABCGJM24] instead
+uses ˆR = R ·Rδ
+2. These choices yield different adversarial capabilities and leakage profiles.
+Security Concerns for ECDSA Modes of Operation. Despite their efficiency, these modi-
+fications are not innocuous: for all presignature and biased-nonce variants, security is not known
+3
+to reduce to the standard ECDSA notion. Indeed, there is good reason for this: Groth and Shoup
+[GS22] showed that ECDSA with presignatures requires, at a minimum, an additional assumption
+on the hash function 1. This implies that each variant requires a dedicated security analysis to be
+confidently relied upon.
+The situation is further complicated by the fact that presignature modes of operation are also
+often considered in conjunction with other (orthogonal) modifications of the ECDSA security game:
+• In raw signing , the message digest—rather than the message itself—is passed as input to
+the signatories. Raw signing is useful to many providers, as it enables them to offer signing
+capabilities for variants of ECDSA with custom hash functions. It is also useful when end
+users wish to hide the actual contents of their messages from the provider. It is worth noting
+that raw signing is typically offered in HSMs [ Pkc].
+• With additive key derivation , many subkeys Xγ = X ·gγ can be derived from a single master
+key X. This mechanism is used widely in cryptocurrency applications due to the Hierarchi-
+cal Deterministic Wallet scheme standardized in Bitcoin Improvement Proposal 32 (BIP32,
+[Wui12]).
+Using presignatures (without rerandomization) in combination with these variants introduces
+other attack vectors: presignatures are utterly insecure in the raw-signing mode of operation, and
+admit faster generic attacks when they are combined with additive key derivation [ GS22].
+A first systematic study of the ECDSA landscape was initiated by Groth and Shoup [ GS22],
+showing attacks on presignatures with either raw-signing or key-derivation, and proving the security
+in the elliptic-curve generic group model (EC-GGM, a variant of the generic group model (GGM)
+introduced in [ Sho97] that models more closely the setting of elliptic curve groups) of additively-
+rerandomized presignatures (even in conjunction with raw-signing or key-derivation). In the biased-
+nonce setting, the scheme of Adjedj et al. [ ABCGJM24] comes with a tight security proof in the
+EC-GGM. However, there remain multiple gaps in our understanding of the security landscape of
+these ECDSA variants:
+• For presignatures without rerandomization, with or without additive key-derivation, it is not
+clear to what extent the cryptanalysis of [ GS22] in the EC-GGM translates to a real-world
+attack, as the attack model counts only the number of queries to the generic group, but
+ignores the cost of all other operations. Furthermore, it is not known whether these attacks
+are best-possible, or whether better attacks could exist.
+• For presignatures with multiplicative rerandomization [ CMP20], as used in [ Fir25] (and by at
+least one other company [ com25]), no supporting security analysis is known in the literature.
+• Finally, the biased nonce mode of Doerner et al. [ DKLs18] (deprecated, but implemented in
+several public libraries [ Tau21; Coi21; Qui23b] and used by some companies [ Qui23a]) claims
+security in the GGM, but only a sketch of the analysis is provided. As we will see later,
+the situation for this mode is more complex than originally anticipated by Doerner et al.
+[DKLs18].
+1This assumption is also implicit in Canetti et al. [ CMP20], but there it is absorbed by the random oracle model.
+4
+As threshold ECDSA and its many modes of operation are routinely used to secure monetary
+transactions, the lack of a clear security landscape is a concern. Our aim in this work is to provide
+a complete picture of the security landscape. Along the way, we reveal an elegant connection of
+this landscape with the field of fine-grained complexity theory.
+Important update: a new 3SUM algorithm
+Alman and Vassilevska Williams [ A V26] report a truly subquadratic algorithm for 3SUM,
+discovered by an LLM and subsequently checked and developed by the authors. Assuming
+its correctness, this refutes our 3-SUM hardness assumptions and the associated conjectured
+security bounds for multiplicatively rerandomized presignatures and the DKLS18 biased-nonce
+variant [DKLs18]. The reductions establishing a connection in both directions between forgery
+and average-case computational problems remain valid. Given how recent this development
+is, we retain the original statements subject to this qualification and defer a fuller revision
+pending further scrutiny.
+1.1 Our Contribution
+In this work, we aim to fill the remaining gaps and provide a formal and unified security analysis
+of all known presignatures and biased-nonce modes of operation for ECDSA. Our study reveals a
+close connection between the hardness of ECDSA modes of operation in the elliptic-curve generic
+group model and random oracle, and standard conjectures in the field of fine-grained complexity
+regarding the average-case hardness of the k-SUM problem. Before stating our main result, let us
+introduce a few notions. The average-case k-SUM conjecture at density 1 states the following: let
+L be a list of N1/k random integers between −N and N. Then no algorithm can find k integers
+a1, ··· , ak ∈L such that a1 + ··· + ak = 0 in time much faster than N⌈k/2⌉/k. The standard form
+of the conjecture rules out algorithms with constant success probability. A slightly stronger form
+of the conjecture, due to [ DKK22], rules out algorithms with slightly smaller success probability
+Ω(1/ log2 N). Let F : {0, 1}∗ →Zq denote the ECDSA message digest function. We prove the
+following:
+Theorem 1.1 (informal). We model F as a random oracle and let ε denote an arbitrary fixed
+constant. Then in the EC-GGM, there exists an attacker running in time T = q1/2−ε with suc-
+cess probability Ω(1) against the biased-nonce mode of operation from [ DKLs18], or against the
+presignature mode of operation with multiplicative randomizer from [ Fir25], if and only if the
+strong average-case 3-SUM conjecture at density 1 is wrong. Furthermore, if 3-SUM at density 1
+can be solved in near-optimal time ˜O(N1/3), these two modes of operation can be broken in time
+T = ˜O(q1/3) in the EC-GGM.
+The hardness of the average-case 3-SUM problem at density 1 is a standard and well-studied
+hardness assumption in the field of fine-grained complexity. A statement of the conjecture can be
+found for example in [ DKK22, Conjecture 1.2], or in [ ASSVV24, Conjecture 1.1] (the conjecture is
+stated there for a modular variant of k-SUM, but the variants are equivalent). Other statements of
+the same conjecture can be found in [ Set15; LL W19; BSDV21; AHY25; DLSVW25]. The stronger
+form is due to [ DKK22], where it was noted that even a refutation of this stronger variant would
+imply a major breakthrough, since the slightly sub-constant winning probability would suffice in
+5
+known cryptanalytic applications of k-SUM algorithms. This implies that finding any attack that
+breaks these modes of operation faster than the best known attacks on standard ECDSA would
+entail a major breakthrough in fine-grained complexity.
+We note that a byproduct of our analysis is a proof that these two modes of operation fall short
+of the q1/2 security bar in a “pure-GGM” model, where the adversary runtime is counted solely
+via GGM queries: both modes admit a forgery using only q1/3 queries to the GGM (in contrast,
+the best known attack on plain ECDSA requires solving a discrete logarithm and takes time q1/2).
+This contradicts a claim of Doerner et al. [ DKLs18] that their alternative mode admits “a proof
+in the generic group model that the adversary has no advantage in the forgery game, relative to
+the standard functionality” . This could be a concern, since this protocol is still maintained in
+some public libraries [ Qui23b] and used by some companies [ Qui23a], even though the authors
+of [ DKLs18] deprecated their protocol (for reasons that include other unrelated security concerns,
+and because it was superseded by the protocol of Doerner et al. [ DKLs24]). This is also the
+case for the protocol of [ Fir25], which is actually deployed commercially. Fortunately, barring a
+breakthrough in fine-grained complexity, our analysis shows that this pure-GGM attacker cannot
+be turned into a real-world attack 2.
+We complement our analysis by investigating the original “plain” presignature mode of operation
+(without rerandomizer), which was previously shown in [ GS22] to be broken in the EC-GGM using
+q1/3 queries, or even q1/4 queries when the mode is combined with additive key-derivation. We
+observe that the attacks from [ GS22] are pure-GGM attacks (that ignore all attacker costs beyond
+group queries), and we ask whether they can be turned into real-world attacks. We prove the
+following:
+Theorem 1.2 (informal). There exists a q1/3-time attack against the plain presignature mode of
+operation, with or without additive key-derivation, that uses the group generically. Furthermore,
+assuming that F is modeled as a random oracle and the strong average-case 4-SUM conjecture at
+density 1, there exist no q1/3−ε-time attacks on this mode without additive key-derivation. Assuming
+additionally a new (modular) affine collision ( AFF) conjecture, there exist no q1/3−ε-time attacks
+even with additive key-derivation.
+The new AFF conjecture states, informally, that given two lists L1, L2 of random elements of Zq,
+no q1/3−ε-time adversary can find two lines (a, b) ∈L1 ×L2, (c, d) ∈L1 ×L2, and a point x ∈L2,
+such that both lines coincide on x: ax + b = cx + d mod q (see Security Game 4 and Conjecture 5.1
+for a formal statement). One way to attack AFF is by reduction to a 4-SUM instance: pick an
+arbitrary x ∈L2, and define L3 = {u ·x : u ∈L1}. Then, a solution to AFF is given by a 4-tuple
+(u, v, w, y ) ∈L3 ×L2 ×L3 ×L2 such that u + v −w −y = 0 mod q, which can be obtained in time
+q1/3 (ignoring other polynomial factors) using Wagner’s 4-list algorithm [ Wag02] or some optimized
+variants over Zq [JKL24]. Our conjecture essentially states that this is the best possible attack.
+We note that the attack (and lower bound) matches that of [ GS22] in the setting without
+key-derivation. In the setting with key-derivation, our results indicate that the plain presignature
+mode is plausibly more secure than the pure-GGM attack of Groth and Shoup [ GS22] suggests, if
+a new average-case fine-grained hardness assumption holds; we leave the study of this conjecture
+for future work. We summarize all known results on the security of ECDSA modes of operation,
+including our new results, in Table 1.
+2From a theoretical point of view, clarifying the security guarantees of [ DKLs18] is also interesting since this
+protocol is not fully superseded by that of Doerner et al. [ DKLs24]: it requires only two rounds of communication,
+whereas the latter requires three.
+6
+T able 1: Summary of security status of presignatures & biased nonces. “Secure” means that no attack
+can run in time significantly less than √q in the generic group model, where q denotes the group size.
+A qx-query attack denotes a “pure-GGM” attack, where all costs beyond GGM queries are ignored.
+3-SUM and 4-SUM refer to Conjecture 2.5 instantiated with k = 3 and k = 4 respectively, and k-MUL
+indicates the use of an algorithm (typically Wagner’s k-list) to solve the kMMUL problem (Security
+Game 3 and 4). AFF refers to Conjecture 5.1.
+Mode From Status e
+[GS22]
+Presignatures
+ˆR = R
+[CMP20; GG20]
+[DOKSS20; DJNPØ20] � q1/3-query attack (3-MUL)
+Presignatures
+(
+ )a [GS22] � Insecure
+Presignatures
+(
+ )a [GS22] � q1/4-query attack (4-SUM)
+Presignatures
+rerand. ˆR = R ·gµ [GS22] � Secureb,c
+[ABCGJM24]
+Biased nonce
+R ·Rδ
+2
+[ABCGJM24] � Securec
+Presignatures
+rerand. ˆR = R ·gµ [GS22] � Securec
+[This work]
+Presignatures
+ˆR = R
+[CMP20; GG20]
+[DOKSS20; DJNPØ20] − q1/3-secured under 4-SUM conj.
+Presignatures
+(
+ )a [GS22] − q1/3-secured under {4-SUM
++ AFF}conj.
+Biased nonce
+R ·Rδ
+1
+[DKLs18]
+
+
+Presignatures
+rerand. ˆR = Rµ [Fir25]
+� q1/3-query attack (3-MUL)
+� Securec under 3-SUM conj.
+a
+ and
+ denote the raw-signing and key-derivation modes respectively.
+b Security holds under the assumption that rerandomization occurs once or the presignature is discarded, i.e., the
+attacker cannot query multiple values of µ before settling on a message.
+c Security holds for
+ - and
+ -modes (including in combination). For
+ , there is 1/d-loss of security where d denotes
+the number of key-derivation paths.
+d No security in
+ -mode.
+e Every attack listed uses a single presignature and a single signing query; the stated qx costs are offline (hash evaluations
+and group operations). The exception is our attack on multiplicatively rerandomized presignatures (Section 3), which
+additionally makes Θ(q1/3) nonce-finalization queries against that one presignature, each of which requires interaction
+with the honest signers.
+Interpreting Our Attacks. Three caveats are in order. First, every attack in this work assumes
+an adversary that chooses the message to be signed adaptively, after seeing the presignature and,
+where applicable, the modifier. Whether this is achievable depends on the deployment: an adversary
+rarely has full control over the signed messages, though we consider it realistic that it can often
+7
+strongly influence them. Second, the key-derivation attacks require the number d of available
+derivation paths to be large; deployments may bound d, but bounds large enough to matter are
+plausible in practice, e.g. under BIP32 [ Wui12]. Third, a mode admitting a q1/3-time attack is
+not broken in any practical sense—it offers less security than standard ECDSA, but the resulting
+security level may still be adequate. We reserve the word “insecure” for modes that admit a forgery
+with a constant number of queries.
+1.2 Related Work: Rerandomized Presignatures
+As highlighted in Table 1 and detailed in Section 2.3, plain (non-rerandomized) presignatures incur
+a meaningful security loss relative to standard ECDSA, and they are utterly insecure in raw-signing
+mode.
+In an effort to recover the security level of ECDSA while retaining raw signing, Groth and Shoup
+[GS22] introduce rerandomized presignatures: the presignature R is rerandomized to a modified
+point ˆR, and the released signature uses nonce ˆR instead of R. Groth and Shoup [ GS22] propose
+additive rerandomization, setting ˆR = R ·gδ for a public random δ. They show that if a single
+modifier δ is sampled and bound to one message digest, so only one modifier can be used and the
+presignature is discarded otherwise, then additive rerandomized presignatures match the security
+of standard ECDSA. However, this mitigation must be implemented with care: in Groth and Shoup
+[GS22], once the adversary chooses a message and presignature, the signature is generated and the
+presignature is consumed. This setting is only realistic when a public random beacon is available.
+In contrast, using the standard practice of performing rerandomization via a hash function (hashing
+the transcript à la Fiat-Shamir) would be insecure, since it allows the adversary to “backtrack”
+and reject a rerandomization outcome that is not to their liking. Unfortunately, in many scenarios,
+a public trusted random beacon is too strong a setup assumption.
+As a consequence, several threshold ECDSA libraries [ Fir25] implement a variant of reran-
+domized presignatures that differs from what is prescribed in Groth and Shoup [ GS22], and the
+limited security guarantees in that work do not extend to these variants. Additionally, while Groth
+and Shoup [ GS22] prescribe that the nonce be randomized using an additive public shift, multiple
+implementations instead apply a multiplicative factor.
+In the recent work [ ABCGJM24] on biased nonces (biased nonces and presignatures are essen-
+tially equivalent as we explain in Section 2.2), the authors show that even when an attacker can
+sample many different additive modifiers for different message digests (and even multiple modifiers
+for the same digest), with each modifier the output of a hash modeled as a random oracle, there
+is essentially no security loss relative to standard ECDSA. However, the analysis of Adjedj et al.
+[ABCGJM24] only applies to additive modifiers, and, as far as we know, no such analysis exists for
+multiplicative modifiers or biased nonces à la [ DKLs18].
+1.3 Organization
+In Section 2, we introduce preliminaries on the generic group model, presignatures (including an
+equivalence to biased nonces and a discussion and overview of known attacks), and the k-SUM
+problem. Section 3 presents a new attack on rerandomized presignatures. Section 4 introduces our
+main reduction from the security of our general presignature experiment to a multiplicative variant
+of the k-SUM problem, while Section 5 extends the reduction to the setting of plain presignatures
+(without rerandomization), under stronger fine-grained complexity conjectures. Finally, Section 6
+8
+shows that the conjectured hardness of the multiplicative variants of k-SUM used in our work is
+implied by the standard “average-case k-SUM at density 1” conjecture.
+2 Preliminaries
+Notation. We assume some familiarity with ECDSA and basic group theory and we use mul-
+tiplicative notation for group operations. We use the notation from [ ABCGJM24]. Let (G, g, q)
+and F : {0, 1}∗ →Zq denote the group-generator-order tuple and the message digest function as-
+sociated with ECDSA. We recall that G is equipped with a ‘conversion function’ X: G →Zq, the
+projection to the first coordinate, that deterministically maps group elements to elements modulo
+q with the property that X(A) = X(A−1) for A ∈G. ECDSA public keys are simply elements
+X = gx ∈G where x
+$
+←Z∗
+q is drawn uniformly at random from the set of units modulo q. ECDSA
+signatures for a message digest m = F(msg) consist of pairs (r, s) ∈F2
+q such that r = X(gk) and
+s = k−1(m + rx) mod q for k
+$
+←Z∗
+q chosen uniformly at random.
+2.1 The Elliptic-Curve GGM
+For defining the GGM, we follow [ ABCGJM24], which in turn uses the EC-generic group model
+of [ GS22] that captures some idiosyncrasies of elliptic curves, in particular the fact that X(A) =
+X(A−1) for every A ∈G. A generic group oracle O is defined via a random bijective map π : G →G
+under the following notation and constraints.
+1. G denotes the set of identifying labels of elements in group G.
+2. There are efficient algorithms for sampling uniformly from G and efficiently deciding mem-
+bership in G.
+3. π(AB) = O(π(A), π(B)) and X(π(A)) = X(π(A−1)), for every A, B ∈G.
+2.2 Presignatures
+In this section, we define presignatures and their security game. We present all variants within a
+single framework. To that end, the specification in Security Game 1 uses intentionally inefficient
+operations—specifically how the leakage function f and the modifier ν are computed—purely to
+support a unified presentation. We then show how Security Game 1 can be implemented efficiently,
+depending on the desired mode of operation.
+Additionally, for clarity—and since the main case of interest is rerandomized presignatures in
+raw-signing (
+ ) mode—we color-code in teal the lines that apply only to the non-raw and key-
+derivation (
+ ) modes. These can be ignored on a first pass.
+Security Game Presignatures Game
+1. Parameters. ECDSA digest func. F and leakage func. f : G2 →Zq.
+2. Key-Generation. SO samples x
+$
+←Zq and returns X = gx.
+%In
+ mode, a random set of public tweaks ∆ ⊆Zq is also returned.
+9
+3. Signing. When prompted for signing:
+(a) On input (prompt.presig) from A:
+– Return R
+$
+←G to A. Record (presig, R).
+%We say that R is a presignature.
+(b) On input (prompt.nonce, R, m, id):
+– If there exists a record (nonce, R, m, id, ˆR, ν), return ( ˆR, ν).
+%In the non-
+ mode, m = F(msg) for some msg ∈{0, 1}∗.
+– Otherwise, if there exists a record (presig, R), sample ˆR
+$
+←G, set ν ←f(R, ˆR),
+record (nonce, R, m, id, ˆR, ν), and return ( ˆR, ν).
+%In the plain-presignatures mode, ˆR = R and ν =⊥.
+– Otherwise, ignore the message.
+%In
+ mode, a key-tweak δ ∈∆ is part of the input and is recorded.
+(c) On input (prompt.sig, R, m, id):
+– If there exists a record (nonce, R, m, id, ˆR, ν), return σ such that (X( ˆR), σ) is a
+valid signature for m. Erase all records of (presig, R) and (nonce, R, m, . . .).
+%In
+ mode, σ is valid for the tweaked public key X ·gδ.
+– Otherwise, ignore the message.
+4. Outcome. A wins if it outputs (msg0, r0, σ0) such that (r0, σ0) is a valid signature for
+msg0 and (prompt.sig, . . . , F(msg0) = m0) was never queried to SO. The pair (r0, σ0) is
+referred to as a forgery.
+%In
+ mode, A wins if the forgery is valid for any tweaked key.
+Security Game 1: General Unforgeability Experiment
+Definition 2.1 (Efficient Additively Rerandomized Presignatures) . Additively rerandomized pres-
+ignatures correspond to the variant of Security Game 1 where ν = f( ˆR, R) and ˆR = R ·gν. For an
+efficient implementation, the challenger samples k
+$
+←Zq and sets R = gk on a presignature query.
+On a nonce query, it samples ν
+$
+←Fq and sets ˆR = R ·gν. It records k and ν to compute the corre-
+sponding signature when requested: s = ( ν+k)−1·
+(
+m+X( ˆR)·x
+)
+(or s = ( ν+k)−1·
+(
+m+X( ˆR)·(x+δ)
+)
+in key-derivation mode).
+Definition 2.2 (Efficient Multiplicatively Rerandomized Presignatures) . Multiplicatively reran-
+domized presignatures correspond to the variant of Security Game 1 where ν = f( ˆR, R) and
+ˆR = Rν. For an efficient implementation, the challenger samples k
+$
+←Zq and sets R = gk on
+a presignature query. On a nonce query, it samples ν
+$
+← Fq and sets ˆR = Rν. It records k
+and ν to compute the corresponding signature when requested: s = ( νk)−1 ·
+(
+m + X( ˆR) ·x
+)
+(or
+s = ( νk)−1 ·
+(
+m + X( ˆR) ·(x + δ)
+)
+in key-derivation mode).
+10
+2.2.1 Mapping Biased-Nonce ECDSA to Security Game 1.
+While not immediate, Security Game 1 also captures the biased-nonce setting in threshold ECDSA.
+In this regime, the initiator sends R1 = gk1 ; the responder samples R2 = gk2 and finalizes the nonce
+as a deterministic function of its view (the function includes a cryptographic hash for security).
+Below we show that, modeling the hash as a random oracle, the security of biased nonces is captured
+by Security Game 1. We stress that the biased-nonce effect does not affect an honest responder
+(the nonce is unbiased from their perspective), so the analysis considers only a corrupted responder
+with an honest initiator.
+DKLs18 Modifier. Doerner et al. [ DKLs18] set the nonce to ˆR = Rk2+δ
+1 , where δ is the random-
+oracle output on (R2, R′, m, X) and R′ = gk1k2 . Viewing R = R1 as a presignature, since k2 can
+be extracted via a knowledge-of-exponent (KEA) assumption, 3 we can program the oracle so that
+ν = k2 + δ. Then ˆR = Rk2+δ
+1 = Rν, which matches a multiplicatively rerandomized presignature.
+ABC+24 Modifier. Adjedj et al. [ ABCGJM24] set the nonce to ˆR = ( R1 ·gδ)k2 , where δ is the
+random-oracle output on (R2, R, m, X ) and R = gk1k2 . Viewing R as a presignature, since k2 can
+be extracted via a knowledge-of-exponent (KEA) assumption, we can program the oracle so that
+ν = δ ·k2. Then ˆR = ( R1 ·gδ)k2 = R ·gk2δ = R ·gν, which matches an additively rerandomized
+presignature.
+2.3 Known Attacks on Presignatures
+In this section, we describe known attacks for the various presignature modes. In the following,
+R ∈G denotes a presignature requested by the attacker at the beginning of Security Game 1. We
+write r = X(R).
+Plain Presignatures and Raw Signing. The attacker A aims to calculate a forgery F(msg0) =
+m0 ∈Zq. For this purpose, A samples a random element R0 = Rλ ∈G and sets r0 = X(R0). Then,
+it requests a signature for m = m0 ·r/r0, and obtains s for the signature. It sets s0 = sr0 ·(rλ)−1.
+It follows that the pair (r0, s0) is a forgery for m0.4 Indeed:
+Rs0
+0 = ( Rs)r0/r = ( gmXr)r0/r = gm0 Xr0 .
+Plain Presignatures w/o Key-Derivation. When disallowing the raw-signing capability, the
+above attack is thwarted, as it is no longer possible to request signatures for digests that are not
+outputs of the ECDSA hash F (indeed, the attack boils down to finding msg ∈{0, 1}∗ such that
+F(msg) = m0·r/r0). Still, as pointed out by Groth and Shoup [ GS22], there remains an attack vector
+not present in plain ECDSA: it suffices to find msg and msg 0 such that F(msg)/F(msg0) = r/r0.
+Furthermore, by iterating over many possible group elements R0, it suffices for the adversary to find
+3If the attacker returns a DH tuple (R1, R2, R′) for a random R1, then k2 is extractable under KEA, and uncon-
+ditionally in the GGM.
+4This attack may seem meaningless: the attacker already has access to a raw signing oracle that returns signatures
+on chosen messages. However, it has practical ramifications in the derived-keys setting, where the attacker may request
+a signature under a related key X · gδ with public δ. In this case, a signature on m = m0 − δr under X · gδ is also a
+valid signature on m0 under X.
+11
+msg, msg 0 and λ such that F(msg)/F(msg0) = X(R)/X(Rλ). From a pure query-complexity point
+of view, solutions are guaranteed to exist with constant probability with as few as q1/3 queries.
+Plain Presignatures w/ Key-Derivations. Key derivation opens up an alternative attack
+opportunity that only uses a single presignature R. By querying many values mi = F(msgi) and
+key tweaks δj ∈∆, the attacker is tasked with finding mi1 , mi2 and δj1 , δj2 such that mi1 + δj1 r =
+mi2 + δj2 r for r = X(R). If successful, the attacker requests a signature for mi1 on tweak δj1
+which immediately yields a valid signature for mi2 on tweak δj2 . Indeed, letting s denote the value
+returned by the signing oracle:
+Rs = gmi1 ·(X ·gδj1 )r = gmi1 +rδj1 Xr = gmi2 +rδj2 Xr = gmi2 ·(X ·gδj2 )r.
+Groth and Shoup [ GS22] show how to solve this problem using Wagner’s algorithm in query and
+time complexity q1/3, while a pure-GGM attack is possible with as few as q1/4 queries.
+2.4 The k-SUM Problem
+Definition 2.3 (A verage-casek-SUM problem) . An input to the (N, r)-kSUM problem is given by
+a list L of r integers sampled uniformly and independently over {−N, ··· , N}. The goal is to find
+a k-tuple (an ordered set of distinct indices) (i1, ··· , ik) such that L[i1] + ···+ L[ik] = 0 , where the
+sum is over Z.
+Instances of the average-case k-SUM problem are usually characterized by their density regime.
+The density of a k-SUM instance (N, r)-kSUM is defined as ∆ := log
+(r
+k
+)
+/ log N ≈k log r/ log N
+(where the approximation is very close to reality for low values of k; in this work, we will always
+consider k ∈{3, 4}). At density ∆ = 1 , a kSUM instance has exactly one solution on average. In
+the dense regime ∆ > 1, many solutions exist, while in the sparse regime ∆ < 1, solutions are
+unlikely to exist. A folklore and well-studied conjecture states that k-SUM is average-case hard at
+density 1:
+Conjecture 2.4 (A verage-casek-SUM conjecture). Any algorithm that solves the (N, N 1/k)-kSUM
+problem with probability Ω(1) must run in expected time T = Ω( N⌈k/2⌉/k−o(1)).
+A statement of the above conjecture can be found for example in [ DKK22, Conjecture 1.2], or
+in [ ASSVV24, Conjecture 1.1] (the conjecture is stated there for a modular variant of kSUM, but
+as we will see later, the variants are equivalent). Other statements of the same conjecture (or
+generalizations thereof) can be found in [ Set15; LL W19; BSDV21; AHY25; DLSVW25]. In our
+work, we will rely on a slight strengthening of this conjecture:
+Conjecture 2.5 (A verage-casek-SUM conjecture at ε = 1/ log2 N). Any algorithm that solves
+the (N, N 1/k)-kSUM problem with probability Ω(1/ log2 N) must run in expected time T =
+Ω(N⌈k/2⌉/k−o(1)).
+12

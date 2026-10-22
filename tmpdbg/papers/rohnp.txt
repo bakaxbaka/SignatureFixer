@@ -1,0 +1,306 @@
+Return of the Hidden 
+Number Problem
+A Widespread and Novel Key Extraction Attack on ECDSA and DSA
+Keegan Ryan
+NCC Group
+What is ROHNP?
+• Key extraction attack on DSA and ECDSA
+• Uses an old technique to target a new part of the algorithm
+• Common (11/20 tested implementations were vulnerable)
+• Easy attack to understand and apply
+Prior Attacks on (EC)DSA
+𝑟 = 𝑓 𝑘 ∗𝐺
+𝑠 = 𝑘−1(𝑚+𝑟𝑥)
+• The attacker knows r, s, m, and G.
+• Recover information about nonce k.
+• Derive information about private key x.
+Nonce Leaks and the Hidden Number Problem
+𝑟 = 𝑓 𝑘 ∗𝐺
+𝑠 = 𝑘−1(𝑚+𝑟𝑥)
+• Observe multiplication k*G happens quickly
+• Infer k is “small”
+• Rewrite DSA equations [HGS01]
+• Solve system of inequalities [BV96]
+• Fix nonce leaks with constant time multiplication
+𝑘 = 𝑠−1𝑚+ 𝑠−1𝑟 𝑥 < 𝑞/2𝑙
+Return of the
+Hidden Number Problem
+Return of the Hidden Number Problem
+𝑟 = 𝑓 𝑘 ∗𝐺
+𝑠 = 𝑘−1(𝑚+𝑟𝑥)
+• The attacker knows r, s, m, and G.
+• Target the addition in the calculation of s. 
+Modular Addition
+def AddMod(a, b, q):
+# Assuming a and b are reduced modulo q,
+# return (a + b) % q
+c = a + b
+if c >= q:
+c = c – q
+return c
+Return of the Hidden Number Problem
+• Observe the calculation of m + rx
+• Use a side channel to see if the addition wraps around
+• If not, 
+• If so,
+• Result is a system of HNP inequalities
+𝑚+𝑟𝑥 < 𝑞 ⇒ 0+𝑟𝑥 < 𝑞−𝑚
+𝑚+𝑟𝑥 ≥ 𝑞 ⇒ 𝑞−𝑟𝑥 < 𝑚+1
+Benefits of the ROHNP attack
+• Information can leak through many side channels
+• Attacker can choose m to tune the bits leaked per HNP inequality
+• Can detect the presence of this vulnerability in a black box
+• Signatures with large m are more likely to include the extra subtraction
+• Run statistical analysis to see if this case takes longer
+• Exploit with a side channel that detects subtraction in an individual sample
+• Avoids prior countermeasures
+• Common
+Affected Implementations
+Cryptographic Libraries
+• LibreSSL
+• Mozilla NSS
+• OpenSSL
+• WolfCrypt
+• Botan
+• Libgcrypt
+• Libtomcrypt
+• matrixSSL
+• OpenJDK libsunec
+• CryptLib
+• Golang crypto/tls
+• BouncyCastle
+• mbedTLS
+• C#/Mono
+• TrezorCrypto
+• BoringSSL
+• Nettle
+• Crypto++
+• BearSSL
+• Libsecp256k1
+• NaCl
+• Netflix MSL
+• ZeroMQ
+• Pyca/cryptography
+• Amazon s2n
+• GnuTLS
+• Cloudflare CFSSL
+• NanoSSL
+• Microsoft Schannel
+• Apple Secure Transport
+• RSA BSAFE
+• SharkSSL
+• Microsoft CryptoAPI/CNG
+• JCA
+• CryptoComply
+• Oracle JSSE
+Cryptographic Libraries
+• LibreSSL
+• Mozilla NSS
+• OpenSSL
+• WolfCrypt
+• Botan
+• Libgcrypt
+• Libtomcrypt
+• matrixSSL
+• OpenJDK libsunec
+• CryptLib
+• Golang crypto/tls
+• BouncyCastle
+• mbedTLS
+• C#/Mono
+• TrezorCrypto
+• BoringSSL
+• Nettle
+• Crypto++
+• BearSSL
+• Libsecp256k1
+• NaCl
+• Netflix MSL
+• ZeroMQ
+• Pyca/cryptography
+• Amazon s2n
+• GnuTLS
+• Cloudflare CFSSL
+• NanoSSL
+• Microsoft Schannel
+• Apple Secure Transport
+• RSA BSAFE
+• SharkSSL
+• Microsoft CryptoAPI/CNG
+• JCA
+• CryptoComply
+• Oracle JSSE
+Closed Source
+Cryptographic Libraries
+• LibreSSL
+• Mozilla NSS
+• OpenSSL
+• WolfCrypt
+• Botan
+• Libgcrypt
+• Libtomcrypt
+• matrixSSL
+• OpenJDK libsunec
+• CryptLib
+• Golang crypto/tls
+• BouncyCastle
+• mbedTLS
+• C#/Mono
+• TrezorCrypto
+• BoringSSL
+• Nettle
+• Crypto++
+• BearSSL
+• Libsecp256k1
+• NaCl
+• Netflix MSL
+• ZeroMQ
+• Pyca/cryptography
+• Amazon s2n
+• GnuTLS
+• Cloudflare CFSSL
+• NanoSSL
+• Microsoft Schannel
+• Apple Secure Transport
+• RSA BSAFE
+• SharkSSL
+• Microsoft CryptoAPI/CNG
+• JCA
+• CryptoComply
+• Oracle JSSE
+Closed Source
+Wraps (EC)DSA
+Cryptographic Libraries
+• LibreSSL
+• Mozilla NSS
+• OpenSSL
+• WolfCrypt
+• Botan
+• Libgcrypt
+• Libtomcrypt
+• matrixSSL
+• OpenJDK libsunec
+• CryptLib
+• Golang crypto/tls
+• BouncyCastle
+• mbedTLS
+• C#/Mono
+• TrezorCrypto
+• BoringSSL
+• Nettle
+• Crypto++
+• BearSSL
+• Libsecp256k1
+• NaCl
+• Netflix MSL
+• ZeroMQ
+• Pyca/cryptography
+• Amazon s2n
+• GnuTLS
+• Cloudflare CFSSL
+• NanoSSL
+• Microsoft Schannel
+• Apple Secure Transport
+• RSA BSAFE
+• SharkSSL
+• Microsoft CryptoAPI/CNG
+• JCA
+• CryptoComply
+• Oracle JSSE
+Closed Source
+Wraps (EC)DSA
+Doesn’t Implement
+Open Source Implementations
+• LibreSSL
+• Mozilla NSS
+• OpenSSL
+• WolfCrypt
+• Botan
+• Libgcrypt
+• Libtomcrypt
+• matrixSSL
+• OpenJDK libsunec
+• CryptLib
+• Golang crypto/tls
+• BouncyCastle
+• mbedTLS
+• C#/Mono
+• TrezorCrypto
+• BoringSSL
+• Nettle
+• Crypto++
+• BearSSL
+• Libsecp256k1
+Open Source Implementations
+• LibreSSL
+• Mozilla NSS
+• OpenSSL
+• WolfCrypt
+• Botan
+• Libgcrypt
+• Libtomcrypt
+• matrixSSL
+• OpenJDK libsunec
+• CryptLib
+• Golang crypto/tls
+• BouncyCastle
+• mbedTLS
+• C#/Mono
+• TrezorCrypto
+• BoringSSL (ECDSA)
+• Nettle (ECDSA)
+• Crypto++
+• BearSSL
+• Libsecp256k1
+Constant Time
+Open Source Implementations
+• LibreSSL
+• Mozilla NSS
+• OpenSSL (DSA)
+• WolfCrypt (DSA)
+• Botan (DSA)
+• Libgcrypt (DSA)
+• Libtomcrypt (DSA)
+• matrixSSL
+• OpenJDK libsunec
+• CryptLib
+• Golang crypto/tls
+• BouncyCastle
+• mbedTLS
+• C#/Mono
+• TrezorCrypto
+• BoringSSL (ECDSA)
+• Nettle (ECDSA)
+• Crypto++
+• BearSSL
+• Libsecp256k1
+Constant Time
+Wrong Operation Order
+Open Source Implementations
+• LibreSSL
+• Mozilla NSS
+• OpenSSL (DSA)
+• WolfCrypt (DSA)
+• Botan (DSA)
+• Libgcrypt (DSA)
+• Libtomcrypt (DSA)
+• matrixSSL
+• OpenJDK libsunec
+• CryptLib
+• Golang crypto/tls
+• BouncyCastle
+• mbedTLS
+• C#/Mono
+• TrezorCrypto
+• BoringSSL (ECDSA)
+• Nettle (ECDSA)
+• Crypto++
+• BearSSL
+• Libsecp256k1
+Constant Time
+Wrong Operation Order
+Vulnerable
+Example:
+
+Solo
+

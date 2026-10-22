@@ -1,0 +1,12 @@
+{
+ "reuse_pairs": 0,
+ "found_keys": [],
+ "high_s": 3398,
+ "short_s_le200": 0,
+ "bad_der": 0,
+ "addr_mismatch": 3223,
+ "verify_failed": 0,
+ "offcurve": [],
+ "same_r_diff_q": 0,
+ "range_violations": 0
+}

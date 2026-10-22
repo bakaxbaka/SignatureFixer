@@ -1,0 +1,339 @@
+Elliptic Curve Cryptography in Practice
+Joppe W. Bos1, J. Alex Halderman 2, Nadia Heninger3, Jonathan Moore, Michael Naehrig 1,
+and Eric Wustrow2
+1 Microsoft Research
+2 University of Michigan
+3 University of Pennsylvania
+Abstract. In this paper, we perform a review of elliptic curve cryptography (ECC), as it is
+used in practice today, in order to reveal unique mistakes and vulnerabilities that arise in imple-
+mentations of ECC. We study four popular protocols that make use of this type of public-key
+cryptography: Bitcoin, secure shell (SSH), transport layer security (TLS), and the Austrian e-ID
+card. We are pleased to observe that about 1 in 10 systems support ECC across the TLS and
+SSH protocols. However, we ﬁnd that despite the high stakes of money, access and resources pro-
+tected by ECC, implementations suﬀer from vulnerabilities similar to those that plague previous
+cryptographic systems.
+1 Introduction
+Elliptic curve cryptography (ECC) [34, 39] is increasingly used in practice to instantiate
+public-key cryptography protocols, for example implementing digital signatures and key agree-
+ment. More than 25 years after their introduction to cryptography, the practical beneﬁts of
+using elliptic curves are well-understood: they oﬀer smaller key sizes [36] and more eﬃcient
+implementations [6] at the same security level as other widely deployed schemes such as
+RSA [45]. In this paper, we provide two contributions:
+•First, we study the current state of existing elliptic curve deployments in several diﬀerent
+applications. Certicom released the ﬁrst document providing standards for elliptic curve
+cryptography in 2000, and NIST standardized ECDSA in 2006. What does the deploy-
+ment of these algorithms look like in 2013? In order to study this question, we collect
+cryptographic data from a number of diﬀerent real-world deployments of elliptic curve
+cryptography: Bitcoin [40], secure shell (SSH) [48], transport layer security (TLS) [9], and
+the Austrian Citizen Card [31].
+•Next, we perform a number of “sanity checks” on the data we collected, in particular on the
+public keys, key exchange data, and digital signatures, in order to detect implementation
+problems that might signal the presence of cryptographic vulnerabilities.
+The security of deployed asymmetric cryptographic schemes relies on the believed hardness
+of number theoretic problems such as integer factorization and the computation of discrete
+logarithms in ﬁnite ﬁelds or in groups of points on an elliptic curve. However, most real-
+world cryptographic vulnerabilities do not stem from a weakness in the underlying hardness
+assumption, but rather from implementation issues such as side-channel attacks, software
+bugs or design ﬂaws (cf. [27]). One such example are so-called cache attacks [42] (see [13]
+for an application to the asymmetric setting) that exploit the memory access pattern in
+cryptographic schemes using data dependent table lookups. Another class of problems is
+related to implementations which do not provide suﬃcient randomness and subsequently
+generate insecure cryptographic keys. Recent examples of implementations suﬀering from a
+lack of randomness are the Debian OpenSSL vulnerability [52], the discovery of widespread
+weak RSA and DSA keys used for TLS, SSH, and PGP as documented in [35, 30] and recent
+results in [4] that show how to break a number of RSA keys obtained from Taiwan’s national
+Citizen Digital Certiﬁcate database.
+In order to survey the implementation landscape for elliptic curve cryptography, we col-
+lected several large cryptographic datasets:
+•The ﬁrst (and largest) dataset is obtained from the Bitcoin block chain. Bitcoin is an
+electronic crypto-currency, and elliptic curve cryptography is central to its operation:
+Bitcoin addresses are directly derived from elliptic-curve public keys, and transactions are
+authenticated using digital signatures. The public keys and signatures are published as
+part of the publicly available and auditable block chain to prevent double-spending.
+•The second largest dataset we collected is drawn from an Internet-wide scan of HTTPS
+servers. Elliptic-curve cipher suites that oﬀer forward secrecy by establishing a session
+key using elliptic-curve Diﬃe-Hellman key exchange [20] were introduced in 2006 and
+are growing in popularity for TLS. This dataset includes the Diﬃe-Hellman server key
+exchange messages, as well as public keys and signatures from servers using ECDSA.
+•We also performed an Internet-wide scan of SSH servers. Elliptic-curve cipher suites for
+SSH were introduced in 2009, and are also growing more common as software support
+increases. This dataset includes elliptic curve Diﬃe-Hellman server key exchange messages,
+elliptic-curve public host keys, and ECDSA signatures.
+•Finally, we collected certiﬁcate information, including public keys from the publicly avail-
+able lightweight directory access protocol (LDAP) database for the Austrian Citizen Card.
+The Austrian e-ID contains public keys for encryption and digital signatures, and as of
+2009, ECDSA signatures are oﬀered.
+Our main results can be categorized as follows.
+Deployment. Elliptic curve cryptography is far from being supported as a standard option
+in most cryptographic deployments. Despite three NIST curves having been standardized,
+at the 128-bit security level or higher, the smallest curve size, secp256r1, is by far the most
+commonly used. Many servers seem to prefer the curves deﬁned over smaller ﬁelds.
+Weak keys.We observed signiﬁcant numbers of non-related users sharing public (and hence
+private) keys in the wild in both TLS and SSH. Some of these cases were due to virtual
+machine deployments that apparently duplicated keys across distinct instances; others we
+were able to attribute to default or low-entropy keys generated by embedded devices, such as
+a network ﬁrewall product.
+Vulnerable signatures.ECDSA, like DSA, has the property that poor randomness used
+during signature generation can compromise the long-term signing key. We found several cases
+of poor signature randomness used in Bitcoin, which can allow (and has allowed) attackers to
+steal money from these clients. There appear to be diverse causes for the poor randomness,
+including test values for uncommonly used implementations, and most prominently an An-
+droid Java bug that was discovered earlier this year (see [37] for a discussion of this bug in
+Android and related Java implementations).
+2 Preliminaries
+This section brieﬂy discusses the standardized elliptic curves that are mainly used in practice.
+It also ﬁxes notation for elliptic curve public-key pairs and introduces the basic concepts for
+key establishment and digital signatures in the elliptic curve setting.
+2.1 Elliptic Curves Used in Practice
+First, we brieﬂy recap standardized elliptic curves that are used most commonly in real-world
+applications. All these curves are given in their short Weierstrass formE : y2 = x3 +ax+band
+are deﬁned over a ﬁnite ﬁeld Fp, where p> 3 is prime and a,b ∈Fp. Given such a curve E,
+the cryptographic group that is employed in protocols is a large prime-order subgroup of the
+group E(Fp) of Fp-rational points on E. The group of rational points consists of all solutions
+(x,y) ∈F2
+p to the curve equation together with a point at inﬁnity, the neutral element. The
+number of Fp-rational points is denoted by # E(Fp) and the prime order of the subgroup by
+n. A ﬁxed generator of the cyclic subgroup is usually called the base point and denoted by
+G∈E(Fp).
+In the FIPS 186-4 standard [51], NIST recommends ﬁve elliptic curves for use in the
+elliptic curve digital signature algorithm targeting ﬁve diﬀerent security levels. Each curve is
+deﬁned over a prime ﬁeld deﬁned by a generalized Mersenne prime. Such primes allow fast
+reduction based on the work by Solinas [47]. All curves have the same coeﬃcient a = −3,
+supposedly chosen for eﬃciency reasons, and their group orders are all prime, meaning that
+n= #E(Fp). The ﬁve recommended primes are
+p192 = 2192 −264 −1, p 224 = 2224 −296 + 1,
+p256 = 2256 −2224 + 2192 + 296 −1, p384 = 2384 −2128 −296 + 232 −1,
+p521 = 2521 −1.
+In the standard, these curves are named P-192. P-224, P-256, P-384, and P-521, but in
+practice they also appear as nistp192, nistp224 etc. These along with other curves are
+also recommended by Certicom in the standards for eﬃcient cryptography SEC2 [16], in
+which the curves are named secp192r1, secp224r1, secp256r1, secp384r1, secp521r1. But
+sometimes, other names are used, for example P-192 and P-256 are named prime192v1 and
+prime256v1 in OpenSSL.
+For 256-bit primes, in addition to the NIST curve deﬁned over Fp256 , SEC2 also proposes
+a curve named secp256k1 deﬁned over Fp where p= 2256 −232 −977. This curve is used in
+Bitcoin. It has a 256-bit prime order. Interestingly, this choice deviates from those made in
+FIPS 186-4 in that the curve coeﬃcients are a = 0 and b = 7. This means that secp256k1
+has j-invariant 0 and thus possesses a very special structure.
+A curve with j-invariant 0 has eﬃciently computable endomorphisms that can be used
+to speed up implementations, for example using the GLV decomposition for scalar multipli-
+cation [26]. Since for secp256k1 p ≡1 (mod 6), there exists a primitive 6th root of unity
+ζ ∈Fp and a corresponding curve automorphism ψ : E →E, (x,y) ↦→(ζx,−y). This map
+allows the fast computation of certain multiples of any point P ∈E(Fp), namely ψ(P) = λP
+for an integer λ with λ6 ≡1 (mod n). But eﬃcient endomorphisms not only speed up scalar
+multiplication, they also speed up Pollard’s rho algorithm [43] for computing discrete loga-
+rithms [24]. The automorphism group of E has order 6 and is generated by the map ψ above.
+In contrast, an elliptic curve with j-invariant diﬀerent from 0 and 1728 only has an automor-
+phism group of order 2, such that the speed-up in Pollard’s rho algorithm is a constant factor
+of up to
+√
+3 over such a curve.
+Another consequence of the larger automorphism group is the existence of six twists
+(including the curve itself and the standard quadratic twist). An implementation using x-
+coordinate only arithmetic (such as the formulas in [11]) must pay attention to the curve’s
+twist security (see [2, 3]). This means that its quadratic twist needs to have a large enough
+prime divisor for the discrete logarithm problem on the twist to be hard enough. This prevents
+an invalid-curve attack in which an attacker obtains multiples with secret scalars of a point
+on the quadratic twist, e.g. via fault injection [25]. The quadratic twist of secp256k1 has a
+220-bit prime factor and thus can be considered twist secure (e.g. as in [5]). A non-laddering
+implementation (using both x- and y-coordinates) can be compromised by an invalid-curve
+attack if the implementation does not check whether the point satisﬁes the correct curve
+equation [7]. This could lead to a more serious attack on secp256k14 since an attacker might
+obtain scalar multiples with secret scalars of a point on any curve over Fp with coeﬃcient
+a = 0, i.e. on any of secp256k1’s twists. The largest prime divisors of the remaining four
+twists’ group orders are of size 133, 188, 135, and 161 bits, respectively, but there are several
+other smaller prime factors that oﬀer more choices for an invalid-curve attack.
+2.2 Elliptic Curve Public-Key Pairs
+Given a set of domain parameters that include a choice of base ﬁeld prime p, an elliptic curve
+E/Fp, and a base point G of order n on E, an elliptic curve key pair ( d,Q) consists of a
+private key d, which is a randomly selected non-zero integer modulo the group order n, and
+a public key Q = dG, the d-multiple of the base point G. Thus the point Q is a randomly
+selected point in the group generated by G.
+2.3 Elliptic Curve Key Exchange
+There are several diﬀerent standardized key exchange protocols (see [49, 17]) extending the
+basic elliptic curve Diﬃe-Hellman protocol, which works as follows. To agree on a shared key,
+Alice and Bob individually generate key pairs ( da,Qa) and (db,Qb). They then exchange the
+public keys Qa and Qb, such that each can compute the point P = daQb = dbQa using their
+respective private keys. The shared secret key is derived from P by a key derivation function,
+generally being applied to its x-coordinate.
+2.4 Elliptic Curve Digital Signatures
+The Elliptic Curve Digital Signature Algorithm (ECDSA) was standardized in FIPS 186-
+4 [51]. The signer generates a key pair (d,Q) consisting of a private signing key dand a public
+veriﬁcation key Q= dG. To sign a message m, the signer ﬁrst chooses a per-message random
+integer k such that 1 ≤k ≤n−1, computes the point ( x1,y1) = kG, transforms x1 to an
+integer and computes r = x1 mod n. The message m is hashed to a bitstring of length no
+more than the bit length of n, which is then transformed to an integer e. The signature of m
+4 This invalid curve attack on secp256k1 using fault injection has been mentioned before, for example by
+Paulo S.L.M. Barreto (@pbarreto): ”In other words: given 13 faults and a good PC, one can break secp256k1
+(and Bitcoin) in 1 minute.”, October 21, 2013, 10:20 PM, Tweet.
+is the pair (r,s) of integers modulo n, where s= k−1(e+ dr) mod n. Note that r and sneed
+to be diﬀerent from 0, and k must not be revealed and must be a per-message secret, which
+means that it must not be used for more than one message.
+It is important that the per-message secret k is not revealed, since otherwise the secret
+signing key dcan be computed by d≡r−1(ks−e) (mod n) because r and sare given in the
+signature and e can be computed from the signed message. Even if only several consecutive
+bits of the per-message secrets for a certain number of signatures are known, it is possible to
+compute the private key (see [32]). Also, if the same value for k is used to sign two diﬀerent
+messages m1 and m2 using the same signing key dand producing signatures (r,s1) and (r,s2),
+then kcan be easily computed as k≡(s2 −s1)−1(e1 −e2) (mod n), which then allows recovery
+of the secret key.
+3 Applications of Elliptic Curves
+In this section, we survey deployments of elliptic curve cryptography in the real world and
+provide statistics on usage.
+3.1 Bitcoin
+The cryptocurrency Bitcoin is a distributed peer-to-peer digital currency which allows “online
+payments to be sent directly from one party to another without going through a ﬁnancial
+institution” [40]. The (public) Bitcoin block chain is a journal of all the transactions ever
+executed. Each block in this journal contains the SHA-256 [50] hash of the previous block,
+hereby chaining the blocks together starting from the so-called genesis block. In Bitcoin, an
+ECDSA private key typically serves as a user’s account. Transferring ownership of bitcoins
+from user Ato user B is realized by attaching a digital signature (using user A’s private key)
+of the hash of the previous transaction and information about the public key of user B at the
+end of a new transaction. The signature can be veriﬁed with the help of user A’s public key
+from the previous transaction. Other issues, such as avoiding double-spending, are discussed
+in the original document [40].
+The cryptographic signatures used in Bitcoin are ECDSA signatures and use the curve
+secp256k1 (see Section 2). Given an ECDSA (possibly compressed) public-key K, a Bitcoin
+address is generated using the cryptographic hash functions SHA-256 and RIPEMD-160 [22].
+The public-key is hashed twice: HASH160 = RIPEMD-160(SHA-256( K)). The Bitcoin ad-
+dress is computed directly from this HASH160 value (where ∥denotes concatenation) as
+base58(0x00 ∥HASH160 ∥⌊SHA-256(SHA-256(0x00 ∥HASH160))/2224⌋),
+where base58 is a binary-to-text encoding scheme 5.
+By participating in the Bitcoin peer-to-peer network, we downloaded the Bitcoin block
+chain up to block number 252 450 (all transactions up to mid-August 2013) in the Berkeley
+DB [41] format. We extracted 22 159 078 transactions in plain text: this resulted in a single
+26 GB ﬁle. In our dataset we have 46 254 121 valid public keys containing an elliptic curve
+point on the curve, and 15 291 112 of these points are unique. There are 6 608 556 unique
+5 Binary strings are translated to a radix-58 system where the 58 text characters are the digits zero to nine,
+the lowercase letters “a” to “z” and the uppercase letters where zero (0), lowercase ℓ (l), uppercase i (I) and
+uppercase o (O) are omitted to ease distinguishably of the characters.
+points represented in compressed (x-coordinate only) format and 8 682 692 unique points in
+uncompressed format (we found 136 points which occur in both compressed and uncompressed
+public keys). Since it is hard to tell if address reuse is due to the same user reusing their key
+in Bitcoin (see e.g. [44, 38] regarding privacy and anonymity in Bitcoin), there is no simple
+way to check if these duplicate public keys belong to the same or diﬀerent owners.
+Currently (October 2013) there are over 11.5 million bitcoins in circulation with an es-
+timated value of over 2 billion USD. Bitcoin has been analyzed before in diﬀerent settings
+(e.g. [1, 46]), but we perform, as far as we are aware, the ﬁrst asymmetric cryptographic
+“sanity” check; see Section 4.4.
+3.2 Secure Shell (SSH)
+Elliptic curve cryptography can be used in three positions in the SSH protocol. In SSH-2,
+session keys are negotiated using a Diﬃe-Hellman key exchange. RFC 5656 [48] speciﬁes
+the ephemeral Elliptic Curve Diﬃe-Hellman key exchange method used in SSH, following
+SEC1 [17]. Each server has a host key that allows the server to authenticate itself to the
+client. The server sends its host key to the client during the key exchange, and the user
+veriﬁes that the key ﬁngerprint matches their saved value. The server then authenticates
+itself by signing a transcript of the key exchange. This host key may be an ECDSA public
+key [48]. Finally, clients can use ECDSA public keys for client authentication.
+We surveyed the state of elliptic curve deployment on the server side for SSH by scanning
+the complete public IPv4 space in October 2013 for SSH host keys, server Diﬃe-Hellman
+values, and signature values. We also collected the list of key exchange and authentication
+cipher suites oﬀered by each server. We used ZMap [23], a fast Internet-wide port scanner,
+to scan for hosts with port 22 open, and attempted an SSH protocol handshake with the
+addresses accepting connections on port 22.
+In order to focus on elliptic curve values, our client oﬀered only elliptic curve cipher suites.
+This resulted in us discovering several implementations that provided unexpected responses
+to our non-standards-compliant SSH handshake: servers that provided RSA or prime-order
+DSA public keys, or servers that provided empty keys.
+Of the 12 114 534 hosts where we successfully collected a set of cipher suites, 1 249 273
+(10.3%) supported an ECDSA cipher suite for the host key. Of these, 1 247 741 (99.9%) sup-
+ported ecdsa-sha2-nistp256, 74 supported ecdsa-sha2-nistp384, and 1458 (0.1%) sup-
+ported ecdsa-sha2-nistp521. 1 674 700 hosts (13.8%) supported some form of ECDH key
+exchange. Of these, 1 672 458 (99.8%) supported the suitesecdh-sha2-nistp256, ecdh-sha2-
+nistp384, ecdh-sha2-nistp521 in order of increasing security, and 25 supported them in the
+opposite order.
+We successfully collected 1 245 051 P-256, 73 P-384, and 1436 P-521 public keys. In ad-
+dition, 458 689 servers responded with a DSA public key, 29 648 responded with an RSA
+public key, and 7 935 responded with an empty host key, despite our client only claiming
+ECDSA support. The hosts responsible for these responses included several kinds of routers
+and embedded devices.
+3.3 Transport Layer Security (TLS)
+In TLS, elliptic curves can arise in several locations in the protocol. RFC 4492 [9] speciﬁes
+elliptic curve cipher suites for TLS. All of the cipher suites speciﬁed in this RFC use the
+elliptic curve Diﬃe-Hellman (ECDH) key exchange. The ECDH keys may either be long-term
+(in which case they are reused for diﬀerent key exchanges) or ephemeral (in which case they
+are regenerated for each key exchange). TLS certiﬁcates also contain a public key that the
+server uses to authenticate itself; with ECDH key exchanges, this public key may be either
+ECDSA or RSA.
+ECC support was added to TLS [9] through an additional set of cipher suites and three
+extensions in the client and server hello messages. The cipher suites indicate support for a
+particular selection of key exchange, identity veriﬁcation, encryption, and message authen-
+ticity algorithms. For example, the cipher suite TLS ECDHE RSA WITH AES 128 CBC SHA uses
+ephemeral ECDH for a key exchange, signed with an RSA key for identity veriﬁcation, and
+uses AES-128 [19] in CBC mode for encryption and the SHA-1 hash function in an HMAC
+for message authentication. In addition, if a cipher suite that involves ECC is desired, the
+client must include a set of supported elliptic curves in a TLS extension in its client hello
+message.
+Unlike in SSH, a TLS server does not send its full preference of cipher suites or curves
+that it supports. Rather, the client sends its list of supported cipher suites and elliptic curves,
+and the server either replies with a single cipher suite from that list or closes the connection
+if it does not support any cipher suites in common with the client. If the suite requires ECC,
+the server similarly includes only a single curve type along with the key or signature. This
+makes learning which curves a server supports more diﬃcult; a client must use multiple TLS
+connections to oﬀer a varying set of curves in order to learn a server’s support and ordered
+preference.
+In October 2013, we used ZMap [23] to scan the IPv4 address space on port 443, and
+used an event-driven program to send a specially crafted client hello message to each host
+with the port open. We oﬀered 38 ECDH and ECDHE cipher suites and 28 diﬀerent elliptic
+curves. Of the 30.2 million hosts with port 443 open, 2.2 million (7.2%) supported some form
+of ECDH and provided an ECC public key, along with information about which curve it uses.
+We then connected to these hosts again, excluding their known-supported curve type from
+our client hello’s curve list. We repeated this process until we had an empty curve list,
+the server disconnected with an error, or the server presented a curve that was not oﬀered
+to them (a violation of the protocol). This process allowed us to learn each server’s ordered
+preference of support across our 28 curves. We found the most commonly supported curve
+type across the 2.2 million ECC-supporting hosts was secp256r1, supported by 98% of hosts.
+The curves secp384r1 and secp521r1 were supported by 80% and 17% respectively, with
+the remaining curves supported by fewer than 3% of hosts each.
+We also found that the majority of hosts appear to prefer smaller curve sizes over larger
+ones. Of the 1.7 million hosts that supported more than one curve, 98.9% support a strictly
+increasing curve-size preference. For example, 354 767 hosts had a preference of “secp256r1,
+secp384r1, secp521r1”, while only 190 hosts had the opposite order of “secp521r1, secp384r1,
+secp256r1”. This suggests that most hosts prefer lower computation and bandwidth costs
+over increased security.
+3.4 Austrian e-ID
+Physical smart cards are increasingly being deployed for user authentication. These smart
+cards contain cryptographic hardware modules that perform the cryptographic computations;
+most often, these cards contain private keys for encryption and signatures. Elliptic curve
+cryptography is an attractive option for these types of deployments because of the decreased
+key size and computational complexity relative to RSA or large prime-order groups.
+Austria’s national e-ID cards contain either an RSA or ECDSA public key, and can be used
+to provide legally binding digital signatures. We collected 828 911 Citizen Card certiﬁcates
+from the LDAP database ldap.a-trust.at in January 2013. Each certiﬁcate contained a
+public key and an RSA signature from the certiﬁcate authority. 477 985 (58%) certiﬁcates
+contained an elliptic curve public key, and 477 785 parsed correctly using OpenSSL. Of these,
+253 047 used curve P-192, and 224 738 used curve P-256.
+4 Cryptographic Sanity Check
+There is long history of practical problems in cryptography related to insuﬃcient randomness.
+The most notorious example in recent history is the Debian OpenSSL vulnerability [52]: a 2006
+change in the code prevented any entropy from being incorporated into the OpenSSL entropy
+pool, so that the state of the pool was dependent only on the process ID and architecture of
+the host machine. A ﬁxed number of cryptographic keys, nonces, or other random values of
+a given size could ever be generated by these implementations. The problem was discovered
+in 2008.
+In 2012 two diﬀerent teams of researchers showed independently that a signiﬁcant number
+of RSA keys (not considering the keys aﬀected due to the Debian OpenSSL bug) are insecure
+due to insuﬃcient randomness [35, 30]. The latter paper also examined prime-order DSA
+SSH host keys and signatures, and found a signiﬁcant number of SSH host keys could be
+compromised due to poor randomness during signature generation. Most of the vulnerable
+keys were attributed to poor entropy available at ﬁrst boot on resource-limited embedded and
+headless devices such as routers. In 2013, another paper showed that a number of RSA keys
+obtained from Taiwan’s national Citizen Digital Certiﬁcate database could be factored [4] due
+to a malfunctioning hardware random number generator on cryptographic smart cards.
+In order to verify if similar vulnerabilities occur in the setting of elliptic curve cryptog-
+raphy, we gathered as much elliptic curve data as we could ﬁnd and performed a number of
+cryptographic sanity checks:
+4.1 Key Generation
+An elliptic curve public key is a point Q = dG which is a multiple of the generator G
+for 1 ≤d < n. Poor randomness might manifest itself as repeated values of d, and thus
+repeated public keys observed in the wild. In contrast to RSA, where poor random number
+generators and bugs have resulted in distinct RSA moduli that can be factored using the
+greatest common divisor algorithm when they share exactly one prime factor in common, an
+elliptic curve public key appears to have no analogous property. We are unaware of any similar
+mathematical properties of the public keys alone that might result in complete compromise
+of the private keys, and they are unlikely to exist because discrete logarithms have strong
+hardcore properties [10, 33].
+We checked for these problems by looking for collisions of elliptic curve points provided
+in public keys. In practice, however, it is not uncommon to encounter the same public key
+multiple times: individuals can use the same key for multiple transactions in Bitcoin or the
+same key pair can be used to protect diﬀerent servers owned by the same entity.

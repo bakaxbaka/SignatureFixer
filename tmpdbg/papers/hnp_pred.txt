@@ -1,0 +1,621 @@
+On Bounded Distance Decoding with Predicate:
+Breaking the “Lattice Barrier” for the Hidden
+Number Problem
+Martin R. Albrecht1 and Nadia Heninger2⋆
+1 Information Security Group, Royal Holloway, University of London
+2 University of California, San Diego
+Abstract. Lattice-based algorithms in cryptanalysis often search for a
+target vector satisfying integer linear constraints as a shortest or closest
+vector in some lattice. In this work, we observe that these formulations
+may discard non-linear information from the underlying application that
+can be used to distinguish the target vector even when it is far from being
+uniquely close or short.
+We formalize lattice problems augmented with a predicate distinguishing
+a target vector and give algorithms for solving instances of these prob-
+lems. We apply our techniques to lattice-based approaches for solving
+the Hidden Number Problem, a popular technique for recovering secret
+DSA or ECDSA keys in side-channel attacks, and demonstrate that our
+algorithms succeed in recovering the signing key for instances that were
+previously believed to be unsolvable using lattice approaches. We carried
+out extensive experiments using our estimation and solving framework,
+which we also make available with this work.
+1 Introduction
+Lattice reduction algorithms [53, 72, 73, 34, 61] have found numerous applications
+in cryptanalysis. These include several general families of cryptanalytic appli-
+cations including factoring RSA keys with partial information about the secret
+key via Coppersmith’s method [26, 64], the (side-channel) analysis of lattice-
+based schemes [57, 8, 44, 4, 27], and breaking (EC)DSA and Diﬃe-Hellman via
+side-channel attacks using the Hidden Number Problem.
+In the usual statement of the Hidden Number Problem (HNP) [21], the
+adversary learns some most signiﬁcant bits of random multiples of a secret integer
+modulo some known integer. This information can be written as integer-linear
+⋆ The research of MA was supported by EPSRC grants EP/S020330/1, EP/S02087X/1,
+by the European Union Horizon 2020 Research and Innovation Program Grant 780701
+and Innovate UK grant AQuaSec; NH was supported by the US NSF under grants
+no. 1513671, 1651344, and 1913210. Part of this work was done while the authors
+were visiting the Simons Institute for the Theory of Computing. Our experiments
+were carried out on Cisco UCS equipment donated by Cisco and housed at UCSD.
+The full version of this work is available at https://ia.cr/2020/1540.
+constraints on the secret. The problem can then be formulated as a variant of the
+Closest Vector Problem (CVP) known as Bounded Distance Decoding (BDD),
+which asks one to ﬁnd a uniquely closest vector in a lattice to some target point
+t. A suﬃciently strong lattice reduction will ﬁnd this uniquely close vector, which
+can then be used to recover the secret.
+The requirement of uniqueness constrains the instances that can be successfully
+solved with this approach. In short, a ﬁxed instance of the problem is not expected
+to be solvable when few samples are known, since there are expected to be many
+spurious lattice points closer to the target than the desired solution. As the
+number of samples is increased, the expected distance between the target and
+the lattice shrinks relative to the normalized volume of the lattice, and at some
+point the problem is expected to become solvable. For some choices of input
+parameters, however, the problem may be infeasible to solve using these methods
+if the attacker cannot compute a suﬃciently reduced lattice basis to ﬁnd this
+solution; if the number of spurious non-solution vectors in the lattice does not
+decrease fast enough to yield a unique solution; or if simply too few samples
+can be obtained. In the context of the Hidden Number Problem, the expected
+infeasibility of lattice-based algorithms for certain parameters has been referred
+to as the “lattice barrier” in numerous works [12, 30, 79, 75, 66].
+Nevertheless, the initial cryptanalytic problem may remain well deﬁned even
+when the gap between the lattice and the target is not small enough to expect a
+unique closest vector. This is because formulating a problem as a HNP instance
+omits information: the cryptanalytic applications typically imply non-linear
+constraints that restrict the solution, often to a unique value. For example, in
+the most common application of the HNP to side-channel attacks, breaking
+ECDSA from known nonce bits [18, 45], the desired solution corresponds to the
+discrete logarithm of a public value that the attacker knows. We may consider
+such additional non-linear constraints as a predicate h(·) that evaluates to true
+on the unique secret and false elsewhere. Thus, we may reformulate the search
+problem as a BDD with predicate problem: ﬁnd a vector v in the lattice within
+some radius R to the target t such that f(v −t) := h(g(v −t)) returns true,
+where g(·) is a function extracting a candidate secret s from the vector v −t.
+Contributions. In this work, we deﬁne the BDD with predicate problem and
+give algorithms to solve it. To illustrate the performance of our algorithms, we
+apply them to the Hidden Number Problem lattices arising from side-channel
+attacks recovering ECDSA keys from known nonce bits.
+In more detail, in Section 3, we give a simple reﬁnement of the analysis of the
+“lattice barrier” and show how this extends the range of parameters that can be
+solved in practice.
+In Section 4 we deﬁne the Bounded Distance Decoding with predicate
+(BDDα,f(·)) and the unique Shortest Vector with predicate ( uSVPf(·)) prob-
+lems and mention how Kannan’s embedding enables us to solve the former via
+the latter.
+We then give two algorithms for solving the unique Shortest Vector with
+predicate problem in Section 5. One is based on lattice-point enumeration and in
+principle supports any normRof the target vector. This algorithm exploits the fact
+that enumeration is exhaustive search inside a given radius. Our other algorithm
+is based on lattice sieving and is expected to succeed when R ≤
+√
+4/3 ·gh(Λ)
+where gh(Λ) is the expected norm of a shortest vector in a lattice Λ under the
+Gaussian heuristic (see below). 3 This algorithm makes use of the fact that a
+sieve produces a database of short vectors in the lattice, not just a single shortest
+vector. Thus, the key observation exploited by all our algorithms is that eﬃcient
+SVP solvers are expected to consider every vector of the lattice within some
+radius R. Augmenting these algorithms with an additional predicate check then
+follows naturally. In both algorithms the predicate is checked (R/gh(Λ))d+o(d)
+times, where d is the dimension of the lattice, which is asymptotically smaller
+than the cost of the original algorithms.
+In Section 6, we experimentally demonstrate the performance of our algorithms
+in the context of ECDSA signatures with partial information about nonce bits.
+Here, although the lattice-based HNP algorithm has been a well-appreciated tool
+in the side-channel cryptanalysis community for two decades [65, 55, 17, 70, 71,
+63, 80, 46, 24], we show how our techniques allow us to achieve previous records
+with fewer samples, bring problem instances previously believed to be intractable
+into feasible range, maximize the algorithm’s success probability when only a
+ﬁxed number of samples are available, increase the algorithm’s success probability
+in the presence of noisy data, and give new tradeoﬀs between computation time
+and sample collection. We also present experimental evidence of our techniques’
+ability to solve instances given fewer samples than required by the information
+theoretic limit for lattice approaches. This is enabled by our predicate uniquely
+determining the secret.
+Our experimental results are obtained using a Sage [74]/Python framework
+for cost-estimating and solving uSVP instances (with predicate). This framework
+is available at [7] and attached to the electronic version of this work. We expect
+it to have applications beyond this work.
+Related work. There are two main algorithmic approaches to solving the
+Hidden Number Problem in the cryptanalytic literature. In this work, we focus
+on lattice-based approaches to solving this problem. An alternative approach, a
+Fourier analysis-based algorithm due to Bleichenbacher [18], has generally been
+considered to be more robust to errors, and able to solve HNP instances with
+fewer bits known, but at the cost of requiring orders of magnitude more samples
+and a much higher computational cost [30, 12, 75, 13]. Our work can be viewed as
+extending the applicability of lattice-based HNP algorithms well into parameters
+believed to be only tractable to Bleichenbacher’s algorithm, thus showing how
+3 We note that this technique conﬂicts with “dimensions for free” [32, 5] and thus the
+expected performance improvement when arbitrarily many samples are available is
+smaller compared to state-of-the-art sieving (see Section 5.3 for details).
+these instances can be solved using far fewer samples and less computational time
+in practice (see Table 4), while gracefully handling input errors (see Figure 7).
+In particular, our work can be considered a systematization, formalization,
+and generalization of folklore (and often ad hoc) techniques in the literature on
+lattice-reduction aided side-channel attacks such as examining the entire reduced
+basis to ﬁnd the target vector [22, 46] or the technique brieﬂy mentioned in [17]
+of examining candidates after each “tour” of BKZ (BKZ is described below). 4
+More generally, our work can be seen as a continuation of a line of recent
+works that “open up” SVP oracles, i.e. that forgo treating (approximate) SVP
+solvers as black boxes inside algorithms. In particular, a series of recent works
+have taken advantage of the exponentially many vectors produced by a sieve:
+in [10] the authors use the exponentially many vectors to cost the so-called
+“dual attack” on LWE [69]; in [32, 52, 5] the authors exploit the same property
+to improve sieving algorithms and block-wise lattice reduction; and in [31] the
+authors use this fact to compute approximate Voronoi cells.
+Our work may also be viewed in line with [27], which augments a BDD
+solver for LWE with “hints” by transforming the input lattice. While these
+hints must be linear(izable) (with noise), the authors demonstrate the utility
+of integrating such hints to reduce the cost of ﬁnding a solution. On the one
+hand, our approach allows us to incorporate arbitrary, non-linear hints, as long
+as these can be expressed as an eﬃciently computable predicate; this makes
+our approach more powerful. On the other hand, the scenarios in which our
+techniques can be applied are much more restricted than [27]. In particular, [27]
+works for any lattice reduction algorithm and, speciﬁcally, for block-wise lattice
+reduction. Our work, in contrast, does not naturally extend to this setting; this
+makes our approach less powerful in comparison. We discuss this in Section 5.4.
+2 Preliminaries
+We denote the logarithm with base two by log( ·). We start indexing at zero.
+2.1 Lattices
+A lattice Λ is a discrete subgroup of Rd. When the rows b0,..., bd−1 of B
+are linearly independent we refer to it as the basis of the lattice Λ(B) =
+{∑vi ·bi |vi ∈Z}, i.e. we consider row-representations for matrices in this work.
+The algorithms considered in this work make use of orthogonal projections πi :
+Rd ↦→span (b0,..., bi−1)⊥for i= 0,...,d −1. In particular π0(·) is the identity.
+The Gram–Schmidt orthogonalization (GSO) of B is B∗= (b∗
+0,..., b∗
+d−1), where
+the Gram–Schmidt vector b∗
+i is πi(bi). Then b∗
+0 = b0 and b∗
+i = bi −∑i−1
+j=0 µi,j ·
+b∗
+j for i= 1,...,d −1 and µi,j =
+⟨bi,b∗
+j ⟩
+⟨b∗
+j ,b∗
+j ⟩. Norms in this work are Euclidean and
+4 For the purposes of this work, the CVP technique used in [17] is not entirely clear
+from the account given there. We conﬁrmed with the authors that is the analogous
+strategy to their SVP approach: CVP enumeration interleaved with tours of BKZ.
+denoted ∥·∥. We write λi(Λ) for the radius of the smallest ball centred at the
+origin containing at least i linearly independent lattice vectors, e.g. λ1(Λ) is the
+norm of a shortest vector in Λ.
+The Gaussian heuristic predicts that the number |Λ∩B| of lattice points
+inside a measurable body B⊂ Rn is approximately equal to Vol(B)/Vol(Λ).
+Applied to Euclidean d-balls, it leads to the following prediction of the length of
+a shortest non-zero vector in a lattice.
+Deﬁnition 1 (Gaussian heuristic). We denote by gh(Λ) the expected ﬁrst
+minimum of a lattice Λaccording to the Gaussian heuristic. For a full rank lattice
+Λ⊂Rd, it is given by:
+gh(Λ) =
+( Vol(Λ)
+Vol(Bd(1))
+)1/d
+= Γ
+(
+1 + d
+2
+)1/d
+√π ·Vol(Λ)1/d ≈
+√
+d
+2πe ·Vol(Λ)1/d
+where Bd(R) denotes the d-dimensional Euclidean ball with radius R.
+2.2 Hard problems
+A central hard problem on lattices is to ﬁnd a shortest vector in a lattice.
+Deﬁnition 2 (Shortest Vector Problem (SVP)). Given a lattice basis B,
+ﬁnd a shortest non-zero vector in Λ(B).
+In many applications, we are interested in ﬁnding closest vectors, and we have
+the additional guarantee that our target vector is not too far from the lattice.
+This is known as Bounded Distance Decoding.
+Deﬁnition 3 ( α-Bounded Distance Decoding (BDD α)). Given a lattice
+basis B, a vector t, and a parameter 0 < αsuch that the Euclidean distance
+between t and the lattice dist(t,B) <α·λ1(Λ(B)), ﬁnd the lattice vector v ∈Λ(B)
+which is closest to t.
+To guarantee a unique solution, it is required that α <1/2. However, the
+problem can be generalized to 1 /2 ≤α< 1, where we expect a unique solution
+with high probability. Asymptotically, for any polynomially-bounded γ ≥1 there
+is a reduction from BDD 1/(
+√
+2 γ) to uSVP γ [14]. The unique shortest vector
+problem (uSVP) is deﬁned as follows:
+Deﬁnition 4 ( γ-unique Shortest Vector Problem (uSVPγ)). Given a lat-
+tice Λ such that λ2(Λ) >γ ·λ1(Λ) ﬁnd a nonzero vector v ∈Λ of length λ1(Λ).
+The reduction is a variant of the embedding technique, due to Kannan [48],
+that constructs
+L =
+(B 0
+t τ
+)
+where τ is some embedding factor (the reader may think of τ = E
+[
+∥t −v∥/
+√
+d
+]
+).
+If v is the closest vector to t then the lattice Λ(L) contains (t −v,τ) which is
+small.
+2.3 Lattice algorithms
+Enumeration [68, 47, 33, 73, 60, 2] solves the following problem: Given some
+matrix B and some bound R, ﬁnd v = ∑d−1
+i=0 ui·bi with ui ∈Z where at least one
+ui ̸= 0 such that ∥v∥2 ≤R2. By picking the shortest vector encountered, we can
+use lattice-point enumeration to solve the shortest vector problem. Enumeration
+algorithms make use of the fact that the vector v can be rewritten with respect
+to the Gram–Schmidt basis:
+v =
+d−1∑
+i=0
+ui ·bi =
+d−1∑
+i=0
+ui ·
+
+b∗
+i +
+i−1∑
+j=0
+µi,j ·b∗
+j
+
+=
+d−1∑
+j=0
+
+uj +
+d−1∑
+i=j+1
+ui ·µij
+
+·b∗
+j.
+Since all the b∗
+i are pairwise orthogonal, we can express the norms of projec-
+tions of v simply as
+∥πk(v) ∥2 =
+
+d−1∑
+j=k
+
+uj +
+d−1∑
+i=j+1
+uiµi,j
+
+b∗
+j
+
+2
+=
+d−1∑
+j=k
+
+uj +
+d−1∑
+i=j+1
+uiµi,j
+
+
+2
+·∥b∗
+j∥2.
+In particular, vectors do not become longer by projecting. Enumeration algorithms
+exploit this fact by projecting the problem down to a one dimensional problem of
+ﬁnding candidate πd(v) such that ∥πd(v) ∥2 ≤R2. Each such candidate is then
+lifted to a candidate πd−1(v) subject to the constraint ∥πd−1 (v) ∥2 ≤R2.
+That is, lattice-point enumeration is a depth-ﬁrst tree search through a tree
+deﬁned by the ui. It starts by picking a candidate for ud−1 and then explores
+the subtree “beneath” this choice. Whenever it encounters an empty interval of
+choices for some ui it abandons this branch and backtracks. When it reaches the
+leaves of the tree, i.e. u0 then it compares the candidate for a full solution to the
+previously best found and backtracks.
+Lattice-point enumeration is expected [42] to consider
+Hk = 1
+2 ·Vol(Bd−k(R))
+∏d−1
+i=k ∥b∗
+i∥
+nodes at level k and ∑d−1
+k=0 Hk nodes in total. In particular, enumeration ﬁnds
+the shortest non-zero vector in a lattice in dd/(2e)+o(d) time and polynomial
+memory [42]. It was recently shown that when enumeration is used as the SVP
+oracle inside block-wise lattice reduction the time is reduced to dd/8+o(d) [2].
+However, the conditions for this improvement are mostly not met in our setting.
+Signiﬁcant gains can be made in lower-order terms by considering a diﬀerent Ri
+on each level 0 ≤i<d instead of a ﬁxed R. Since this prunes branches of the
+search tree that are unlikely to lead to a solution, this is known as “pruning”
+in the literature. When the Ri are chosen such that the success probability is
+exponentially small in d we speak of “extreme pruning” [35].
+A state-of-the-art implementation of lattice-point enumeration can be found
+in FPLLL [76]. This is the implementation we adapt in this work. It visits about
+2
+d log d
+2e −0.995 d+16.25 nodes to solve SVP in dimension d [2].
+Sieving [1, 59, 16, 51, 15, 43] takes as input a list of lattice points, L⊂Λ, and
+searches for integer combinations of these points that are short. If the initial list
+is suﬃciently large, SVP can be solved by performing this process recursively.
+Each point in the initial list can be sampled at a cost polynomial in d[50]. Hence
+the initial list can be sampled at a cost of |L|1+o(1).
+Sieves that combine kpoints at a time are called k-sieves; 2-sieves take integer
+combinations of the form u ±v with u,v ∈L and u ̸= ±v. Heuristic sieving
+algorithms are analyzed under the heuristic that the points in Lare independently
+and identically distributed uniformly in a thin spherical shell. This heuristic was
+introduced by Nguyen and Vidick in [67]. As a further simpliﬁcation, it is assumed
+that the shell is very thin and normalized such that L is a subset of the unit
+sphere in Rd. As such, a pair ( u,v) is reducible if and only if the angle between
+u and v satisﬁes θ(u,v) < π/3, where θ(u,v) = arccos (⟨u,v⟩/(∥u∥·∥v∥)),
+arccos(x) ∈[0,π]. Under these assumptions, we require |L|≈
+√
+4/3
+d
+in order to
+see “collisions”, i.e. reductions. Lattice sieves are expected to output a list of
+(4/3)d/2+o(d) short lattice vectors [32, 5]. The asymptotically fastest sieve has a
+heuristic running time of 2 0.292 d+o(d) [15].
+We use the performant implementations of lattice sieving that can be found
+in G6K [78, 5] in this work, which includes a variant of [16] (“BGJ1”) and [43]
+(3-Sieve). BGJ1 heuristically runs in time 2 0.349 d+o(d) and memory 20.205 d+o(d).
+The 3-Sieve heuristically runs in time 2 0.372 d+o(d) and memory 20.189 d+o(d).5
+BKZ [72, 73] can be used to solve the unique shortest vector problem and thus
+BDD. BKZ makes use of an oracle that solves the shortest vector problem in
+dimension β. This oracle can be instantiated using enumeration or sieving. The
+algorithm then asks the oracle to solve SVP on the ﬁrst block of dimension β
+of the input lattice, i.e. of the lattice spanned by b0,..., bβ−1. This vector is
+then inserted into the basis and the algorithm asks the SVP oracle to return
+a shortest vector for the block π1 (b1) ,...,π 1 (bβ). The algorithm proceeds in
+this fashion until it reaches πd−2 (bd−2) ,πd−2 (bd−1). It then starts again by
+considering b0,..., bβ−1. One such loop is called a “tour” and the algorithm will
+continue with these tours until no more (or only small changes) are made to the
+basis. For many applications a small, constant number of tours is suﬃcient for
+the basis to stabilize.
+The key parameter for BKZ is the block size β, i.e. the maximal dimension of
+the underlying SVP oracle, and we write “BKZ- β”. The expected norm of the
+shortest vector found by BKZ- β and inserted into the basis as b0 for a random
+lattice is ∥b0∥≈ δd−1
+β ·Vol(Λ)1/d for some constant δβ ∈O
+(
+β1/(2 β))
+depending
+on β.6
+5 In G6K the 3-Sieve is conﬁgured to use a database of size 2 0.205 d+o(d) by default,
+which lowers its time complexity.
+6 The constant is typically deﬁned as ∥b0∥≈ δd
+β ·Vol(Λ)1/d in the literature. From the
+perspective of the (worst-case) analysis of underlying algorithms, though, normalizing
+by d−1 rather than d is appropriate.
+In [10] the authors formulate a success condition for BKZ- β solving uSVP on
+a lattice Λin the language of solving LWE. Let e be the unusually short vector in
+the lattice and let c∗
+i be the Gram–Schmidt vectors of a typical BKZ-β reduced
+basis of a lattice with the same volume and dimension as Λ. Then in [10] it is
+observed that when BKZ considers the last full block πd−β(bd−β) ,...π d−β(bd−1)
+it will insert πd−β(e) at index d−β if that projection is the shortest vector in
+the sublattice spanned by the last block. Thus, when
+∥πd−β(e) ∥<∥c∗
+d−β∥ (1)
+≈
+√
+β/d·E[∥e∥] <δ2β−d−1
+β ·Vol(Λ)1/d (2)
+we expect the behavior of BKZ- β on our lattice Λ to deviate from that of a
+random lattice. This situation is illustrated in Figure 1. Indeed, in [6] it was
+shown that once this event happens, the internal LLL calls of BKZ will “lift”
+and recover e. Thus, these works establish a method for estimating the required
+block size for BKZ to solve uSVP instances. We use this estimate to choose
+parameters in Section 6: given a dimension d, volume Vol(Λ) and E[∥e∥], we pick
+the smallest β such that Inequality (2) is satisﬁed. Note, however, that in small
+dimensions this reasoning is somewhat complicated by “double intersections” [6]
+and low “lifting” probability [27]; as a result estimates derived this way are
+pessimistic for small block sizes. In that case, the model in [27] provides accurate
+predictions. Instead of only running BKZ, a performance gain can be achieved
+by following BKZ with one SVP/CVP call in a larger dimension than the BKZ
+block size [55, 5].
+0 20 40 60 80 100 120 140 160 180
+2
+4
+6
+8
+d−β
+projection index i
+log2(∥·∥)
+∥c⋆
+i∥
+∥πi(e)∥
+Fig. 1: BKZ−βuSVP Success Condition. Expected norms for lattices of dimension
+d = 183 and volume qm−n after BKZ-β reduction for LWE parameters n =
+65,m = 182 ,q = 521, standard deviation σ = 8 /
+√
+2π and β = 56. BKZ is
+expected to succeed in solving a uSVP instance when the two curves intersect at
+index d−β as shown, i.e. when Inequality (1) holds. Reproduced from [6].
+2.4 The Hidden Number Problem
+In the Hidden Number Problem (HNP) [21], there is a secret integer α and a
+public modulus n. Information about α is revealed in the form of what we call
+samples: an oracle chooses a uniformly random integer 0 < ti < n, computes
+si = ti ·αmod n where the modular reduction is taken as a unary operator so
+that 0 ≤si <n, and reveals some most signiﬁcant bits of si along with ti. We
+will write this as ai + ki = ti ·αmod n, where ki <2ℓ for some ℓ∈Z that is a
+parameter to the problem. For each sample, the adversary learns the pair ( ti,ai).
+We may think of the Hidden Number Problem as 1-dimensional LWE [69].
+2.5 Breaking ECDSA from nonce bits
+Many works in the literature have exploited side-channel information about
+(EC)DSA nonces by solving the Hidden Number Problem (HNP), e.g. [65, 19,
+55, 12, 70, 75, 71, 63, 80, 46], since the seminal works of Bleichenbacher [18] and
+Howgrave-Graham and Smart [45]. The latter solves HNP using lattice reduction;
+the former deploys a combinatorial algorithm that can be cast as a variant of
+the BKW algorithm [20, 3, 49, 40]. The latest in this line of research is [13]
+which recovers a key from less than one bit of the nonce using Bleichenbacher’s
+algorithm. More recently, in [56] the authors found the ﬁrst practical attack
+scenario that was able to make use of Boneh and Venkatesan’s [21] original
+application of the HNP to prime-ﬁeld Diﬃe-Hellman key exchange.
+Side-channel attacks. Practical side-channel attacks against ECDSA typically
+run in two stages. First, the attacker collects many signatures while performing
+side-channel measurements. Next, they run a key recovery algorithm on a suitably
+chosen subset of the traces. Depending on the robustness of the measurements,
+the data collection phase can be quite expensive. As examples, in [62] the authors
+describe having to repeat their attack 10,000 to 20,000 times to obtain one byte
+of information; in [37] the authors measured 5,000 signing operations, each taking
+0.1 seconds, to obtain 114 usable traces; in [63] the authors describe generating
+40,000 signatures in 80 minutes in order to obtain 35 suitable traces to carry out
+an attack.
+Thus in the side-channel literature, minimizing the amount of data required
+to mount a successful attack is often an important metric [70, 46]. Using our
+methods as described below will permit more eﬃcient overall attacks.
+ECDSA. The global parameters for an ECDSA signature are an elliptic curve
+E(Fp) and a generator point G on E of order n. A signing key is an integer
+0 ≤d<n , and the public verifying key is a point dG. To generate an ECDSA
+signature on a message hash h, the signer generates a random integer nonce
+k<n , and computes the values r= (kG)x where x subscript is the x coordinate
+of the point, and s= k−1 ·(h+ d·r) mod n. The signature is the pair ( r,s).
+ECDSA as a HNP. In a side-channel attack against ECDSA, the adversary
+may learn some of the most signiﬁcant bits of the signature nonce k. Without
+loss of generality, we will assume that these bits are all 0. Then rearranging the
+formula for the ECDSA signature s, we have −s−1 ·h+ k ≡s−1 ·r·dmod n,
+and thus a HNP instance with ai = −s−1 ·h, ti = s−1 ·r, and α= d.
+Solving the HNP with lattices. Boneh and Venkatesan give this lattice for
+solving the Hidden Number Problem with a BDD oracle:
+
+
+n 0 0 ··· 0 0
+0 n 0 ··· 0 0
+... ···
+0 0 0 ··· n 0
+t0 t1 t2 ··· tm−1 1/n
+
+
+The target is a vector ( a0,...,a m−1,0) and the lattice vector
+(t0 ·αmod n, ... ,tm−1 ·αmod n, α/n)
+is within √m+ 1 ·2ℓ of this target when |ki|<2ℓ.
+Most works solve this BDD problem via Kannan’s embedding i.e. by con-
+structing the lattice generated by the rows of
+
+
+n 0 0 ··· 0 0 0
+0 n 0 ··· 0 0 0
+... ...
+0 0 0 ··· n 0 0
+t0 t1 t2 ··· tm−1 2ℓ/n 0
+a0 a1 a2 ··· am−1 0 2 ℓ
+
+
+This lattice contains a vector
+(k0,k1,...,k m−1, 2ℓ ·α/n, 2ℓ)
+that has norm at most √m+ 2 ·2ℓ. This lattice also contains (0 ,0,..., 0,2ℓ,0),
+so the target vector is not generally the shortest vector. There are various
+improvements we can make to this lattice.
+Reducing the size of k by one bit. In an ECDSA input, k is generally positive, so
+we have 0 ≤ki <2ℓ. The lattice works for any sign of k, so we can reduce the
+bit length of k by one bit by writing k′
+i = ki−2ℓ−1. This modiﬁcation provides a
+signiﬁcant improvement in practice and is described in [65], but is not consistently
+taken advantage of in practical applications.
+Eliminating α. Given a set of input equations a0 + k0 ≡t0 ·αmod n,...,a m−1 +
+km−1 = tm−1 ·αmod n, we can eliminate the variable α and end up with a new
+set of equations a′
+1 + k1 ≡t′
+1 ·k0 mod n, ... ,a′
+m−1 + km−1 ≡t′
+m−1 ·k0 mod n.
+For each relation, t−1
+i ·(ai + ki) ≡t−1
+0 ·(a0 + k0) mod n; rearranging yields
+ai −ti ·t−1
+0 ·a0 + ki ≡ti ·t−1
+0 ·k0 mod n.
+Thus our new problem instance has m−1 relations with a′
+i = ai −ti ·t−1
+0 ·a0
+and t′
+i = ti ·t−1
+0 .
+This has the eﬀect of reducing the dimension of the above lattice by 1, and
+also making the bounds on all the variables equal-sized, so that normalization
+is not necessary anymore, and the vector (0 ,0,..., 0,2ℓ,0) is no longer in the
+lattice. Thus, the new target (k1,k2,...,k m−1,k0,2ℓ) is expected to be the unique
+shortest vector (up to signs) in the lattice for carefully chosen parameters. We
+note that this transformation is analogous to the normal form transformation for
+LWE [11]. From a naive examination of the determinant bounds, this transfor-
+mation would not be expected to make a signiﬁcant diﬀerence in the feasibility
+of the algorithm, but in the setting of this paper, where we wish to push the
+boundaries of the unique shortest vector scenario, it is crucial to the success of
+our techniques.
+Let w = 2 ℓ−1. With the above two optimizations, our new lattice Λ is
+generated by: 
+
+n 0 0 ··· 0 0 0
+0 n 0 ··· 0 0 0
+... ...
+0 0 0 ··· n 0 0
+t′
+1 t′
+2 t′
+3 ··· t′
+m−1 1 0
+a′
+1 a′
+2 a′
+3 ··· a′
+m−1 0 w
+
+
+and the target vector is vt = (k1 −w,k2 −w,...,k m−1 −w,k0 −w,w).
+The expected solution comes from multiplying the second to last basis vector
+with the secret (in this case, k0), adding the last vector, and reducing modulo n
+as necessary. The entries 1 and w are normalization values chosen to ensure that
+all the coeﬃcients of the short vector will have the same length.
+Diﬀerent-sized kis. We can adapt the construction to diﬀerent-sized ki satisfying
+|ki|<2ℓi by normalizing each column in the lattice by a factor of 2 ℓmax /2ℓi . [17]
+3 The “lattice barrier”.
+It is believed that lattice algorithms for the Hidden Number Problem “become
+essentially inapplicable when only a very short fraction of the nonce is known for
+each input sample. In particular, for a single-bit nonce leakage, it is believed that
+they should fail with high probability, since the lattice vector corresponding to
+the secret is no longer expected to be signiﬁcantly shorter than other vectors in
+the lattice” [13]. Aranha et al. [12] elaborate on this further: “there is a hard limit
+50 100 150 200 250 300 350 400
+252
+254
+256
+258
+m
+log(·)
+gh(Λ) 1-bit bias, max ∥v∥
+2-bit bias, max ∥v∥ 3-bit bias, max ∥v∥
+Fig. 2: Illustrating the “lattice barrier”. BDD is expected to become feasible when
+the length of the target vector ∥v∥is less than the Gaussian heuristic gh(Λ); we
+plot the upper bound in Equation (3) for log(n) = 256 against varying number
+of samples m.
+to what can be achieved using lattice reduction: due to the underlying structure
+of the HNP lattice, it is impossible to attack (EC)DSA using a single-bit nonce
+leak with lattice reduction. In that case, the ‘hidden lattice point’ corresponding
+to the HNP solution will not be the closest vector even under the Gaussian
+heuristic (see [66]), so that lattice techniques cannot work.” Similar points are
+made in [30, 79, 75]; in particular, in [79] it is estimated that a 3-bit bias for a
+256-bit curve is not easy and two bits is infeasible, and a 5- or 4-bit bias for a
+384-bit curve is not easy and three bits is infeasible.
+To see how prior work derived this “lattice barrier”, note that the volume of
+the lattice is
+Vol (Λ) = nm−1 ·w
+and the dimension is m+ 1. According to the Gaussian heuristic, we expect the
+shortest vector in the lattice to have norm
+gh (Λ) ≈Γ(1 + (m+ 1)/2)1/(m+1)
+√π ·Vol(Λ)1/(m+1)
+≈
+√
+m+ 1
+2 πe ·
+(
+nm−1 ·w
+)1/(m+1)
+.
+Also, observe that the norm of the target vector v satisﬁes
+∥v∥≤
+√
+m+ 1 ·w. (3)
+A BDD solver is expected to be successful in recovering v when ∥v∥<gh(Λ).
+We give a representative plot in Figure 2 comparing the Gaussian heuristic gh(Λ)
+against the upper bound of the target vectors in Equation (3) for 1, 2, and
+3-bit biases for a 256-bit ECDSA key recovery problem. The resulting lattice
+dimensions explain the diﬃculty estimates of [79].
+In this work, we make two observations. First, the upper bound for the target
+vector is a conservative estimate for its length. Since heuristically our problem

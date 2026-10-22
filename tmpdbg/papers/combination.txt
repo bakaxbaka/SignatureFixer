@@ -1,0 +1,293 @@
+Private Key Recovery Combination Attacks:
+On Extreme Fragility of Popular Bitcoin
+Key Management, Wallet and Cold Storage Solutions
+in Presence of Poor RNG Events
+Nicolas T. Courtois1 Pinar Emirdag2 Filippo Valsorda3
+1 University College London, UK
+2 Independent market structure professional, London, UK
+3 CloudFlare, London, UK
+Abstract. In this paper we study the question of key management and
+practical operational security in bitcoin digital currency storage systems.
+We study the security two most used bitcoin HD Wallet key management
+solutions (e.g. in BIP032 and in earlier systems). These systems have ex-
+tensive audit capabilities but this property comes at a very high price.
+They are excessively fragile. One small security incident in a remote
+corner of the system and everything collapses, all private keys can be re-
+covered and ALL bitcoins within the remit of the system can be stolen.
+Privilege escalation attacks on HD Wallet solutions are not new. In this
+paper we take it much further. We propose new more advanced combi-
+nation attacks in which the security of keys hold in cold storage can
+be compromised without executing any software exploit on the cold sys-
+tem, but through security incidents at operation such as bad random
+number or related random events.
+In our new attacks all bitcoins over whole large security domains can be
+stolen by people who have the auditor keys which are typically stored
+in hot systems connected to the Internet and can be stolen easily. Our
+combination attacks allow to recover private keys which none of the
+earlier attacks in isolation could hope to recover. Classical bad random
+attacks typically concern only very few bitcoin accounts, and only some
+very lucky holders of bitcoins can actually steal other people’s bitcoins.
+In this paper we go beyond identical random attacks and show several
+attacks which also work with related random events, which events are
+more probable and yet less likely to be detected before it is too late. We
+also present several attacks which work across distinct security domains
+which share no common setup, code or keys. Yet in certain circumstances
+all the bitcoins in each domain can be stolen . All our attacks are
+practical and realistic given the numerous relevant events have already
+happened in the bitcoin blockchain hundreds of times, some as recently
+as September 2014.
+It is not clear if this problem can be repaired, i.e. if there exists a key
+management solution with similar audit capabilities as BIP032 which
+would be immune against this sort of advanced combination attacks.
+Key Words: applied cryptography, bitcoin, key management, security
+management, audit capability, digital signatures, ECDSA, HD Wallets,
+BIP032, privilege escalation attacks, bad RNG, RFC6979.
+1 Introduction
+Bitcoin has been in existence for more nearly 6 years [15]. It is a digital
+currency, payment and ﬁnal clearing/settlement system and technology,
+a distributed property register and digital notary service, all in one.
+Current bitcoin suﬀers from a number of obvious and well known tech-
+nical problems: slow transactions acceptance [8], large storage at all full
+network nodes, poor anonymity [18, 13], high volatility, cyber attacks,
+to name just a few. In theory many diﬀerent digital currency systems
+could exist [3]. In practice no real alternatives to bitcoin exist: all major
+digital currencies are essentially clones of bitcoin with small variations.
+They massively reproduce bitcoin, massively re-use open source code of
+bitcoin, and inherit all the security problems of bitcoin such as studied
+in this paper.
+Bitcoins cultivates a certain type of “cryptographer’s dream” in which
+participants do not trust each other, yet are able to somewhat function
+through pure magic of modern cryptography [3, 9] rather than through
+trusting some ﬁnancial institutions. Cryptography moves from the status
+of disabling some attacks, ﬁxing the security shortcomings of current IT,
+to the status of enabler. Making possible new forms of distributed coop-
+erative business and services. Cryptography is a disruptive technology.
+1.1 Bitcoin and Key Management
+In this paper we look at the question of key management in bitcoin and
+other crypto currencies. This question actually becomes important for
+interesting technical reasons.
+1. First, bitcoin oﬀers pseudonymity but poor anonymity, cf. [18, 13].
+Using multiple keys helps to achieve better anonymity without really
+being a panacea.
+2. In addition bitcoin uses a non-orthodox elliptic curve, while in most
+cases public keys are only revealed at the ﬁrst spending transaction.
+Therefore it is recommended never to use the same key twice, in
+this way the attacker cannot know the public key in advance which
+makes key recovery attacks truly improbable; the attacker would
+need to compute an Elliptic Curve Discrete Log in matter of a few
+seconds cf. [10] in order to have a reasonable chance to double spend
+an existing quantity of bitcoins which was already spent.
+3. The questions of key management are important in order to insure
+reliable backup of bitcoin wallets. If a wallet contains randomly gen-
+erated keys, sooner or later it runs out of keys, and the backup does
+no longer allow to recover all the private keys and some bitcoins
+could be lost. The only solution known is to derive all keys in a
+deterministic way.
+4. There is also a question of cold storage of bitcoins, for example in
+a safe. Using random keys leads to large volumes of keys which are
+very hard to manage in practice for humans. Companies which do
+cold storage at a large scale for numerous customers need again use
+deterministic key management solutions. It appears that billions of
+dollars are currently stored in such systems.
+1.2 Holy Grail Bitcoin of Key Management: Audit
+Capability
+In the historical process of development of deterministic key manage-
+ment solutions in bitcoin, we have seen another “cryptographer’s dream”
+in operation. The idea that it could be possible to assure some level of
+transparency in bitcoin world without compromising security. The key
+question is the audit capability. For example in a ﬁnancial institution
+or broker ﬁrm we would like to give some people, auditors, the capacity
+to see all the transactions without being able to spend the money. Simi-
+larly in a cold storage system we we would like to know how much money
+we have at any moment. this capability is also essential in e-commerce
+scenarios, where the server connected to the Internet which accepts pay-
+ments must be able to generate public keys on the ﬂy, cf. see Section 2.
+This audit capacity is actually the source of all the trouble and the source
+of most attacks on this paper. The bottom line is that this “audit-ability
+dream” is somewhat possible with current public key cryptography, and
+yet somewhat deﬁcient, leading to numerous interesting attacks.
+This paper is organized as follows. In Section 2 we study the question of
+deterministic private key management. In Section 3 we look at generic
+solutions which allow to derive private and public keys with the audit
+capability. In Sec. 3.1 we look at a speciﬁc solutions which are speciﬁed in
+BIP032 and in Sec. 3.3 we describe the basic privilege escalation attack.
+In Section 4 we discuss the traditional bad RNG attacks on ECDSA,
+show that such events have occurred in bitcoin, and introduce more so-
+phisticated related random events. In Section 5 we describe new more
+general related random attacks.
+In Section 6 we describe three advanced combination attacks. In Section
+7 we describe three further attacks across two distinct domains which
+have no shared secrets. In Section 8 we show that these lead also to
+some 6 more analogous attacks in which instead of identical randoms,
+related randoms are generated by diﬀerent users, and also describe a
+more general attack with an arbitrary number of domains. Finally in
+Section 9 we show another practical attack scenario which takes it even
+one stop further: that similar attacks also work in a variety of practical
+scenarios where less bad or related randoms occur, however some events
+additional in which the private keys overlap have also been detected.
+2 Deterministic Private Key Management
+In symmetric cryptography we use deterministic key derivation functions
+for a number of reasons.
+1. They limit key exposure and they limit amount of data that the
+attacker can dispose of, for both traditional algorithmic and side-
+channel attacks.
+2. It avoids expensive storage of too many keys, avoids large databases
+and the problem of updating them as new devices join the system.
+Now for any system with public key cryptography, we can derive private
+keys in the same way, and then derive public keys from private keys on
+an individual basis, key per key. We call it Type 1 Wallets in bitcoin
+jargon.
+Fig. 1. The principle of Type 1 wallets.
+Many bitcoin applications use Type 1 solutions and their widespread ap-
+plication is attributed to Greg Maxwell, Pieter Wuille and other bitcoin
+developers [23, 22, 16]. Type 1 solutions typically derive keys by applying
+SHA256 to a master seed with an added counter n.
+Type 1 Wallets are secure (if SHA256 is secure) but not very practical.
+We would like to have audit capability: the capacity for auditors to see
+public keys but not private keys without again having all the problems
+implied by a large database of keys. This capacity is also needed in an
+e-commerce scenarios we would like a web site to be able to generate
+unique keys for receiving bitcoins for a large number of diﬀerent transac-
+tions without being able to spend any of the bitcoin funds (web servers
+are a big target for hackers). It also increases anonymity of commer-
+cial transactions knowing that the bitcoin blockchain is public (web sites
+which accept credit card payments do not have this problem).
+2.1 Type 2 Key Management Solutions
+The crucial property sought for a wallet to be a Type 2 solution is as
+follows. We want to have 2 derivation functions such that the following
+diagram commutes. For example PK3 should be the same whether it is
+computed by the Public derivation function or if it is computed from
+SK3. In addition the public seed should NOT reveal the private seed or
+any of the private keys. All the 4 derivations on the diagram should be
+done with one-way functions.
+Fig. 2. The principle of Type 2 wallets: the two key derivation functions must be such
+that the diagram commutes and public keys PKi obtained either way are the same.
+So far it is possible to see that the goal is achievable. We can propose
+solutions which satisfy these requirements. The main idea [attributed to
+Greg Maxwell and Peter Wuille] is as follows, cf. [23, 22, 16]. Both deriva-
+tion functions are essentially the same, however in the ”Private Type 2
+Derivation” function the private key is simply used to compute the cor-
+responding public key. We will use two distinct algebraic properties of
+ECDSA keys in order to be able to obtain two such solutions for ECDSA
+keys speciﬁcally. In fact more advanced solutions exist which have also
+two additional properties:
+1. They have additional long secrets beyond public/private keys. These
+additional secrets are called ”chain” values, so that knowing all
+ECDSA keys still does not allow to derive further keys.
+2. They work across several levels of further specializatiin/derivation
+(cf. Fig. 3, below), allowing very interesting and elegant key man-
+agement solutions with multiple hierarchical security domains and
+sub-domains.
+3. Similarly they allow to generate individual keys for individual trans-
+actions.
+Fig. 3. The principle of hierarchical Type 2 wallets across several levels: the diagram
+should commute with all possible paths giving the same result.
+Again it appears that the goal is achievable and we are going to describe
+some generic and one more speciﬁc solutions which seem to satisfy these
+requirements. We are going to need the following deﬁnitions:
+Deﬁnition 21. We call a security sub-domain a set of all the nodes
+in the DIRECTED graph as represented in Fig. 3, with all the nodes
+and leaves BELOW one point/edge, in the sense of the arrows, which
+corresponds to what can be computed: lower level keys can be computed
+from higher level, and public seeds CAN be computed from private seeds.
+Remark: The level of access on any user in an HD wallet system can be
+seen as a union of several security domains in the sense of Def. 21 above.
+However the possession of keys which give access to several domains can
+have unintended consequences, as a clever attacker will be sometimes able
+to gain access to additional security domains. See ourPrivilege Escalation
+Attack in Prop. 32 on page 11.
+3 Generic Solutions
+In this section we two generic solutions which works across an arbitrary
+number of levels. In this paper we only cover solutions with additional
+secrets (chain variables) so that seeds in Fig. 3 will now always be of
+speciﬁc form asymmetric key (left part) concatenated with a Chain vari-
+able C (right part). Both solutions are speciﬁc to ECDSA in the sense
+that a similar solution probably wouldn’t exist if a diﬀerent digital sig-
+nature scheme with less special algebraic/homorphic properties was used
+in bitcoin. It is possible to see that both solutions could also work with
+traditional DSA-like signatures. In this paper we will use the additive
+notation (as in ECDSA) and ignore their DSA versions. All attacks in
+this paper are totally independent of the elliptic curve used.
+We are going to need the following deﬁnition:
+Deﬁnition 31. We assume a public key cryptosystem such that the pri-
+vate key can be derived in an eﬃcient deterministic way from the public
+key (e.g. ECDSA). We call an Extended Private Keya concatenation of
+a private key and an additional secret xC which will be called Chain
+variable.
+We call an Extended Public Keya concatenation of a public key and an
+additional secret xC which under right circumstances it will be the same
+value as above.
+We call Neutering or N the operation which transforms an Extended
+Private Keyinto an Extended Public Keyas follows: we derive the public
+key for the left part by EC base point multiplication, and we copy the
+Chain variable xC, so we have
+N(k||xC) = (k.G||xC).
+This operation Nof Neutering is what is need to make diagrams such
+as in Fig. 3 commute. In all the solutions presented in this paper and
+on all pictures in this paper each of the horizontal arrows represents an
+application of Non extended keys with chain values.
+3.1 Two Solutions
+Interestingly, even though the problem is not completely trivial to solve,
+there two distinct major generic solutions to this problem known, both
+of which allow ﬂexible audit capabilities. By ﬂexible we mean that we
+can give auditors extended keys (cf. Def. 31) which allow audit of all
+operations in ANY security sub-domain as deﬁned in Def. 21 above, and
+which works down across an arbitrary number of levels. We present both
+solutions in Fig. 4 and Fig. 5 below.
+Fig. 4. A generic Solution1 using the EC scalar multiplication property, HM is an
+arbitrary OW function with 2 inputs called M and K. In practice HMAC can be used.
+Fig. 5. A generic Solution2 using the EC homomorphic property, HM is an arbitrary
+OW function with 2 inputs called M and K. In practice HMAC can be used.
+In all cases we denote by q be the order of the EC subgroup used. In
+bitcoin q = 2 256 −232 −977 we have. In both solutions if we assume
+that we apply Nto the inputs on the left side and we will get the inputs
+on the right side, the same relationship also holds for the two outputs,
+i.e. we can apply N to the outputs on the left side and we will get the
+same correct outputs on the right side. We refer to Proposition 31 and
+Corollary 31 below for a proof of correctness and applicability of these
+two solutions across an arbitrary number of levels as in Fig. 3. We have
+the following results:
+Proposition 31. For both Solution1 and Solution2 with notations as
+in Fig. 4 and Fig. 5 if we have that
+N(k||xC) = (K||xC).
+which means that K = k.G and xchain is the same on both sides, THEN
+then we obtain the right key with
+N(ki, ci) = (Ki, ci).
+or in other words we have Ki = ki.G and the same ci is obtained on
+both sides.
+Proof: The proof is obvious by following the identical values on the di-
+agram in Fig. 4 and Fig. 5. In Solution1 in Fig. 4 the public key Ki on
+the right hand side is the correct key for ki on the left because we have
+ki.G = (yLi ∗kL).G = yLi.(kL.G) = yLi.KL = Ki.
+In Solution2 in Fig. 5 and in BIP032 in Fig. 6 the public key Ki on the
+right hand side is the correct key for ki on the left because we have
+ki.G = (yLi + kL).G = yLi.G + kL.G = yLi.G + KL = Ki.
+More generally for both solutions and by induction it is easy to see that:
+Corollary 31. Both the solution of Fig. 4 and Fig. 5 can produce com-
+muting diagrams across an arbitrary number of levels such as in Fig. 3
+in which all directed paths produce exactly the same public keys.
+Remark 1 . Both solutions exploit two distinct properties on ECDSA
+keys. We have only two major solutions in Fig. 4/5 and it is NOT easy
+to produce similar solutions. It is not true that one could use an arbitrary
+group operation to combine yL with k and produce other solutions 4.
+Remark 2. Both solutions have been implemented and are very widely
+used in bitcoin community; in bitcoin exchanges, cold storage systems,
+wallet systems, electronic commerce solutions, trading solutions etc. The
+Solution1 is based on the initial proposal which has been used in vari-
+ous systems such as Electrum before it was changed on 30 April 2013 to
+implement Solution2 which is now standardized as part of BIP032 spec-
+iﬁcation and more widely used. It is not clear that Solution2 was ever
+meant to be more secure than Solution1, however it was claimed to be
+faster and easier to implement [22]. In this paper was show that Solu-
+tion2/BIP032 is NOT more secure than Solution1, and we show similar
+sort of attacks on both solutions.
+4 Quite possibly there would be NO solution at all if bitcoin has used a diﬀerent sort
+of digital signature scheme (e.g. Lamport signatures [6]) which does not have special
+algebraic properties.
+3.2 A Speciﬁc Solution: Details About BIP032
+BIP032 is a speciﬁc application of Solution2 based on HMAC-SHA512.
+Fig. 6.Details of BIP032 public and private key derivation mechanisms known as CDK
+or Child Key Derivation functions, both work together.
+Fig. 7. The ”Hardened” version of BIP032 private key derivation function when i ≥
+231. This is version is back again a Type1 solution like on Fig. 1. Here the ”compatible”
+public version does not exist and there is no way to derive public keys in bulk.

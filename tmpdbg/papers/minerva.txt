@@ -1,0 +1,563 @@
+Minerva: The curse of ECDSA nonces
+Systematic analysis of lattice attacks on noisy leakage
+of bit-length of ECDSA nonces
+Ján Jančár1, Vladimír Sedláček12, Petr Švenda1 and Marek Sýs1
+1 Masaryk University,
+2 Ca’ Foscari University of Venice
+{j08ny,vlada.sedlacek}@mail.muni.cz;{svenda,syso}@fi.muni.cz
+Abstract. We present our discovery1 of a group of side-channel vulnerabilities in imple-
+mentations of the ECDSA signature algorithm in a widely used Atmel AT90SC FIPS
+140-2 certiﬁed smartcard chip and ﬁve cryptographic libraries (libgcrypt, wolfSSL,
+MatrixSSL, SunEC/OpenJDK/Oracle JDK, Crypto++). Vulnerable implementations
+leak the bit-length of the scalar used in scalar multiplication via timing. Using leaked
+bit-length, we mount a lattice attack on a 256-bit curve, after observing enough
+signing operations. We propose two new methods to recover the full private key
+requiring just 500 signatures for simulated leakage data, 1200 for real cryptographic
+library data, and 2100 for smartcard data.
+The number of signatures needed for a successful attack depends on the chosen
+method and its parameters as well as on the noise proﬁle, inﬂuenced by the type of
+leakage and used computation platform. We use the set of vulnerabilities reported in
+this paper, together with the recently published TPM-FAIL vulnerability [MSE+20]
+as a basis for real-world benchmark datasets to systematically compare our newly
+proposed methods and all previously published applicable lattice-based key recovery
+methods. The resulting exhaustive comparison highlights the methods’ sensitivity
+to its proper parametrization and demonstrates that our methods are more eﬃcient
+in most cases. For the TPM-FAIL dataset, we decreased the number of required
+signatures from approximately 40000 to mere 900.
+Keywords: ECDSA · Hidden Number Problem · side-channel attack · lattice
+attack · smartcards
+1 Introduction
+The Elliptic Curve Digital Signature Algorithm (ECDSA) is a very popular digital signature
+algorithm, used among others in the TLS protocol [Res18], document signing and in
+blockchain applications. One of its main pitfalls is that it requires a unique nonce per
+signed message. Its fragility with regards to these nonces is well known. Any reuse of
+the nonce for a diﬀerent message trivially leads to key recovery, as was the case in the
+PlayStation 3 game console [FAIL10], which utilized a ﬁxed value for signing its binaries.
+While nonce reuse problems are to large extent mitigated by using deterministic
+generation of nonces as speciﬁed in RFC 6979 [Por13] or used in EdDSA [BDL+12], other
+potential issues can prove fatal. Knowing the nonce used for a single known message – or
+being able to brute-force it, as was the case for the Chromebook H1 chip [CrOS19] used
+for U2F authentication – leads to private key recovery as well. Even worse, ECDSA is
+one of the Schnorr-like [Sch89] signature schemes, featuring a linear relation between the
+nonce and the private key. Thus even partial information about the random nonces (such
+as knowledge of certain bits) can be suﬃcient to recover the private key, often via the use
+1See https://minerva.crocs.fi.muni.cz.
+2 Minerva: The curse of ECDSA nonces
+of lattice reduction techniques. The partial information can originate from implementation
+issues (such as a faulty random number generator or a biased sampling method), or it
+might be observed via side-channel attacks or even forced via fault injection.
+The already large, yet still incomplete list of past ECDSA-related vulnerabilities
+indicates a systemic diﬃculty in the implementation of secure, leakage-resistant ECDSA
+code. We developed a new leakage-testing tool, analyzed a variety of cryptographic libraries
+and devices, and found several with timing leakage during the ECDSA signing. In contrast
+to the more commonly used proof-based approach intrinsic to lattices, we focused on
+extensive heuristic comparison of existing and newly proposed methods on the benchmark
+data as collected from several real-world vulnerabilities and having diﬀerent noise proﬁles.
+The paper brings the following contributions in the area of lattice-based attack methods
+against real implementations of ECDSA:
+1. Discovery and responsible disclosure of a set of vulnerabilities in the implementation
+of ECDSA in a certiﬁed cryptographic chip and ﬁve cryptographic libraries that
+allow to extract the private key used (Section 3 and Section 4).
+2. Propositions of two new distinct methods for private key recovery, which can tolerate
+a certain number of errors in the estimation of nonce’s known bits (Section 5).
+3. A systematic and extensive comparison of the newly proposed and all previously
+published methods and their parameterization on the benchmark created using noise
+proﬁles observed in the real-world vulnerable implementations (Section 6). Notably,
+we show that newly proposed methods require an order of magnitude fewer signatures
+for a successful attack on the TPM-FAIL dataset [MSE+20].
+4. Release of an open-source tool2 for extensive analysis of ECC implementations for
+software cryptographic libraries and JavaCard smartcards.
+2 Related work
+The task of recovering the ECDSA private key given enough information about signature
+nonces can be seen as an instance of the Hidden Number Problem (HNP). The HNP was
+originally introduced by Boneh and Venkatesan [BV96] to prove the hardness of computing
+Diﬃe-Hellman secrets. They showed a way to solve it by transforming it into a Closest
+Vector Problem (CVP) instance, solvable via lattice reduction and Babai’s nearest plane
+algorithm [Bab86]. Howgrave-Graham and Smart [HS01] and Nguyen and Shparlinski
+[NS02; NS03] used the HNP to show that the (EC)DSA schemes are insecure if the attacker
+can obtain information about the most signiﬁcant bits of the nonces used. Since then,
+the HNP was used in many attacks against biased or leaked nonces in (EC)DSA, often
+utilizing side channels such as timing [ABuH+19; BT11; MSE+20], cache attacks [BH09;
+BvdPS+14; vdPSY15; FWC16; Rya19a; DME+18; Rya19b; WSB20], electromagnetic
+measurements and other side channels [GuHT+19; GPP+16; BFM+16].
+Other attacks utilizing the HNP include using information about nonce distribution
+[BH19] or fault injection in the case of the SM2 signature algorithm [LCL13]. There have
+also been some theoretical extensions [FGR12; GRV16; HR06]. Finally, a very diﬀerent
+approach was taken by Mulder et al. [MHM+13], where lattice reduction is used just as
+a processing step, and the core of the method lies in the Fast Fourier Transform. The
+method, also known as Bleichenbacher’s approach, allows more input errors in exchange
+for much more signatures than the lattice-based approach.
+The real device leakage and measurement noise proﬁles largely inﬂuence the input
+information and can cause errors, to which lattice-based methods are susceptible. Further-
+more, the parameter space for these methods is extensive. Thus so far, there is only a
+2 ECTester:https://github.com/crocs-muni/ECTester.
+Ján Jančár, Vladimír Sedláček, Petr ’venda and Marek Sýs 3
+limited systematic comparison of the eﬃciency of existing methods, evaluated based on the
+number of required input signatures (the fewer, the better). We addressed the situation
+and created such a comparison based on real-world noise proﬁles.
+3 The vulnerability
+The vulnerable devices and libraries (see Table 1 for a list) leak the bit-length of the
+scalar used in scalar multiplication on an elliptic curve through timing. The leakage is
+insigniﬁcant for many applications of scalar multiplication such as ECDH or key generation
+as only the bit-length of the private key is leaked, which represents a small amount of
+information about the private key, which is always the same.
+However, in ECDSA [NIST13], the bit-length of the random nonce is leaked. Such
+leakage is much more signiﬁcant as each signature represents new and usable information
+about the private key. When enough leaked information is accumulated, the private key
+can be completely recovered using lattice reduction techniques.
+Table 1: Libraries and devices we analyzed with respect to their leakage.
+Type Name Version/Model Scalar multiplier Leakage
+Library
+OpenSSL 1.1.1d Montgomery ladder1 no
+BouncyCasle 1.58 Comb method2 no
+SunEC JDK 7 - JDK 12 Window-NAF no
+Lopez-Dahab ladder yes
+WolfSSL 4.0.0 Sliding window yes3
+BoringSSL 974f4dddf Window method no
+libtomcrypt v1.18.2 Sliding window no
+libgcrypt 1.8.4 Double-and-add yes
+Botan 2.11.0 Window method4 no
+Microsoft CNG 10.0.17134.0 Window method no
+mbedTLS 2.16.0 Comb method no
+MatrixSSL 4.2.1 Sliding window yes
+Intel PP Crypto 2020 Window-NAF no
+Crypto++ 8.2 unknown yes
+Card
+Athena IDProtect 010b.0352.0005 unknown yes
+NXP JCOP3 J2A081, J2D081, J3H145 unknown no
+Inﬁneon JTOP 52GLA080AL, SLE78 unknown no
+G+D SmartCafe v6, v7 unknown no
+1 Applies the ﬁxed bit-length mitigation.
+2 Uses many scalar multiplication algorithms.
+3 Likely not exploitable, due to a small amount of leakage.
+4 Uses additive scalar blinding.
+3.1 Elliptic Curve Digital Signature Algorithm (ECDSA)
+The public domain parameters of the ECDSA consist of a standardized elliptic curveE
+over a ﬁnite ﬁeld and a generator pointGon E of prime ordern. To sign a hashed message
+H(m) with a private keyx∈Zn, the signer:
+1. generates a uniformly random value (“nonce”)k∈Z∗
+n,
+2. computes r= ([k]G)x (mod n), thex-coordinate of the point[k]G 3,
+3. computes s= k−1(H(m) +xr) (mod n) 3,
+4. outputs (r,s) as the signature ofH(m).
+3And returns to step 1. if the value equals0.
+4 Minerva: The curse of ECDSA nonces
+3.2 Leakage
+248 249 250 251 252 253 254 255 256
+nonce bit-length
+148500
+149000
+149500
+150000
+150500
+151000
+151500
+152000signature time ( s)
+0
+20
+40
+60
+80
+Figure 1: Heatmap of the signing duration and the bit-length of ECDSA nonces for
+500 000 signatures usingsecp256r1 curve on the Athena IDProtect card.
+For three out of ﬁve aﬀected libraries in Table 1 (libgcrypt, MatrixSSL, SunEC) and
+the aﬀected smartcard (Athena), the signing runtime directly depends on the bit-length
+of the nonce linearly: each additional bit represents one more iteration of a loop in
+scalar multiplication, which increases the runtime. The leakage can be clearly seen from
+powertraces of the card performing ECDSA signing in Figure 2.
+For implementations leaking just the noisy bit-length (libgcrypt, SunEC, Athena) the
+leakage can be modeled using three parameters: duration of constant time processing in
+signing (e.g., hashing) (base), duration of one iteration of the scalar multiplication loop
+(iter_time) and the standard deviation of the noise (sdev). For thesecp256r1 curve, the
+leakage L can be modelled as a random variable:
+L = base+ iter_time·B + N
+B ∼Geom(p= 1/2,(256,255,...,0))
+N ∼Norm(0,sdev2)
+(1)
+where B represents the bit-length with a truncated geometric distribution andN
+the noise. Only two of the above parameters,iter_time and sdev, aﬀect how much the
+implementation leaks; we will use them to assess how easy it is to mount an attack.
+In the case of wolfSSL and its sliding window scalar multiplication implementation,
+the dependency is more complex, and the leakage much smaller. Thus we consider it to be
+leaking, yet not likely exploitable. The MatrixSSL implementation also leaks the Hamming
+weight of a scalar: each non-zero bit increases the computation runtime. The Crypto++
+library leaks the bit-length and other unidentiﬁed information.
+3.3 Causes
+We identiﬁed two main categories of root causes for the reported group of vulnerabilities.
+While the ﬁrst one stems from an intricate relation between the ECDSA nonce, the
+private key, and the resulting signature, the second one relates to the general diﬃculty of
+implementing non-leaking scalar multiplication.
+3.3.1 Nonce issues
+The susceptibility of (EC)DSA nonces to lattice attacks does not seem to be widely known
+amongst developers of cryptographic software. There are four main issues regarding nonce
+Ján Jančár, Vladimír Sedláček, Petr ’venda and Marek Sýs 5
+Figure 2: The visible leakage of nonce’s bit-length on a power consumption trace of the
+Athena IDProtect smartcard as captured by an ordinary oscilloscope at 40MHz
+sampling frequency for three signatures (aligned) with nonces having 0, 1 and 5
+leading zero bits. The zoomed region of the whole ECDSA operation displays
+the diﬀerence at the end of the multiplication operation. The pattern
+corresponding to a single iteration of the scalar multiplication algorithm is
+clearly discernible, allowing an attacker with physical access to a card to
+establish the bit-length of the nonces precisely and with no error. Note that
+captured powertrace is presented only to highlight the root cause of
+vulnerability – the oscilloscope is not required for the successful attack.
+use in (EC)DSA: nonce reuse, the bias in nonce randomness, nonce bit-length leaks, and
+other leaks of partial information about nonces. Due to the aforementioned lattice attacks
+and their variants, all of these issues might lead to a private key recovery attack.
+Deterministic generation of nonces, as done in EdDSA3 [BDL+12] or RFC6979 [Por13]
+mitigates the issues of nonce reuse and nonce bias. However, it does not address the latter
+two in any signiﬁcant way. Deterministic generation of nonces might help the attacker
+in case the attacker has a noisy side-channel leaking information about the nonce. If the
+attacker can observe the signing of the same message multiple times, they might use the
+fact that the same nonce was used to reduce the noise in the side-channel signiﬁcantly.
+3.3.2 Leaky scalar multiplication
+Not leaking the bit-length of the scalar used in scalar multiplication is surprisingly hard.
+Take almost any algorithm that processes the scalar in a left to right fashion – e.g., the
+Montgomery ladder [Mon87] – and instantiate it with incomplete addition formulas (that
+cannot correctly compute∞+Qor 2∞ in a side-channel indistinguishable way fromP+Q
+and 2P). The result introduces a side-channel leaking the bit-length. At the start of the
+ladder that computes a multiple of a pointG, the two ladder variables are initialised either
+as R0 = ∞, R1 = G or asR0 = G, R1 = 2G, depending on the used algorithm.
+In the ﬁrst case, the computation might start at any bit larger than the most signiﬁcant
+set bit in the scalar, i.e., it can be a ﬁxed loop bound, for example, on the bit-length
+of the order of the generator, as seen in Algorithm 1. However, until the ﬁrst set bit
+is encountered, all of the additions and doublings will involve the point at inﬁnity, and
+because of our assumption that the used formulas are incomplete, they will leak this
+information through some side-channel. The leak might have the form of short-circuiting
+addition formulas, which check whether the point at inﬁnity was input and short circuit
+accordingly to satisfy∞+ P = P and 2∞ = ∞. Such was the case for vulnerable versions
+of libgcrypt and was the reason why merely ﬁxing a loop bound in scalar multiplication
+3We remark that EdDSA is not vulnerable to our attack, as it uses a mitigation described in Section 3.4.
+6 Minerva: The curse of ECDSA nonces
+was not enough to ﬁx the issue. The formulas might leak the fact that the point at inﬁnity
+is present through diﬀerent channels than timing: power or EM side-channels come to
+mind, as the point at inﬁnity is often represented using only0 or 1 values, which can often
+be distinguishable in multiplication and addition on a powertrace.
+Algorithm 1Montgomery ladder (complete)
+function Ladder(G,k = (kl,...,k0)2)
+R0 = ∞; R1 = G
+for i= l downto0 do
+R¬ki = R0 + R1; Rki = 2Rki
+return R0
+In the second case, the most signiﬁcant bit of the scalar must be explicitly found, as
+seen in Algorithm 2. The ladder must start at that bit because the variables are initialized
+into a state such that the point at inﬁnity will not appear (so that incomplete formulas
+can be used).
+Such an implementation clearly leaks the bit-length through timing alone, because of
+the loop bound on the bit-length of the scalar.
+Algorithm 2Montgomery ladder (incomplete)
+function Ladder(G,k = (kl,...,k0)2)
+R0 = G; R1 = 2G
+for i= |k|−1 downto0 do
+R¬ki = R0 + R1; Rki = 2Rki
+return R0
+The use of incomplete formulas or the direct computation of the bit-length of the scalar
+for use as a loop bound in scalar multiplication was the source of leakage in all of the
+vulnerable software cryptographic libraries. As the implementation on the vulnerable card
+is closed source, we were not able to analyze it directly; however, a similar cause is likely,
+given the nature of the leakage on the powertraces in Figure 2.
+Both the vulnerable Athena IDProtect card and the used Atmel AT90SC chip and
+cryptographic library are FIPS 140-2 [Sma12a] and Common Criteria (CC) [Sma12b;
+Atm09] certiﬁed devices, respectively. The presence of such a vulnerability in certiﬁed
+devices can be explained by noting that the CC security target of the AT90SC chip [Atm09]
+contains mention of two versions of ECC functionality, fast and secure variants. It further
+goes to mention that the fast variants are not protected against side-channel attacks
+and should not be used on secure data. We think these fast and insecure functions were
+erroneously used by the Athena IDProtect card and resulted in the vulnerability.
+3.4 Mitigations
+Below, we discuss several mitigations that can be applied to a leaking implementation
+to ﬁx the vulnerability. The mitigations either stop the leak or mask it with additional
+randomness to prevent reconstruction of the private key.
+3.4.1 Complete formulas
+As described in Section 3.3.2, one of the root causes of the vulnerability was the usage of
+incomplete addition formulas, which introduced a measurable time diﬀerence between the
+case where one of the points being added is the point at inﬁnity and the case where both
+points are aﬃne. This ultimately led to a leak of the nonce length. The use of complete
+Ján Jančár, Vladimír Sedláček, Petr ’venda and Marek Sýs 7
+formulas [RCB16; SM16], which behave in the same way for all possible inputs, would
+prevent such leak. Besides being constant-time, these formulas also make the addition
+algorithm less complex. However, these formulas are slower than incomplete formulas, by
+a factor of around1.4 as reported by Renes, Costello, and Batina [RCB16], and until late,
+they were not even available for all short Weierstrass curves.
+Using complete formulas is likely the most systematic mitigation, so we recommend to
+the developers of the aﬀected systems to switch to complete formulas whenever possible.
+The mitigation also requires that the scalar multiplication loop starts at a ﬁxed bit and
+that the bit-length of the scalar is not explicitly computed to shorten the loop.
+3.4.2 Fixing the bit-length
+Even if incomplete addition formulas are used, the vulnerability can still be removed by
+making all the nonces the same bit-length. One option is to add a suitable multiple of the
+group order to the nonce so that the result of multiplying a point by the nonce will not be
+aﬀected. For example, following the recommendation by Brumley and Tuveri [BT11], we
+could compute the modiﬁed nonce as
+ˆk=
+{
+k+ 2n if ⌈log2(k+ n)⌉= ⌈log2 n⌉
+k+ n otherwise.
+This ﬁxes the bit-length ofˆk, ensuring that⌈log2 ˆk⌉= ⌈log2 n⌉+ 1. Subsequently, the
+scalar multiplication loop will always run the same number of times (as both points being
+added are already aﬃne during the ﬁrst addition), and the nonce length will not be leaked
+through timing. As the computational cost of usingˆk over k is negligible, we recommend
+the aﬀected systems to do so as a second line of defense.
+3.4.3 Scalar randomisation
+Alternatively, there are various side-channel countermeasures utilizing scalar randomization
+(i.e., performing the scalar multiplication without directly multiplying by the scalar). A
+basic overview of these methods can be found in Danger et al. [DGH+13]. While introducing
+some overhead, they also eﬀectively protect against some power analysis attacks.
+3.4.4 Long nonces
+Finally, if one can aﬀord it, generating much longer nonces and using them for scalar
+multiplication (without prior reduction modulo the group ordern) should thwart these
+types of attacks, as learning the most signiﬁcant bits of the scalar seems to provide
+almost no information about the most signiﬁcant bits of the scalar modulon. Such an
+approach is taken by EdDSA [BDL+12]: for example, when using Ed25519, the nonce is
+deterministically created as a 512-bit hash, whereasn has only 255 bits. In principle, the
+countermeasure could be adapted for ECDSA as well.
+3.5 Responsible disclosure
+We disclosed the vulnerabilities to the aﬀected vendors upon discovery; we also provided
+assistance and patches ﬁxing the vulnerability to several of them. Currently, all of the
+vulnerabilities in the software products are ﬁxed in their newer versions. The state of the
+vulnerable chip AT90SC is unknown, as it is currently oﬀered by the WiseKey company
+[Wis], which did not conﬁrm or deny our ﬁndings regarding the chip. The Athena IDProtect
+card is no longer in production, as Athena was acquired by NXP Semiconductors, which
+conﬁrmed to us that no new products are based on the vulnerable code. However, existing
+cards remain vulnerable as updates to JavaCards are often almost impossible to deploy.
+8 Minerva: The curse of ECDSA nonces
+We then disclosed the vulnerability publicly, together with a proof of concept and a
+testing tool that can be used to verify that other implementations are not vulnerable.
+4 The attack
+In the case of (EC)DSA and even attestation systems such as EPID [DME+18] or ECDAA
+[FIDO18; MSE+20], the knowledge of the most signiﬁcant bits of nonces (with the goal of
+computing the private key) can be turned into an HNP instance [BV96], which can be
+turned into an instance of the Closest Vector Problem and solved using the methods of
+lattice reduction. We will introduce the HNP and show how the knowledge of the most
+signiﬁcant bits of nonces translates into an HNP instance for the aforementioned systems.
+4.1 Notation
+We use⌊y⌋q to denote the reduction ofy∈Z modulo q (so that the result lies in[0,q −1]).
+We also use
+|y|q := min
+a∈Z
+|y−aq|
+to denote the distance ofy∈R to the closest integer multiple ofq.
+Note that|y|q = |y|for ally∈[−q/2,q/2] and
+|y|q = |y−aq|q
+holds for alla∈Z.
+Also note that if0 <y <z for anyz∈R, then
+|y−z/2|<z/2.
+Deﬁnition 1(Approximations). By APPl,q(y), we will denote anyu∈Q satisfying
+|y−u|q ≤q/2l.
+Note that generally there are many suchu.
+The most signiﬁcant modular bits [BV96; NS03] are deﬁned in the following way:
+Deﬁnition 2(Most Signiﬁcant Modular Bits). The l> 0 most signiﬁcant modular bits of
+an elementy∈Zq (regarded as an integer in[0,q −1]) are the unique integerMSMBl,q(y)
+such that
+0 ≤y−MSMBl,q(y) ·q/2l <q/2l.
+For example, whenl= 1, the most signiﬁcant bit ofy is 0 or 1 depending on whether
+y <q/2.
+As noted in [NS03], this deﬁnition is in contrast with the usual deﬁnition of the most
+signiﬁcant bits of an integer. In the lattice context, the modular bits are more convenient
+to work with, but see Remark 1 in Section 4.3.
+It is worth observing that the most signiﬁcant modular bits give rise to a speciﬁc
+approximation ofy. We can see directly from Deﬁnition 2 that
+|y−MSMBl,q(y) ·q/2l|<q/2l,
+and since the absolute value argument already lies in[−q/2,q/2], it is equivalent to
+|y−MSMBl,q(y) ·q/2l|q <q/2l.
+Thus MSMBl,q(y) ·q/2l may be taken asAPPl,q(y). Also, after recentering the bits,
+MSMBl,q(y) ·q/2l −q/2l+1 may be taken asAPPl+1,q(y) giving the exact approximation
+used in Nguyen and Shparlinski [NS03].
+Ján Jančár, Vladimír Sedláček, Petr ’venda and Marek Sýs 9
+4.2 The Hidden Number Problem
+Following [NS03], we state the HNP in the following way:
+Deﬁnition 3(Hidden Number Problem). Given approximationsai = APPli,q(ki), where
+ki = ⌊αti −ui⌋q, for many knownti that are uniformly and independently distributed in
+Z∗
+q, knownui and a ﬁxed secretα ∈Zq, ﬁndα.
+In the text, we will use the more common deﬁnition where the problem is, given many
+HNP inequalities|ki −ai|q <q/2li , ﬁndα.
+In the (EC)DSA case,α is the ﬁxed secret key,ti and ui are values constructed from
+the signatures such thatki = ⌊αti −ui⌋q and ai = APPl,q(ki) is the information leaked,
+in our case that is always0, which claims that thel most-signiﬁcant modular bits are zero.
+This simpliﬁes the above inequality to:
+|αti −ui|q <q/2li . (2)
+4.3 Constructing the HNP
+Assume that we are givend (EC)DSA signatures(ri,si) of message hashesH(mi) such
+that for each respective nonceki >0, we know that the most signiﬁcantli >0 bits ofki
+are zero. Denoting the curve order byn and the private key byx, we have
+⌊ki⌋n <n/2li
+|s−1
+i (xri + H(mi))|n <n/2li
+|x⌊s−1
+i ri⌋n + ⌊s−1
+i H(mi)⌋n|n <n/2li
+(3)
+Thus by settingq= n,α = x, ti = ⌊s−1
+i ri⌋n and ui = ⌊−s−1
+i H(mi)⌋n, we have a HNP
+instance.
+Remark 1. The fact that the most signiﬁcantli bits (in the classical sense) ofki are zero
+translates into the inequality
+⌊ki⌋n <2⌈log2(n)⌉/2li ,
+which is weaker than the used⌊ki⌋n <n/2li . This means that the inequalities above might
+not be true for allki. However, as the ration/2⌈log2(n)⌉is around 10−9 for the curve
+secp256r1 that we are working with, we will use the more convenient stronger inequality
+which will still be true with overwhelming probability.
+It is worth having this distinction in mind though, as it would cause problems for
+example for the curvesect571k1, where the ration/2⌈log2(n)⌉is almost2.
+In our setup, the valuesli are estimated from timing only, so it may well happen that
+the actual number of most signiﬁcant zero bits is either higher or lower thanli. The former
+case is not a signiﬁcant issue, as the attack will still work (although we are using less
+information than available, so we need to balance this by a higher number of signatures).
+However, the latter case is quite problematic, as we are utilizing false information in the
+attack, and the lattice approach will very likely fail to compute the correct result. We will
+refer to the second case as to “input errors” in the remainder of the text and discuss some
+options of dealing with them in Section 5. For now, just note that there are two basic
+ways of removing the errors: either lowering theli or subtracting a certain multiple of
+n/2li from ki, so that the ﬁrst inequality in(3) will hold. The latter option amounts to
+adding a certain multiple ofn/2li to ui, which clears the high bits ofki.
+10 Minerva: The curse of ECDSA nonces
+4.4 Solving the HNP
+Given d HNP inequalities of the form
+|αti −ui|n <n/2li ,
+we can construct a lattice spanned by the rows of the(d+ 1)×(d+ 1)matrix B [NS02;
+BvdPS+14]:
+B =
+
+
+2l1 n 0 0 ... 0 0
+0 2 l2 n 0 ... 0 0
+... ...
+0 0 0 ... 2ld n 0
+2l1 t1 2l2 t2 2l3 t3 ... 2ld td 1
+
+
+Then, by the HNP inequalities above, the vector
+u = (2l1 u1,...,2ld ud,0)
+is a vector unusually close to a lattice point. The closest lattice point often has a form
+v = (2l1 t1α,...,2ld tdα,α),
+in which case ﬁnding such lattice point reveals the private keyα. To do so, one needs
+to solve the Closest Vector Problem (CVP). There are several algorithms for solving the
+CVP, the original paper [BV96] used Babai’s nearest plane algorithm [Bab86] with LLL
+[LLL+82]. One could also use BKZ for lattice reduction or solve the CVP by enumeration.
+There is also a technique of transforming an instance of CVP to a Shortest Vector Problem
+(SVP) by embedding the target vector into a larger lattice:
+C =
+(B 0
+u n
+)
+Then, one can solve the SVP by lattice reduction and either looking directly at basis
+vectors or by further enumeration to ﬁnd the shortest vector. As we used several heuristic
+arguments, the solution is not guaranteed to be found.
+Generally, each inequality addsli bits of information and the problem starts to be
+solvable (theoretically) as soon as the lattice contains more information than the unknown
+information in the private key. The expected amount of information inN signatures can
+be computed asN ·∑⌈log2(n)⌉
+i=2 2−li−1 ·li ≈3
+4 N assuming only signatures withli ≥2 are
+used. Adding inequalities withli <2 generally does not help, as those will not lead to the
+desired vector being unusually close to a lattice point [AFG+14].
+Using the above formula, we obtain the expected minimum of aroundN = 342
+signatures for a 256-bit private key. Since the amount of information is linear inN it can
+be computed asN ≈ 4
+3 ·|K|for size|K|of the private key. Adding dimensions is also
+not for free, as the runtime of lattice algorithms grows signiﬁcantly with an increase in
+the number of dimensions. However, adding some overhead of information, such that the
+lattice contains around1.3 times the information of the private key, was shown to improve
+the success rate [Rya19b].
+4.5 Baseline attack
+The baseline version of the attack, against which we will compare the variants, is an
+application of the attack from Brumley and Tuveri [BT11]. We collectN signatures from
+the library or card while measuring the duration of signing precisely. Then, we sort the
+Ján Jančár, Vladimír Sedláček, Petr ’venda and Marek Sýs 11
+signatures by their duration and takedof the fastest. For the basic attack, we then assume
+these all have at leastli = 3most-signiﬁcant bits of the nonce zero, we construct the HNP
+and transform it into a CVP and then an SVP matrix. Given no noise (perfect dependency
+of the signing duration on the bit-length), the assumption ofli = 3 makes sense if the
+collected number of signaturesN is larger thand·2li = 8d, as then thedfastest signatures
+will likely have at least the required number of most-signiﬁcant zero bits.
+We use fplll [FPL16], an open-source implementation of the LLL and BKZ lattice
+reduction algorithms, to perform LLL and progressive BKZ [AWH+16] reduction of the
+SVP matrix with block sizesβ ∈{15,20,30,40,45,48,51,53,55}. After each reduction
+step, we check if the second to last column of the matrix contains the private key by
+multiplying the base-point by the column entries and testing equality to the public key.
+5 Attack variants and new improvements
+The main limitation of the attack described in Section 4.5 is the required number of
+signatures and its sensitivity to input errors (as the time measurements are noisy). This
+section oﬀers a remedy: we present and discuss in detail the following methods, the last
+two of which are new to the best of our knowledge:
+• Measurement improvements (known)
+• Random subsets (known) [BT11]
+• Recentering (known) [BH19; MSE+20]
+• The CVP/SVP methods (known)
+• Nonce diﬀerences (partially discussed in[FGR12] and [BH19])
+• Geometric bounds(new in this work, Section 5.6)
+• CVP + changes inu (new in this work, Section 5.7)
+In Section 6, we will systematically compare these to each other as well as to the
+baseline attack on both simulated and real data.
+As the listed methods are mostly independent of each other4, their combinations could
+possibly provide improvement in the decreased number of necessary signatures. However,
+the high number of computational experiments for all possible combinations makes an
+exhaustive analysis prohibitively expensive.
+5.1 Improving the input data
+One straightforward way of improving a noise-sensitive method success rate is to lower
+the noise via better measurements. In our context, this means either mounting a micro-
+architectural side-channel attack on a vulnerable library or performing power/EM side-
+channel attack on a vulnerable card.
+In the former case, the attacker would use, for example, a cache side-channel as done by
+Ryan [Rya19b], to count the number of calls to the point addition and doubling functions.
+This would give him a much more precise measurement of bit-length than simply timing
+the full ECDSA signing operation, which contains hashing, data processing, and other
+library functions.
+In the latter case, the attacker with physical access to a vulnerable card would obtain
+power or EM traces as those shown in Figure 2 and use pattern matching to count the
+4There are two notable exceptions: CVP + changes inu requires the use of the CVP method and the
+recentering approach cannot be used in nonce diﬀerences.
+12 Minerva: The curse of ECDSA nonces
+number of addition and doubling operations in the trace. This will again give the attacker
+a much more precise measurement of bit-length.
+We expect both of the above approaches to lead to noise-free information about the
+bit-length of the nonce and thus a much easier application of the HNP to obtain the private
+key, leading to a similar success rate as in Figure 15.
+5.2 Random subsets
+The errors in the input can be mitigated by randomly selecting subsets of signatures from
+the set of all signatures with relatively short duration as proposed by Brumley and Tuveri
+[BT11]. If the number of errors is not too large, we can expect to ﬁnd a subset without
+any error after a reasonable number of tries. Note that this strategy is also trivially
+parallelizable, unlike most of the other methods.
+In practice, we can take a medium-sized subset of the fastest signatures (for example,
+3
+2 d, where d is the dimension of the matrix we are aiming for) and repeatedly run the
+attack with randomly selectedd of these signatures. However, since the strategy does not
+always use thed fastest signatures, it does not use the information in an optimal way. On
+average less information is present in the randomly selected signatures, with the hope that
+the increased number of tries will lead to both enough information and few errors being
+present in at least one of them.
+5.3 Recentering
+To increase the the amount of information in each HNP inequality, one can use the fact that
+the nonce is non-negative and that to gain a HNP inequality we only need to upper-bound
+the absolute value, as only it aﬀects the norm of the vector. Instead of using the inequality
+in (3), one can use:
+|x⌊s−1
+i ri⌋n + ⌊s−1
+i H(mi)⌋n −n/2li+1|n <n/2li+1.
+5.4 CVP/SVP approach
+Even though the HNP naturally translates into a CVP instance, such an approach is usually
+believed to not be very suitable [BvdPS+14; BH19; vdPSY15]. Instead, the standard
+approach is to further convert the CVP instance into an SVP instance by including the rows
+of ui’s in the matrix and checking for a short vector after lattice reduction (as described in
+Section 4.4). However, for reasons that will be explained in Section 5.7, we also evaluate
+the CVP approach (using Babai’s nearest plane algorithm) and measure how it compares
+to the SVP approach, even though we expect it to perform worse.
+5.5 Diﬀerences of nonces
+Instead of using information about the nonceski themselves, we could instead use infor-
+mation about their diﬀerenceski −kj, hoping that the most signiﬁcant bits ofki and kj
+might cancel out.
+Assuming that li ≤ lj, we can make a similar computation as in(3). From the
+inequality:
+|⌊ki⌋n −⌊kj⌋n|n <n/2min(li,lj) (4)
+we get:
+|⌊s−1
+i (H(mi) +rix)⌋n −⌊s−1
+j (H(mj) +rjx)⌋n|n <n/2min(li,lj)
+|x(⌊s−1
+i ri −s−1
+j rj⌋n) +⌊s−1
+i H(mi) −s−1
+j H(mj)⌋n|n <n/2min(li,lj)
