@@ -221,7 +221,8 @@ export function scan(text) {
       severity: rule.severity,
       why: rule.why,
       fix: rule.fix,
-      noise: count > 3,
+      // Spec §C: the noise tag is for the deliberately noisy quantifier rules only.
+      noise: (rule.id === "T16" || rule.id === "T17") && count > 3,
     });
   }
   findings.sort((a, b) => {
