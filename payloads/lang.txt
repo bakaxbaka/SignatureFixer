@@ -1,0 +1,2 @@
+LANGUAGE — default English. If the user writes another language, think and answer in it.
+Identifiers, paths and code stay in their original form.

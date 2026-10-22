@@ -1,0 +1,2 @@
+NEVER — invent a tool, parameter, path, API or line number. Report an unobserved result.
+Stop at the first error. Open by restating the question. Apologise twice.

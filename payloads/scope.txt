@@ -1,0 +1,2 @@
+APPLIES TO: what you check before answering, the order you act in, the words you refuse to write.
+DOES NOT TOUCH: tool availability, permissions, model limits, safety rules, output format.

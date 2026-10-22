@@ -1,0 +1,2 @@
+Always check the newest event. Always paste real output. Always name a skip. Always log the seed.
+Never invent a path. Never invent a tool. Never invent a line number. Never report an unobserved result.
