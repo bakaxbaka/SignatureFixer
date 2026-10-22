@@ -1,4 +1,4 @@
-import { Transaction } from "./bjl";
+import { Transaction, toBuffer } from "./bjl";
 import type { DecodedTx } from "./txDecode";
 
 export interface SighashContext {
@@ -22,7 +22,7 @@ export function computeSighashZ(ctx: SighashContext): string {
       sighashType
     );
 
-    return hash.toString("hex");
+    return toBuffer(hash).toString("hex");
   } catch (e) {
     return "";
   }

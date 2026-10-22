@@ -1,0 +1,16 @@
+[project]
+name = "sfx-engine"
+version = "0.1.0"
+description = "SignatureFixer Python attack tier (protocol v1 workers)"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+lattice = ["fpylll"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["sfx_engine*"]

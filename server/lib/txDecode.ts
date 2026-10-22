@@ -1,4 +1,4 @@
-import { Transaction } from "./bjl";
+import { Transaction, toBuffer } from "./bjl";
 import type { TxInputAnalysis, TxOutputAnalysis } from "../../client/src/types/txInspector";
 
 export interface DecodedTx {
@@ -17,9 +17,9 @@ export function decodeRawTx(rawTxHex: string): DecodedTx {
   const tx = Transaction.fromBuffer(buf);
 
   const inputs: TxInputAnalysis[] = tx.ins.map((input, index) => {
-    const prevTxid = Buffer.from(input.hash as any).reverse().toString("hex");
+    const prevTxid = toBuffer(input.hash).reverse().toString("hex");
     const prevVout = input.index;
-    const scriptSigHex = input.script?.toString("hex") || "";
+    const scriptSigHex = toBuffer(input.script).toString("hex") || "";
     const isCoinbase = prevTxid === "0".repeat(64);
 
     return {
@@ -29,7 +29,7 @@ export function decodeRawTx(rawTxHex: string): DecodedTx {
       sequence: input.sequence,
       scriptSigHex,
       scriptSigAsm: "",
-      witness: input.witness?.map((w) => w.toString("hex")) || [],
+      witness: input.witness?.map((w) => toBuffer(w).toString("hex")) || [],
       scriptType: "unknown",
       valueSats: undefined,
       address: undefined,
@@ -43,7 +43,7 @@ export function decodeRawTx(rawTxHex: string): DecodedTx {
   const outputs: TxOutputAnalysis[] = tx.outs.map((out, index) => ({
     index,
     valueSats: typeof out.value === "bigint" ? Number(out.value) : out.value,
-    scriptPubKeyHex: out.script.toString("hex"),
+    scriptPubKeyHex: toBuffer(out.script).toString("hex"),
     scriptPubKeyAsm: "",
     scriptType: "unknown",
     address: undefined,
