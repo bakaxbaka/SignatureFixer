@@ -26,12 +26,45 @@ export interface SigRecord {
   pubkey?: string;
 }
 
+/**
+ * W3 defect fix: hex-vs-decimal was ambiguous — a decimal string longer than 8
+ * digits (e.g. "1234567890") was silently parsed as hex. Rule now: explicit
+ * "0x" prefix or hex-only characters of EXACTLY 64 chars (the CSV z/r/s column
+ * format) parse as hex; everything else parses as decimal.
+ */
 function toScalar(v: string | bigint): bigint {
   if (typeof v === "bigint") return v;
   const t = v.trim();
-  return t.startsWith("0x") || /^[0-9a-fA-F]+$/.test(t) && t.length > 8
-    ? BigInt("0x" + t.replace(/^0x/, ""))
-    : BigInt(t);
+  if (t.startsWith("0x")) return BigInt(t);
+  if (/^[0-9a-fA-F]{64}$/.test(t)) return BigInt("0x" + t);
+  return BigInt(t);
+}
+
+/** W3 perf fix (pre-affine measurement): cached base-point table for G.
+ *  pointMul(G, k) plain double-and-add costs ~256 point ops per call; affine's
+ *  ~10^6 candidate scans need a lookup path. Table built once, lazily. */
+let gTable: Point[] | null = null;
+function gMultiples(): Point[] {
+  if (!gTable) {
+    gTable = new Array(256);
+    gTable[0] = null;
+    gTable[1] = G;
+    for (let i = 2; i < 256; i++) gTable[i] = pointAdd(gTable[i - 1], G);
+  }
+  return gTable;
+}
+
+/** k·G via byte-window lookup over the cached table (left-to-right, base 2^8). */
+export function pointMulG(k: bigint): Point {
+  const tbl = gMultiples();
+  const hex = bigToHex32(mod(k, CURVE.n));
+  let acc: Point = null;
+  for (let i = 0; i < 32; i++) {
+    if (i > 0) for (let b = 0; b < 8; b++) acc = acc ? pointAdd(acc, acc) : acc;
+    const byte = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    if (byte !== 0) acc = pointAdd(acc, tbl[byte]);
+  }
+  return acc;
 }
 
 /** True if (x, y) reconstructed from r and recid parity lies on the curve. */
@@ -78,10 +111,9 @@ export function recoverCandidates(rIn: string | bigint, sIn: string | bigint, zI
 
 /** Convenience: single candidate for a declared recid, or null. */
 export function recoverPubkey(r: string | bigint, s: string | bigint, z: string | bigint, recid: number): string | null {
-  const all = recoverCandidates(r, s, z);
-  // candidates come out ordered by recid group; map recid→parity/x-order deterministically
+  // W3 defect fix: dropped the redundant recoverCandidates() call (doubled the work)
   const cands = recoverCandidatesWithRecid(r, s, z);
-  return cands.find((c) => c.recid === recid)?.pubkey ?? all[0] ?? null;
+  return cands.find((c) => c.recid === recid)?.pubkey ?? null;
 }
 
 export function recoverCandidatesWithRecid(rIn: string | bigint, sIn: string | bigint, zIn: string | bigint): { recid: number; pubkey: string }[] {
@@ -116,7 +148,7 @@ export function verifyDgEqualsQ(dHex: string | bigint, qHex: string): boolean {
     if (d < 1n || d >= CURVE.n) return false;
     const Q = parsePubkey(qHex);
     if (!Q) return false;
-    const calc = pointMul(d, G);
+    const calc = pointMulG(d); // cached base-point table (W3 perf fix)
     if (!calc) return false;
     // compare in both forms: Q may be given compressed or uncompressed
     const calcComp = ((calc.y & 1n) === 1n ? "03" : "02") + bigToHex32(calc.x);

