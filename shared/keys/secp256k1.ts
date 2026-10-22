@@ -5,7 +5,12 @@
 
 export const CURVE = {
   p: 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2fn,
-  n: 0xffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n,
+  // W1 defect fix (S1): the order literal was 63 hex digits (one 'f' short) —
+  // it decoded to a value ~2^252 below the true group order. Every r/s range
+  // check, invMod and low-S comparison silently used the wrong n. Corrected to
+  // the SEC2 order: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFE BAAEDCE6 AF48A03B
+  // BFD25E8C D0364141
+  n: 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n,
   a: 0n,
   b: 7n,
   gx: 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798n,
@@ -52,7 +57,13 @@ export function sqrtMod(a: bigint, p: bigint = CURVE.p): bigint | null {
 
 export const G: Point = { x: CURVE.gx, y: CURVE.gy };
 
-export function pointAdd(p1: Point, p2: Point): Point {
+export function pointAdd(p1In: Point, p2In: Point): Point {
+  // W1 defect fix: the old code tested `p1 === null` / `p2 === null`, but a
+  // doubled-infinity accumulator reached the x-comparison as `undefined`
+  // (TypeError: Cannot read properties of undefined (reading 'x')) — every
+  // reuse-test sign() path hit it. Normalise both forms before any access.
+  const p1 = p1In ?? null;
+  const p2 = p2In ?? null;
   if (p1 === null) return p2;
   if (p2 === null) return p1;
   const p = CURVE.p;
