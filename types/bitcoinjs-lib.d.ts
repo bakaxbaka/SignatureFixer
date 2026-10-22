@@ -1,3 +1,3 @@
 declare module "bitcoinjs-lib" {
-  export * from "bitcoinjs-lib/src/cjs/index.js";
+  export * from "bitcoinjs-lib/src/index.js";
 }

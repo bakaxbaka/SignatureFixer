@@ -20,7 +20,7 @@ export const rawTxSchema = z
   .string({ required_error: "Raw transaction hex is required" })
   .trim()
   .min(2, "Raw transaction cannot be empty")
-  .max(12000, "Raw transaction too large")
+  .max(10000, "Raw transaction too large") // ~10 kB consensus-ish cap for inspection input
   .regex(HEX_REGEX, "Raw transaction must be hex")
   .refine((value) => value.length % 2 === 0, "Hex length must be even");
 

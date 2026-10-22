@@ -1,10 +1,47 @@
 /**
  * bjl.ts — single typed entry point for bitcoinjs-lib v7.
- * The package's "exports" map points TS at ESM JS without colocated .d.ts, so
- * bundler resolution mis-declares class statics (e.g. Transaction.fromBuffer).
- * We import the authoritative CJS declarations directly and re-export typed.
+ * The package's "exports" map mis-resolves under TS bundler resolution, so we
+ * load the authoritative CJS build via createRequire and re-export it with a
+ * minimal structural typing surface (TxInput/TxOutput mirror
+ * client/src/types/txInspector shapes consumed downstream).
  */
-import { Transaction as _Transaction } from "bitcoinjs-lib/src/cjs/transaction.js";
+import { createRequire } from "node:module";
 
-export const Transaction: typeof _Transaction = _Transaction;
-export type TransactionInstance = _Transaction;
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const bjp = require("bitcoinjs-lib");
+
+export interface TxInput {
+  hash: Buffer | Uint8Array;
+  index: number;
+  script: Buffer;
+  sequence: number;
+  witness: Buffer[];
+}
+
+export interface TxOutput {
+  value: bigint | number;
+  script: Buffer;
+}
+
+export interface BjlTransaction {
+  version: number;
+  locktime: number;
+  ins: TxInput[];
+  outs: TxOutput[];
+  getId(): string;
+  virtualSize(): number;
+  weight(): number;
+  toBuffer(): Buffer;
+  toHex(): string;
+  hasWitnesses(): boolean;
+  hashForSignature(vinIndex: number, prevOutScript: Buffer, hashType: number): Buffer;
+}
+
+interface TransactionCtor {
+  fromBuffer(buffer: Buffer | Uint8Array): BjlTransaction;
+  new (): BjlTransaction;
+}
+
+export const Transaction: TransactionCtor = bjp.Transaction as TransactionCtor;
+export type TransactionInstance = BjlTransaction;
