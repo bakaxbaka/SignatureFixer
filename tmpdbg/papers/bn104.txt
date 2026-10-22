@@ -1,0 +1,366 @@
+Biased Nonce Sense: Lattice Attacks against
+Weak ECDSA Signatures in Cryptocurrencies
+Joachim Breitner1 and Nadia Heninger2
+1 DFINITY Foundation, Zug
+2 University of California, San Diego
+Abstract. In this paper, we compute hundreds of Bitcoin private keys
+and dozens of Ethereum, Ripple, SSH, and HTTPS private keys by
+carrying out cryptanalytic attacks against digital signatures contained
+in public blockchains and Internet-wide scans. The ECDSA signature
+algorithm requires the generation of a per-message secret nonce. This
+nonce must be generated perfectly uniformly, or else an attacker can
+exploit the nonce biases to compute the long-term signing key. We use
+a lattice-based algorithm for solving the hidden number problem to
+eﬃciently compute private ECDSA keys that were used with biased
+signature nonces due to multiple apparent implementation vulnerabilities.
+Keywords: Hidden number problem, ECDSA, Lattices, Bitcoin, Crypto
+1 Introduction
+The security of the ECDSA signature algorithm relies crucially on the proper
+generation of a per-signature nonce value that is used as an ephemeral private
+key. It is well known that if an ECDSA private key is ever used to sign two
+messages with the same signature nonce, the long-term private key is trivial to
+compute.[18,7,37,13,11,8]
+Repeated nonce values are not the only type of bias that can render an ECDSA
+key insecure, however. In fact, any nonuniformity in the ECDSA signature nonces
+can reveal the private key, given suﬃciently many signatures. In this paper, we
+carry out lattice-based cryptanalytic attacks against ECDSA signatures collected
+from the Bitcoin, Ethereum, and Ripple blockchains as well as Internet-wide
+scans of HTTPS and SSH hosts, and eﬃciently compute hundreds of Bitcoin
+private keys and a handful of Ethereum and SSH private keys. As a side eﬀect,
+we also ﬁnd numerous Bitcoin, Ethereum, Ripple, SSH, and HTTPS private keys
+that were compromised through repeated signature nonces.
+The lattice attacks we apply are based on algorithms for solving the hidden
+number problem. [ 6] While the hidden number problem is a popular tool in
+the cryptanalytic literature for recovering private keys based on side channel
+attacks [5,14], to our knowledge we are the ﬁrst to apply these techniques to
+already-generated keys in the wild, and the ﬁrst to observe that these techniques
+may apply to signatures in cryptocurrencies. In total, we computed around 300
+Bitcoin keys with these techniques. As of this writing, 818,975 satoshis, or around
+2 Joachim Breitner and Nadia Heninger
+$54, and 30.40 XRP, or about $14, remain in Bitcoin and Ripple accounts whose
+keys we were able to compute, suggesting that these ﬂaws do not yet appear to
+be known, or else the funds would have already been stolen.
+The attacks we use are signiﬁcantly faster than naive brute force or the
+state of the art algorithms for the elliptic curve discrete log problem. Using a
+square root-time algorithm like Pollard rho [ 28], one could feasibly carry out
+a targeted attack against a small number of the 64-bit or 128-bit nonces we
+discovered; carrying out this attack againstall of the approximately 230 signatures
+in the Bitcoin blockchain would have required signiﬁcantly more computational
+resources than we have access to. In contrast, we spent around 40 CPU-years
+total on our computations, implemented in Python, for all of the blockchains.
+The nonce vulnerabilities fall into several classes that suggest that we have
+found several independent implementation vulnerabilities. We ﬁrst use the hidden
+number problem algorithm to discover the long-term ECDSA signature key when
+used with nonces that are shorter than expected, and found keys used with nonces
+with lengths 64 bits, 110 bits, 128 bits, and 160 bits. We extend this technique
+to discover nonces with shared preﬁxes and suﬃxes, and found keys used with
+signature nonces that shared preﬁxes and varied in their 64 least signiﬁcant bits,
+as well as keys used with signature nonces that shared suﬃxes and varied in their
+128 and 224 most signiﬁcant bits.
+Ethics. We are unable to validate the existence of these vulnerabilities without
+actually computing the private keys for vulnerable addresses. In the case of
+cryptocurrencies, these keys give us, or any other attacker, the ability to claim
+the funds in the associated accounts. In the case of SSH or HTTPS, these keys
+would give us, or any other attacker, the ability to impersonate the end hosts.
+We did not do so, and in the course of our research we did not carry out any
+cryptocurrency transactions or active attacks ourselves; our research is entirely
+passive, and requires only observation of transactions or general-purpose network
+measurements. However, given that we ﬁnd evidence that other attackers are
+already emptying the accounts of cryptocurrency users whose keys are revealed
+through known vulnerabilities (both repeated nonces and private keys posted
+online), we anticipate that users will be aﬀected once knowledge of this ﬂaw
+becomes public. We have attempted to disclose ﬂaws to the small number of
+parties we were able to identify, but in most cases we were unable to identify any
+particular vendors, maintainers, or users to responsibly disclose to.
+Countermeasures. All of the attacks we discuss in this paper can be pre-
+vented by using deterministic ECDSA nonce generation [ 29], which is already
+implemented in the default Bitcoin and Ethereum libraries.
+2 Related Work
+The Hidden Number Problem and ECDSA. The Hidden Number Problem and
+the lattice-based algorithm we used to solve it were formulated by Boneh and
+Venkatesan, who used it to prove the hardness of computing most signiﬁcant
+bits for Diﬃe-Hellman [ 6]. Howgrave-Graham and Smart [19] and Nguyen and
+Biased Nonce Sense 3
+Shparlinski [ 26] applied the hidden number problem to show that the DSA
+and ECDSA signature schemes are insecure if an attacker can learn some most
+signiﬁcant bits of the signature nonces. Since then, this technique has been
+applied in practice in the context of side-channel attacks [5,14].
+Repeated DSA/ECDSA signature nonces. A number of works have examined
+vulnerabilities in DSA and ECDSA due to repeated signature nonces in the
+wild. Heninger, Durumeric, Wustrow, and Halderman [ 18] compromised SSH
+host keys for 1% of SSH hosts in 2012 by searching for repeated DSA signature
+nonces from SSH handshakes. They traced the problems primarily back to
+implementation vulnerabilities in random number generation on low-resource
+devices. Bos, Halderman, Heninger, Moore, Naehrig, and Wustrow [7] documented
+repeated nonces in the Bitcoin blockchain in 2013, as part of a broader study
+of elliptic curve cryptography use. Valsorda studied repeated Bitcoin nonces in
+2014 [37]. Courtois, Emirdag, and Valsorda [ 13] studied repeated Bitcoin nonces
+in 2014 and noted that it would be possible to chain compromises across keys.
+Castellucci and Valsorda studied repeated nonces and variants of weak keys and
+nonces repeated across keys in Bitcoin in 2016 [ 11]. Brengel and Rosow examined
+repeated nonces within signatures from the same key and chained compromised
+nonces across signatures from diﬀerent keys in the Bitcoin blockchain in 2018 [ 8].
+Key generation issues in cryptocurrencies. In 2013, a major bug in Android
+SecureRandom was blamed for the theft of Bitcoin from many users of Android
+wallets, due to the faulty random number generators generating repeated ECDSA
+signature nonces [20,22]. In 2015, the Blockchain.info Android application was
+discovered to be generating duplicate private keys because the application was
+seeding from random.org, which had started serving a 403 Redirect to their https
+URL several months prior [35].
+Cryptocurrency cryptanalysis. The Large Bitcoin Collider is a project that is
+searching for Bitcoin private keys using an apparently linear brute force search
+algorithm [30] that has searched up to a 54 bit key space. For public keys that
+are already revealed, it would be more eﬃcient to use square root discrete log
+algorithms [28,34] to recover short private keys of this type, but we are unaware
+of any dedicated eﬀorts in this direction.
+3 The elliptic curve digital signature algorithm (ECDSA)
+The public domain parameters for an elliptic curve digital signature include an
+elliptic curve E over a ﬁnite ﬁeld and a base point Gof order non E. The private
+signing key is an integer d modulo n, and the public signature veriﬁcation key is
+a point Q= dG. Elliptic curve public keys can be represented in uncompressed
+form by providing both the x and y coordinates of the public point Q, or in
+compressed form by providing the x coordinate only and a single parity bit from
+the y value. [9]
+To sign a message hash h, the signer chooses a per-message random integer
+k modulo n, computes the point kG, and then computes the values ( xr,yr) =
+kGmod n, and outputs r= xr and s= k−1(h+ dr) mod n. The signature is the
+4 Joachim Breitner and Nadia Heninger
+pair (r,s). To verify a message hash using a public key Q, the veriﬁer computes
+(x′
+r,y′
+r) = hs−1G+ rs−1Q and veriﬁes that x′
+r ≡rmod n. If the bit length ℓ of
+the curve is shorter than the bit length of the hash function used to compute h,
+h is truncated to its ℓ most signiﬁcant bits prior to the calculation. [25]
+3.1 ECDSA in cryptocurrencies.
+Bitcoin [23], Ethereum [10], and Ripple [33] all use the elliptic curvesecp256k1 [9].
+A Bitcoin address is derived from a public key by repeatedly hashing the un-
+compressed or compressed ECDSA public key with SHA-256 and RIPEMD-160.
+An Ethereum address is the last 20 bytes of the Keccak-256 hash of the un-
+compressed ECDSA public key, where Keccak-256 is an early version of the
+SHA-3 standard. Ethereum public keys are not explicitly included along with the
+signature; instead, the signature includes an additional byte v that allows the
+public key to be derived from the signature. A Ripple address is derived from a
+compressed public key by repeatedly hashing with SHA-256 and RIPEMD-160,
+and concatenating portions of the hashes. For the purposes of the analysis in our
+paper, in all of these cryptocurrencies the ECDSA public key is only revealed
+after an address has been used to sign a transaction. Bitcoin and Ripple explicitly
+reveal the ECDSA public key in uncompressed or compressed format along with
+a signature; in Ethereum, clients must derive the public key from the signature
+itself using key recovery.
+ECDSA signatures are used to authenticate the sending party of a transaction.
+Addresses can be single signature, corresponding to a single public key, or
+multisignature addresses, which require valid signatures from k out of a set of
+n public keys in order to spend money from a transaction. Users are typically
+recommended to use a fresh new address for every transaction [2].
+Signature normalization. ECDSA signatures have the property that both the
+signatures (r,s) and (r,−s) will validate with the same public key. In October
+2015, Bitcoin introduced a change in the signing procedure to use the smaller of
+s and −smod n in a signature in order to make signatures unique. 3 Ethereum
+and Ripple also do this type of signature normalization, which aﬀects our attack.
+3.2 ECDSA in network protocols.
+ECDSA signatures can also be used in other network protocols. In TLS, every
+certiﬁcate is signed either by a certiﬁcate authority or is self-signed. Most of
+these signatures remain RSA signatures in practice. However, when ephemeral
+Diﬃe-Hellman key exchange is chosen as part of the cipher suite in TLS 1.2 and
+below, the server signs its portion of the the key exchange, and the client uses
+the public key in the certiﬁcate to validate this signature [ 16]. In SSH, every
+host has a host key that it uses to sign the entire handshake between client and
+server [38]. The client authenticates the server by verifying the signature with
+the host public key.
+3 https:/ /github.com/bitcoin-core/secp256k1/commit/0c6ab2ﬀ
+Biased Nonce Sense 5
+3.3 Elementary attacks on ECDSA
+If an attacker learns the per-message nonce k used to generate an ECDSA
+signature, the long-term secret key dis easy to compute as d= (sk−h)r−1 mod n.
+It is also well known that if the same nonce k is used to sign two diﬀerent
+messages h1 and h2 with the same secret key, then the secret key is revealed.
+Let ( r1,s1) be the signature generated on message hash h1, and ( r2,s2) be
+the signature on message hash h2. We have immediately that r1 = r2, since
+r1 = r2 = x(kG). Then we can compute k = (h1 −h2)(s1 −s2)−1 mod n, and
+recover the secret key as above.
+4 Lattice Attacks on ECDSA
+The signature nonce k must also be generated perfectly uniformly at random
+modulo n, or else techniques for solving the hidden number problem can be used
+to solve for the secret key d.
+4.1 The hidden number problem.
+In the hidden number problem as formulated by Boneh and Venkatesan [ 6], there
+is a secret integer α modulo a public prime p, and one is given information
+about the most signiﬁcant bits of multiples tiαmod p, where the ti are generated
+at random and known to the attacker. In other words, one is given m pairs of
+integers {(ti,ai)}m
+i=1 such that tiα−ai mod p= bi with |bi|<B for some B <p.
+One can reformulate this problem as seeking a solution x1 = b1, x2 = b2, ... ,
+xm = bm, y= α to the underconstrained system of linear equations
+x1 −t1y+ a1 ≡0 mod p
+...
+xm −tmy+ am ≡0 mod p
+(1)
+There are two techniques used to solve this problem in the literature. The
+ﬁrst uses lattice-based techniques [ 6,19,26] to solve this system in the case of
+M =
+
+
+p
+p
+...
+p
+t1 t2 ... tm B/p
+a1 a2 ...a m B
+
+
+(2)
+larger biases and fewer samples (up to around
+100 in practice, with B several bits smaller
+than p), and the second uses Fourier anal-
+ysis [3,15] and is more suitable with many
+samples (at least 232) and very small bias. In
+this paper, we focus on the former technique,
+which is better suited to the limited number
+of signatures we encounter in the wild.
+To solve the hidden number problem us-
+ing lattices, consider the lattice generated by the rows of matrixM in Equation (2).
+The m×mupper left quadrant is a slightly rescaled version of the lattice given by
+Boneh and Venkatesan, who suggest using a CVP algorithm to ﬁnd a vector that
+6 Joachim Breitner and Nadia Heninger
+is close to the target, which is the ( m+ 1)st row in our lattice basis. The most
+eﬃcient implementations of lattice algorithms are SVP approximation algorithms,
+so we follow [5] in embedding this lattice basis into a slightly larger one and using
+an SVP approximation algorithm instead.
+The vector vb = ( b1,b2,...,b m,Bα/p,B ) is a short vector generated by
+the rows of Equation (2), and by construction |vb|< √m+ 2B. When |vb|≤
+det L1/dim L, we hope to recover vb among the short vectors of a reduced basis for
+the lattice generated by M. We have det M = B2pm−1 and dim M = m+ 2. The
+LLL [21] or BKZ [ 31,32] lattice basis reduction algorithms can be used to ﬁnd
+short vectors in this lattice. In practice on random lattices, the LLL algorithm
+will ﬁnd a vector satisfying |v|≤ 1.02dim L(det L)1/dim L in polynomial time [ 27].
+The performance of BKZ depends on the block size, and will in time exponential
+in the block size β ﬁnd vectors |v|≤ (1 + ϵ)dim L
+β (det L)1/dim L where ϵβ depends
+on the block size, but ϵβ = 0.01 is achievable in practice [12].
+In this paper, we focus on relatively small dimension lattices, so that the
+approximation factor of LLL or BKZ is largely insigniﬁcant. In this case, we
+expect to solve the problem when log B ≤⌊log p(m−1)/m−(log m)/2⌋.
+4.2 Optimizations.
+There are two further optimizations that should be applied to this attack. The
+ﬁrst is that in the case of most signiﬁcant bits known, the value bi is always
+positive, and thus one can increase the bias by recentering the bi by writing
+each equation as x′
+i −tiy+ am + B ≡0 mod p which has a solution x′
+i = bi −B.
+The second improvement is to decrease the dimension of the lattice by one by
+eliminating the variable y from Equations (1) so that one has m−1 equations in
+m unknowns, all bounded.
+4.3 Implicit preﬁxes.
+We are also interested in the case where the bi share an identical preﬁx, or in
+other words, that they share most signiﬁcant bits when viewed as an integer
+between 0 and p, but we do not know this preﬁx. That is, the input to the
+problem is samples {ti,ai}m
+i=1 satisfying bi + c+ ai ≡tiαmod p, with |bi|<B
+and 0 ≤c<p is unknown. We can reduce this problem to the previous problem
+with m−1 samples by using one of the samples to eliminate the unknown c.
+That is, we solve the hidden number problem with input {t′
+i = ti −tm]}m−1
+i=1 ,
+a′
+i = ai −am, and the desired solutions b′
+i = bi −bm satisfy |b′
+i|≤ 2B.
+4.4 Implicit suﬃxes.
+The technique described in Section 4.3 can also be adapted to solve for bi that
+share an identical suﬃx, that is, that they share least signiﬁcant bits when viewed
+as an integer between 0 and p. More precisely, the input to our problem in this
+case is samples {ti,ai}m
+i=1 satisfying 2ℓbi + c+ ai ≡tiαmod p, with 0 ≤bi <B ,
+Biased Nonce Sense 7
+0 ≤c < punknown, and 2ℓB ≤p. We can reduce this problem to the case of
+shared preﬁxes by multiplying each sample by 2 −ℓ mod n, so that our rescaled
+input is samples {2−ℓti,2−ℓai}m
+i=1 satisfying bi+ 2−ℓc+ 2−ℓai ≡(2−ℓti)αmod p,
+where |bi|< Band 2−ℓc is still unknown. At this point this is precisely the
+case of shared preﬁxes, so we may use the hidden number problem algorithm
+to solve the case of m−1 samples generated as {t′
+i = 2−ℓ(ti −tm) mod n}m−1
+i=1 ,
+a′
+i = 2−ℓ(ai−am) mod n, and the desired solutions b′
+i = bi−bm satisfy |b′
+i|≤ 2B.
+4.5 Breaking ECDSA with the hidden number problem
+To attack ECDSA with biased k values using the hidden number problem [19,26],
+note that each signature ( ri,si) on hi satisﬁes
+ki −s−1
+i rid−s−1
+i hi ≡0 mod n (3)
+If the ki are all small ( |ki|<B ) or share a common preﬁx or suﬃx, then this is
+precisely our setting for the hidden number problem variants we describe above,
+with ki = bi, α= d, p= n, and si, ri, and hi public per signature.
+We construct the input to our problem by hypothesizing that a set of signatures
+contains one of the vulnerabilities necessary to carry out the attacks described in
+Sections 4.1, 4.3, or 4.4, construct the corresponding lattice, and apply a lattice
+basis reduction algorithm. For each candidate solution for ki, we compute the
+value dki = (siki−hi)r−1
+i mod n, and compare dki Gto the public key or address.
+Experimentally, we found that for a 256-bit n, our case of interest for
+secp256k1, we were able to recover the private key from two signatures with 128-
+bit nonces by reducing a 3-dimensional lattice with 75% probability, from three
+signatures with 170-bit nonces with a 4-dimensional lattice with 95% probability,
+from 4 samples with 190-bit nonces with 100% probability; from 20 samples with
+242-bit nonces by reducing a 21-dimensional lattice with 100% probability, and
+from 40 samples with 248-bit nonces and 41-dimensional lattices.
+One can keep continuing by increasing the dimension of the lattice, to a
+practical limit of a bias of three or four bits for this 256-bit curve order, at the
+cost of solving near-exact SVP, which runs in time exponential in the lattice
+dimension, in a high-dimensional lattice.
+Unfortunately for the attacker applying these attacks to cryptocurrency
+signatures, the signature normalization described in Section 3.1 adds complexity.
+We expect half of the signatures to contain a negated s value, but we will not be
+able to tell which. From Equation (3), negating s will negate the derived value
+of ki. Thus an attack on small ki would still be expected to succeed, since the
+lattice algorithm can recover both small positive or small negative values, but
+the normalizations required to solve for the case of shared preﬁxes in Section 4.3
+or shared suﬃxes in Section 4.4 would produce outputs that do not have the
+desired properties. For these cases, we brute forced signs for the si.
+The signature normalization also means that the relations deﬁning ECDSA
+private key recovery from known or repeated nonces as described in Section 3.3
+may not hold as described. For these cases we also brute forced sign values for s.
+8 Joachim Breitner and Nadia Heninger
+5 Bitcoin
+5.1 Collecting data
+To collect Bitcoin signatures we modiﬁed the oﬃcial client to output hash values
+and signatures as they are veriﬁed, and re-validated the entire blockchain.
+We used a snapshot of the blockchain from September 13, 2018 (block height
+541,244). At this point, the blockchain contained 975,560,082 signatures from
+446,605,479 distinct keys. 40,497,752 of these keys had been used to generate
+more than one signature. 569,396,463, or 58% of the signatures in our snapshot
+had been generated by one of these keys.
+5.2 Cryptanalytic tests for biased nonces
+We clustered signatures by public key and eliminated signatures that were fully
+identical, that is, that shared both the hash h and the signature ( r,s). For keys
+associated with m> 1 distinct signatures, we ran the following randomized tests
+on subsamples of the signatures:
+– Check if the set of distinct signatures generated by this key contains any
+duplicate r values. If so, we compute the private key and all signature nonces
+k using Section 3.3 and do not run any of the following.
+– Select two signatures at random and check for nonces of length less than 128
+bits. We repeated this test 2 m times for each key.
+– Select three signatures at random and check for nonces of length less than
+170 bits. We repeated this test 2 m times for each key.
+– Select three signatures at random and check for nonces sharing 128 most
+signiﬁcant bits, brute forcing signature normalizations. We repeated this test
+2m times for each key.
+– Select three signatures at random and check for nonces sharing 128 least
+signiﬁcant bits, brute forcing signature normalizations. We repeated this test
+2m times for each key.
+– For m≤40, check for nonces of length less than ⌊256(m−1)/m⌋−1 bits,
+using all m signatures without signature normalization.
+– For m> 40, choose a random subset of 41 signatures and check for nonces
+of length less than 248 bits. We repeated this test m/20 times for each key,
+without signature normalization.
+The parameters were chosen so that these tests would complete in a reasonable
+length of time even for the most common keys.
+5.3 Running the cryptanalysis
+We implemented these tests in Sage [ 36], using the built-in BKZ implementation
+for lattice basis reduction. We ran the computation parallelized across 2000
+cores of a heterogeneous cluster with mostly Intel Xeon E5 processors. We ended
+up running the computation twice, once without signature normalization on a

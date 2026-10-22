@@ -1,0 +1,522 @@
+A Tale of Three Signatures:
+practical attack of ECDSA with wNAF
+Gabrielle De Micheli1, R´ emi Piau1,2, and C´ ecile Pierrot1
+1 Universit´ e de Lorraine, CNRS, Inria, LORIA, F-54000 Nancy, France
+2 ENS Rennes, France
+Abstract. Attacking ECDSA with wNAF implementation for the scalar
+multiplication ﬁrst requires some side channel analysis to collect infor-
+mation, then lattice based methods to recover the secret key. In this
+paper, we reinvestigate the construction of the lattice used in one of
+these methods, the Extended Hidden Number Problem(EHNP). We ﬁnd
+the secret key with only 3 signatures, thus reaching a known theoretical
+bound, whereas best previous methods required at least 4 signatures in
+practice. Given a speciﬁc leakage model, our attack is more eﬃcient than
+previous attacks, and for most cases, has better probability of success.
+To obtain such results, we perform a detailed analysis of the parameters
+used in the attack and introduce a preprocessing method which reduces
+by a factor up to 7 the total time to recover the secret key for some pa-
+rameters. We perform an error resilience analysis which has never been
+done before in the setup of EHNP. Our construction ﬁnd the secret key
+with a small amount of erroneous traces, up to 2% of false digits, and
+4% with a speciﬁc type of error.
+Keywords: Public key cryptography ·ECDSA ·Side channel attack ·
+windowed Non-Adjacent Form ·Lattice techniques.
+1 Introduction
+The Elliptic Curve Digital Signature Algorithm (ECDSA) [16], ﬁrst proposed in
+1992 by Scott Vanstone [31], is a standard public key signature protocol widely
+deployed. ECDSA is used in the latest library TLS 1.3, email standard OpenPGP
+and smart cards. It is also implemented in the library OpenSSL, and can be found
+in cryptocurrencies such as Bitcoin, Ethereum and Ripple. It beneﬁts from a high
+security based on the hardness of the elliptic curve discrete logarithm problem
+and a fast signing algorithm due to its small key size. Hence, it is recognized as
+a standard signature algorithm by institutes such as ISO since 1998, ANSI since
+1999, and IEEE and NIST since 2000.
+The ECDSA signing algorithm requires scalar multiplications of a pointP on
+an elliptic curve by an ephemeral key k. Since this operation is time-consuming
+and often the most time-consuming part of the protocol, it is necessary to use
+an eﬃcient algorithm. The Non Adjacent Form (NAF) and its windowed vari-
+ant (wNAF) were introduced as an alternative to the binary representation of
+2 De Micheli et al.
+the nonce k to reduce the execution time of the scalar multiplication. Indeed,
+the NAF representation does not allow two non-zero digits to be consecutive,
+thus reducing the Hamming weight of the representation of the scalar. This im-
+proves on the time of execution as the latter is dependent on the number of
+non-zero digits. The wNAF representation is present in implementations such
+as in Bitcoin, as well as in the libraries Cryptlib, BouncyCastle and Apple’s
+Common-Crypto. Moreover, until very recently (May 2019), wNAF was present
+in all three branches of OpenSSL.
+However, implementing the scalar multiplication using wNAF representation
+and no added layer of security makes the protocol vulnerable to side-channel
+attacks. Side-channel attacks were ﬁrst introduced about two decades ago by
+Kocher et al [18], and have since been used to break many implementations, and
+in particular some cryptographic primitives such as AES, RSA, and ECDSA.
+They allow to recover secret information throughout observable leakage. In our
+case, this leakage corresponds to diﬀerences in the execution time of a part of
+the signing algorithm, observable by monitoring the cache.
+For ECDSA, cache side-channel attacks such asFlush&Reload [33, 35] have
+been used to recover information about either the sequence of operations used to
+execute the scalar multiplication, or for example in [10] the modular inversion.
+For the scalar multiplication, these operations are either a multiplication or an
+addition depending on the bits of k. This information is usually referred to as
+a double-and-add chain or the trace of k. A trace is created when a signature
+is produced by ECDSA and thus we talk about signatures and traces in an
+equivalent sense. At this point, we ask how many traces need to be collected to
+successfully recover the secret key. Indeed, from an attacker’s perspective, the
+least traces necessary, the more eﬃcient the attack is. This quantity depends on
+how much information can be extracted from a single trace and how combining
+information of multiple traces is used to recover the key. We work on the latter
+to minimize the number of traces needed.
+The nature of the information obtained from the side channel attack allows
+to determine what kind of method should be carried out to recover the secret key.
+Attacks on ECDSA are inspired by attacks on a similar cryptosystem, DSA. In
+2001, Howgrave-Graham and Smart [15] showed how knowing partial informa-
+tion of the nonce k in DSA can lead to a full secret key recovery. Later, Nguyen
+and Shparlinski [23] gave a polynomial time algorithm that recovers the secret
+key in ECDSA as soon as some consecutive bits of the ephemeral key are known.
+They showed that using the information leaked by the side channel attack, one
+can recover the secret key by constructing an instance of the Hidden Number
+Problem (HNP) [4]. The basic structure of the attack algorithm is to construct a
+lattice which contains the knowledge of consecutive bits of the epheremal keys,
+and by solving CVP or SVP, to recover the secret key. This type of attack has
+been done in [3, 30, 32, 10]. However, these results considered perfect traces, but
+obtaining traces without any misreadings is very rare. In 2018, Dall et al. [6] in-
+cluded an error-resilience analysis to their attack: they showed that key recovery
+with HNP is still possible even in the presence of erroneous traces.
+A Tale of Three Signatures 3
+In 2016, Fan, Wang and Cheng [7] used another lattice-based method to
+attack ECDSA: the Extended Hidden Number Problem (EHNP) [13]. EHNP
+mostly diﬀers from HNP by the nature of the information given as input. In-
+deed, the information required to construct an instance of EHNP is not sequences
+of consecutive bits, but the positions of the non-zero coeﬃcients in any repre-
+sentation of some integers. This model, which we consider in this article as
+well, is relevant when describing information coming from Flush&Reload or
+Prime&Probe attacks for example, the latter giving a more generic scenario
+with no shared data between the attacker and the victim. In [7], the authors
+are able to extract 105.8 bits of information per signature on average, and thus
+require in theory only 3 signatures to recover a 256-bit secret key. In practice,
+they were able to recover the secret key using 4 error-free traces.
+In order to optimize an attack on ECDSA various aspects should be con-
+sidered. By minimizing the number of signatures required in the lattice con-
+struction, one minimizes the number of traces needed to be collected during the
+side-channel attack. Moreover, reducing the time of the lattice part of the at-
+tack, and improving the probability of success of key recovery allows to reduce
+the overall time of the attack. In this paper, we improve on all three of these
+aspects. Furthermore, we propose the ﬁrst error-resilience analysis for EHNP
+and show that key recovery is still possible with erroneous traces too.
+Contributions: In this work, we reinvestigate the attack against ECDSA with
+wNAF representation for the scalar multiplication using EHNP. We focus on
+the lattice part of the attack, i.e., the exploitation of the information gathered
+by the side-channel attack. We ﬁrst assume we obtain a set of error-free traces
+from a side-channel analysis. We preselect some of these traces to optimize the
+attack. The main idea of the lattice part is then to use the ECDSA equation
+and the knowledge gained from the selected traces to construct a set of modular
+equations which include the secret key as an unknown. These modular equations
+are then incorporated into a lattice basis similar to the one given in [7], and a
+short vector in it will contain the necessary information to reconstruct the secret
+key. We call “experiment” one run of this algorithm. An experiment succeeds if
+the algorithm recovers the secret key.
+A new preprocessing method. The idea of selecting good traces beforehand has
+already been explored in [32]. The authors suggest three rules to select traces
+that improve the attack on the lattice part. Given a certain (large) amount of
+traces available, the lattice is usually built with a much smaller subset of these
+traces. Trying to identify beforehand the traces that would result in a better
+attack is a clever option. The aim of our new preprocessing — that completely
+diﬀers from [32] — is to regulate the size of the coeﬃcients in the lattice, and
+this results in a better lattice reduction time. For instance, with 3 signatures,
+we were able to reduce the total time of the attack by a factor of 7.
+Analyzing the attack. Several parameters intervene while building and reducing
+the lattice. We analyze the performance of the attack with respect to these
+4 De Micheli et al.
+parameters and present the best parameters that optimize either the total time
+or the probability of success.
+First, we focus on the attack time. Note that when talking about the overall
+time of the attack, we consider the average time of a single experiment multi-
+plied by the number of trials necessary to recover the secret key. We compare 3
+our times with the numbers reported in [7, Table 3] with method C. Indeed,
+methods A and B in [7] use extra information that comes from choices in the
+implementation which we choose to ignore as we want our analysis to remain as
+general as possible. The comparison is justiﬁed as we consider the same leakage
+model, and compare timings when running experiments on similar machines. For
+4 signatures, our attack is slightly slower 4 than timings in [7]. However, when
+considering more than 4 signatures, our attack is faster. We experiment up to
+8 signatures to further improve our overall time. In this case, our attack runs
+at best in 2 minutes and 25 seconds. Timings for 8 signatures are not reported
+in [7], and the case of 3 signatures was never reached before our work. In Table 1,
+we compare our times with the fastest times reported by [7]. We choose their
+fastest times but concerning our results we choose to report experiments which
+are faster (not the fastest) with, if possible, better probability than theirs.
+Table 1: Comparing attack times with [7], for 5000 experiments.
+Number of Our attack [7]
+signatures Time Success (%) Time Success (%)
+3 39 hours 0 .2 – –
+4 1 hour 17 minutes 0 .5 41 minutes 1 .5
+5 8 minutes 20 seconds 6 .5 18 minutes 1
+6 ≈5 minutes 25 18 minutes 22
+7 ≈3 minutes 17 .5 34 minutes 24
+8 ≈2 minutes 29 – –
+The overall time of the attack is also dependent on the success probability
+of key recovery. From Table 2, one can see that our success probability is higher
+than [7], except for 7 signatures. They have 68% of success with their best
+parameters whereas we only reach 45% in this case.
+For the sake of completeness, we mention that in [25], the authors use HNP
+to recover the secret key using 13 signatures. Their success probability in this
+case is around 54 % and their overall time is close to 20 seconds, hence much
+3 In order to have a fair comparison with our methodology, the times reported in [7]
+with which we compare ourselves have to be multiplied by the number of trials
+necessary for their attack succeed, thus increasing their total time by a lot. Using
+5 signatures, their best total time would be around 15 hours instead of 18 minutes.
+4 For 4 signatures, no times are reported without method A. Thus, we have no other
+choice than to compare our times with theirs, usingA. Yet their time for 4 signatures
+without A should at least be the time they report with it.
+A Tale of Three Signatures 5
+faster. However, as their leakage model is diﬀerent, we do not further mention
+their work.
+Finding the key with only three signatures. Overall, combining a new preprocess-
+ing method, a modiﬁed lattice construction and a careful choice of parameters
+allows us to mount an attack which works in practice with only 3 signatures.
+However, the probability of success in this case is very low. We were able to re-
+cover the secret key only once with BKZ-35 over 5000 experiments. This result
+is diﬃcult to quantify as a probability but we note that ﬁnding the key a single
+time over 5000 experiments is still much better than randomly ﬁnding a 256-bit
+integer. If we assume the probability is around 0 .02%, as each trial costs 200
+seconds in average, we can expect to ﬁnd the secret key after 12 days using a
+single core. Note that this time can be greatly reduced when parallelizing the
+process, i.e., each trial can be run on a separate core. On the other hand, if
+we use our preprocessing method, with 3 signatures we obtain a probability of
+success of 0 .2% and a total time of key recovery of 39 hours, thus the factor 7
+of improvement mentioned above. Despite the low probability of success, this
+result remains interesting nonetheless. Indeed, the authors in [7] reported that
+in practice, the key couldn’t be recovered using less than 4 signatures and we
+improve on their result.
+Table 2: Comparing success probability with [7], for 5000 experiments.
+Number of Our attack [7]
+signatures Success (%) Time Success (%) Time
+3 0.2 39 hours – –
+4 4 25 hours 28 minutes 1.5 41 minutes
+5 20 2 hours 42 minutes 4 36 minutes
+6 40 1 hour 4 minutes 35 1 hour 43 minutes
+7 45 2 hours 36 minutes 68 3 hours 58 minutes
+8 45 5 hours 2 minutes – –
+Resilience to errors. We also investigate the resilience to errors of our attack.
+Such an analysis has not yet been done in the setup of EHNP. It is important to
+underline that collecting traces without any errors using any side-channel attack
+is very hard. Previous works used perfect traces to mount the lattice attack.
+Thus, it required collecting more traces. As pointed out in [7], more or less twice
+as many signatures are needed if errors are considered. In practice, this led [7]
+to gather in average 8 signatures to be able to ﬁnd the key with 4 perfect traces.
+We experimentally show that we are still able to recover the secret key even in
+the presence of faulty traces. In particular, we ﬁnd the key using only 4 faulty
+traces, but with a very low probability of success. As the percentage of incorrect
+digits in the trace grows, the probability of success decreases and thus more
+signatures are required to successfully recover the secret key. For instance, if
+6 De Micheli et al.
+2% of the digits are wrong among all the digits of a given set of traces, it is
+still possible to recover the key with 6 signatures. This result is valid if errors
+are uniformly distributed over the digits. However, we have a better probability
+to recover the key if errors consist in 0-digit faulty readings, i.e., 0 digits read
+as non-zero. In other words, the attack could work with a higher percentage of
+errors, around 4%, if we could ensure from the side channel attack and some
+preprocessing methods that none of the non-zero digits have been ﬂipped to 0.
+Looking at Coppersmith. Finally, as the EHNP setup consists of a system of
+modular equations for which we look for integer roots, we investigate the use
+of Coppersmith’s method for ﬁnding small roots of integer polynomials, as an
+alternative to EHNP. Albeit our attempts to apply Coppersmith’s method were
+not successful as some bound on the unknowns is not satisﬁed, we brieﬂy sketch
+our ideas hoping it could lead to further improvements.
+Organization: In Section 2, we introduce some background on ECDSA and
+the wNAF representation. Moreover, we give details on lattices and well known
+reduction algorithms. In Section 3, we explain how the Extended Hidden Number
+problem can be transformed into a lattice problem. We explicit the lattice basis
+and give some analysis on the length of the short vectors found in the reduced
+basis. In Section 4, we introduce our preprocessing method which allows us
+to reduce the overall time of our attack. In Section 5, we give experimental
+results which shows the performance of our attack as a function of the various
+parameters that are being considered. In Section 6, we analyze the resilience of
+our attack to erroneous traces. Finally in Section 7, we describe our attempt to
+use Coppersmith’s method instead of EHNP.
+2 Preliminaries
+2.1 Elliptic Curves Digital Signature Algorithm
+The Elliptic Curves Digital Signature Algorithm is a variant of the Digital Sig-
+nature Algorithm, DSA, [21] which uses elliptic curves instead of ﬁnite ﬁelds.
+The parameters used in the ECDSA algorithm are an elliptic curve E over a
+ﬁnite ﬁeld, a generator G of prime order q and a hash function H. The private
+key is an integer αsuch that 1 <α<q −1 and the public key is pk = [α]G, the
+scalar multiplication of G by α.
+To sign a message m using the private key α, randomly select an ephemeral
+key k ←R Zq and compute [ k]G. Let r be the x-coordinate of [ k]G. If r = 0,
+select a new nonce k. Then, compute s = k−1(H(m) + αr) mod q and again if
+s= 0, select a new nonce k. Finally, the signature is given by the pair ( r,s).
+In order to verify a signature, ﬁrst check if r,s ∈Zq, otherwise the signature
+is not valid. Then, compute v1 = H(m) ·s−1 mod q, v2 = r·s−1 mod q and
+(x,y) = [v1]G+ [v2]pk. Finally, the signature is valid if x≡r (mod q).
+A Tale of Three Signatures 7
+Remark 1. In this paper, we consider a 128 bit level of security and thus α,q
+and k are all 256-bit integers.
+2.2 wNAF representation
+The ECDSA algorithm presented above requires the computation of [ k]Gwhich
+corresponds to a scalar multiplication. In [12], various methods to compute fast
+exponentiation are presented. One family of such methods is called window meth-
+ods and comes from NAF representation. Indeed, the NAF representation does
+not allow two non-zero digits to be consecutive, thus reducing the Hamming
+weight of the representation of the scalar. The basic idea of a window method
+is to consider chunks of w bits in the representation of the scalar k, compute
+powers in the window bit by bit, square wtimes and then multiply by the power
+in the next window. The window methods can be combined with the NAF rep-
+resentation of k, as we will explain now. For any k∈Z, a representation
+k=
+∞∑
+j=0
+kj2j
+is called a NAF if kj ∈{0,±1}and kjkj+1 = 0 for all j ≥0. Moreover, every k
+has a unique NAF representation. The NAF representation minimizes the num-
+ber of non-zero digits kj. It is presented in Algorithm 1.
+Input : k∈Z+
+Output: NAF representation of k
+i= 0;
+while k> 0 do
+if k (mod 2) = 1 then
+ki = 2 −(k (mod 4));
+k= k−ki;
+else
+ki = 0;
+end
+k= k/2;
+i= i+ 1;
+end
+return ki−1,ki−2,...,k 1,k0
+Algorithm 1:NAF algorithm
+The NAF representation can be combined with a sliding window method to
+further improve the execution time. For instance, in OpenSSL (up to the latest
+versions using wNAF 1.1.1b for example), the window size usually chosen was
+w= 3. The scalar kis converted into wNAF form using Algorithm 2. Note that in
+Algorithm 2, the sequence of digits mi belongs to the set {0,±1,±3,..., ±(2w−
+8 De Micheli et al.
+Input: k∈Z+, w∈N
+Output: (m0,m1,...,m n), i.e., k in its wNAF representation
+i= 0;
+while k> 0 do
+if k (mod 2) = 1 then
+mi = k (mod 2w+1);
+if mi ≥2w then
+mi = mi −2w+1;
+end
+k= k−mi;
+else
+mi = 0;
+end
+k= k/2;
+i= i+ 1;
+end
+Algorithm 2:wNAF representation
+1)}. We can rewrite k as a sum of its non-zero digits, which we rename ki. More
+precisely, we get
+k=
+ℓ∑
+j=1
+kj2λj,
+where ℓ is the number of non-zero digits, and λj represents the position of the
+digit kj in the wNAF representation.
+Example 1. In binary, we can write
+23 = 24 + 22 + 21 + 20 = (1,0,1,1,1)
+whereas in NAF-representation, we have
+23 = 25 −23 −20 = (1,0,−1,0,0,−1).
+Using a window size w= 3, the wNAF representation gives
+23 = 24 + 7 ×20 = (1,0,0,0,7).
+There exists a modiﬁed wNAF representation used in OpenSSL for example.
+In the non-modiﬁed wNAF representation, at most one of any w+ 1 consecutive
+digits is non-zero and in the modiﬁed version, this also stands with the exception
+that the most signiﬁcant digit may be only w−1 zeros away from that next non-
+zero digit.
+2.3 Lattice reduction algorithms
+A lattice is a discrete additive subgroup of Rn. It is usually speciﬁed by giving
+a basis matrix B ∈ Zn×n. The lattice L(B) generated by B consists of all
+A Tale of Three Signatures 9
+integer combinations of the row vectors in B. The determinant of a lattice is the
+absolute value of the determinant of a basis matrix: det L(B) = |det B|. The
+discreteness property ensures that there is some λ1 >0 such that the length of
+one of the shortest non-zero vectors v1 in the lattice satisﬁes ||v1||= λ1. Let λi
+be the ith successive minimum of the lattice. The LLL algorithm [19] takes as an
+input a lattice basis, and returns in polynomial time in the lattice dimension na
+reduced lattice basis whose vectorsbi satisfy the worst-case approximation bound
+||bi||2 ≤2(n−1)/2λi. In practice, for random lattices, LLL obtains approximation
+factors such that b1 ≤1.02nλ1 as noted by Nguyen and Stehl´ e [22]. Moreover,
+for random lattices, we note that the Gaussian heuristic implies that
+λ1 ≈
+√
+n/(2πe) det(L)1/n. (1)
+The BKZ algorithm [26, 28] is exponential in some given block-size β and
+polynomial in the lattice dimension n. It outputs a reduced lattice basis whose
+vectors bi satisfy the approximation ||bi||2 ≤iγ(n−i)/(k−1)
+β λi [27], where γβ is the
+Hermite constant. In practice, Chen and Nguyen [5] observed that BKZ returns
+vectors such that b1 ≤(1 + ϵβ)nλ1 where ϵβ depends on the block-size β. For
+random lattices, they get 1 + ϵβ = 1.01 for a block-size β = 85.
+3 Attacking ECDSA using lattices
+Using some side-channel attack, one can recover information about the wNAF
+representation of the nonce k. In particular, it allows us to know the positions
+of the non-zero coeﬃcients in the representation of k. However, the value of
+these coeﬃcients are unknown. This information can be used in the setup of the
+Extended Hidden Number Problem (EHNP) to recover the secret key. For many
+messages m, we use ECDSA to produce signatures ( r,s) and each run of the
+signing algorithm produces a nonce k. We assume we have the corresponding
+trace of the nonce, that is, the equivalent of the double-and-add chain of kG
+using wNAF. The goal of the attack is to recover the secret α while optimizing
+either the number of signatures required or the total time of the attack.
+3.1 The Extended Hidden Number Problem
+The Hidden Number Problem (HNP), introduced in 1996 [4], allows to recover
+a secret element α ∈Zq if some information about the most signiﬁcant bits of
+random multiples of α (mod q) are known for some primeq. Boneh and Venkate-
+san show how to recover αin polynomial time with probability greater than 1/2.
+In [14], the authors extend the HNP and present a polynomial time algorithm for
+solving the instances of this extended problem. The Extended Hidden Number
+Problem is deﬁned as follows. Given u congruences of the form
+aiα+
+ℓi∑
+j=1
+bi,jki,j ≡ci (mod q), (2)
+10 De Micheli et al.
+where the secret α and 0 ⩽ ki,j ⩽ 2ηij are unknown, and the values ηij, ai, bi,j,
+ci, ℓi are all known for 1 ⩽ i ⩽ u (see [14], Deﬁnition 3), one has to recover α
+in polynomial time. Similarly to the HNP, the EHNP can be transformed into
+a lattice problem and one can recover the secret α by solving a short vector
+problem in a given lattice.
+3.2 Using EHNP to attack ECDSA
+From the ECDSA algorithm, we know that given a message m, the algorithm
+outputs a signature ( r,s) such that
+αr= sk−H(m) (mod q). (3)
+The value H(m) is just some hash of the message m. We consider a set of u
+signature pairs (ri,si) with corresponding messagemi that satisﬁes Equation (3).
+For each signature pair, we have a nonce k. Using the wNAF representation
+of k, we write k = ∑ℓ
+j=1 kj2λj, with kj ∈ {±1,±3,..., ±(2w −1)}and the
+choice of w depends on the implementation. Note that the coeﬃcients kj are
+unknown, however, the positions λj are supposed to be known via some side-
+channel leakage. It is then possible to represent the ephemeral key k as the sum
+of a known part, and an unknown part. As the value of kj is odd, one can write
+kj = 2k′
+j+ 1, where −2w−1 ⩽ k′
+j ⩽ 2w−1 −1. Using the same notations as in [8],
+set dj = k′
+j + 2w−1, where 0 ≤dj ≤2w −1. In the rest of the paper, we will
+denote by µj the window-size of dj. Note that here, µj = wbut this window-size
+will be modiﬁed later. This allows to rewrite the value of k as
+k=
+ℓ∑
+j=1
+kj2λj = ¯k+
+ℓ∑
+j=1
+dj2λj+1, (4)
+with ¯k = ∑ℓ
+j=1 2λj −∑ℓ
+j=1 2λj+w. The expression of ¯k represents the known
+part of k.
+By substituting k in Equation (4), we obtain a system of modular equations
+of the form
+αri −
+ℓi∑
+j=1
+2λi,j+1sidi,j −(si¯ki −H(mi)) ≡0 (mod q) (5)
+where the unknowns are αand the di,j. The known values are the ℓi which is the
+number of non-zero digits in k for the ith sample, λi,j, which is the position of
+the jth non-zero digit in k for the ith sample and ¯k deﬁned above. We can then
+use Equation (5) as input to the Extended Hidden Number Problem, following
+the method explained in [14]. The problem of ﬁnding the secret key is then
+reduced to solving the short vector problem in a given lattice which we give in
+the following section.
+A Tale of Three Signatures 11
+3.3 Constructing the lattice
+Before giving the lattice basis construction, we redeﬁne Equation (5) to reduce
+the number of unknown variables in the system. This will allow us to construct
+a lattice of smaller dimension. Again, we use the same notations as in [8].
+Eliminating one variable. One straightforward way to reduce the lattice dimen-
+sion is to eliminate a variable from the system. In this case, one can eliminate
+α from Equation (5). Let Ei denote the ith equation of the system. Then by
+computing r1Ei −riE1, we get the following new modular equations
+∑ℓ1
+j=1 (2λ1,j+1s1ri)  
+:=τj,i
+d1,j + ∑ℓi
+j=1 (−2λi,j+1sir1)  
+:=σi,j
+di,j
+−r1(si¯ki −H(mi)) + ri(s1¯k1 −H(m1))  
+:=γi
+≡0 (mod q).
+(6)
+Again, using the same notations as in [8], we deﬁne τj,i = 2λ1,j+1s1ri, σi,j =
+−2λi,j+1sir1 and γi = r1(si¯ki −H(mi)) + ri(s1¯k1 −H(m1)) for 2 ⩽ i ⩽ u,
+1 ⩽ j ⩽ ℓi. Even if α is eliminated from the equations, if we are able to recover
+some di,j values from a short vector in the lattice, we can recover α using any
+equation in the modular system (5). We will now use Equation (6) to construct
+the lattice basis.
+From a modular system to a lattice basis. Let Lbe the lattice constructed for
+the attack, and we have L= L(B) where the lattice basis Bis given below. Let
+m= maxi,jµij for 1 ⩽ j ⩽ ℓi and 2 ⩽ i⩽ u. We set a scaling factor ∆∈N to
+be deﬁned later. The lattice basis is given by
+B=
+Eq(6),i= 2...Eq (6),i=u
+
+
+
+∆2mq 0 0 0
+0 ... ...
+0 ··· ∆2mq 0
+∆2mτ1,2 ... ∆2mτ1,u 2m−µ1,1
+... ... 0 ...
+∆2mτℓ1,2 ... ∆2mτℓ1,u 2m−µ1,ℓ1
+∆2mσ2,1 0 0 2 m−µ2,1
+... ... ...
+∆2mσ2,ℓ2
+... 2 m−µ2,ℓ2
+0 ... 0 ... ...
+... ∆2mσu,1 2m−µu,1
+... ... ...
+0 0 ∆2mσu,ℓu 0 2 m−µu,ℓu
+∆2mγ2 ... ∆ 2mγu 2m−1 ... 2m−1 2m−1
+Let n = (u−1) + T + 1 = T + u, with T = ∑u
+i=1 ℓi, be the dimension of
+the lattice. The u−1 ﬁrst columns correspond to Equation (6) for 2 ≤i ≤u.
+12 De Micheli et al.
+Each of the remaining columns, except the last one, corresponds to a dij, and
+contains coeﬃcients that allow to regulate the size of the dij. The determinant
+of Lis given by
+det L= qu−1 (∆2m)u−1 2
+∑
+i,j(m−µi,j)2m−1.
+The lattice is built such that there exists w∈L which contains the unkowns
+di,j. To ﬁnd it, we know there exists some values t2,t2,...,t u such that if v =
+(t2,...,t u,d1,1,...,d u,ℓu,−1), we get
+w= vB, (7)
+and
+w= (0,..., 0,d1,12m−µ1,1 −2m−1,...,d u,ℓu2m−µu,ℓu −2m−1,−2m−1).
+If we are able to ﬁnd w in the lattice, then we can reconstruct the secret key
+α. In order to ﬁnd w, we estimate its norm and make sure w appears in the
+reduced basis. After reducing the basis, we look for vectors of the correct shape,
+i.e., with suﬃciently many zeros at the beginning and the correct last coeﬃcient,
+and attempt to recover α for each of these.
+How the size of ∆ aﬀects the norms of the short vectors. In order to ﬁnd the
+vector w in the lattice, we reduce Busing LLL or BKZ. For w to appear in the
+reduced basis, one should at least set ∆ such that
+||w||2 ⩽ (1.02)n(det L)1/n. (8)
+The vector w we expect to ﬁnd has norm ||w||2 ⩽ 2m−1√
+T + 1. From Equa-
+tion (8), one can deduce the value of ∆ needed to ﬁnd w in the reduced lattice,
+which is given by the expression
+∆⩾ (T + 1)(T+u)/(2(u−1))2
+1+∑µi,j−(u+T)
+u−1
+q(1.02)
+(T+u)2
+u−1
+:= ∆th
+In our experiments, the average value of ℓi for 1 ⩽ i⩽ u is ˜ℓ= 26, and thus
+T = u×˜ℓon average. Moreover, the average value of µij is 7 and so on average∑µij = 7 ×u×˜ℓ. Hence, if we compute ∆th for u= 3,..., 8, with these values,
+we obtain ∆th ≪1, which does not help us to set this parameter.
+In practice, we verify that setting ∆= 1 allows us to recover the secret key.
+In our experiments, we vary the bitsize of∆to see whether a slightly larger value
+aﬀects the probability of success. This comment will be adressed in Section 5.
+Too many small vectors. While running BKZ on B, we note that for some spe-
+ciﬁc sets of parameters the reduced basis contains some undesired short vectors,
+i.e., vectors that are shorter than w. This can be explained by looking at two
+consecutive rows in the lattice basis given above, say thejth row and the (j+1)th

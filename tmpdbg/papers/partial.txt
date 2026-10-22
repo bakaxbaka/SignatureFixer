@@ -1,0 +1,537 @@
+Recovering cryptographic keys from partial
+information, by example
+Gabrielle De Micheli1 and Nadia Heninger2
+1Universit´ e de Lorraine, CNRS, Inria, LORIA, Nancy, France
+2University of California, San Diego
+Abstract
+Side-channel attacks targeting cryptography may leak only partial or
+indirect information about the secret keys. There are a variety of tech-
+niques in the literature for recovering secret keys from partial information.
+In this tutorial, we survey several of the main families of partial key recov-
+ery algorithms for RSA, (EC)DSA, and (elliptic curve) Diﬃe-Hellman, the
+public-key cryptosystems in common use today. We categorize the known
+techniques by the structure of the information that is learned by the at-
+tacker, and give simpliﬁed examples for each technique to illustrate the
+underlying ideas.
+Contents
+1 Introduction 2
+2 Motivation 4
+3 Mathematical background 6
+4 Key recovery methods for RSA 7
+4.1 RSA Preliminaries . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+4.2 RSA Key Recovery with Consecutive bits known . . . . . . . . . 9
+4.2.1 Warm-up: Lattice attacks on low-exponent RSA with bad
+padding. . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+4.2.2 Factorization from consecutive bits of p. . . . . . . . . . . 13
+4.2.3 RSA key recovery from least signiﬁcant bits of p . . . . . 14
+4.2.4 RSA key recovery from middle bits of p . . . . . . . . . . 15
+4.2.5 RSA key recovery from multiple chunks of bits of p . . . . 17
+4.2.6 Open problem: RSA key recovery from many nonconsec-
+utive bits of p . . . . . . . . . . . . . . . . . . . . . . . . . 17
+4.2.7 Partial recovery of RSA dp . . . . . . . . . . . . . . . . . 18
+1
+4.2.8 Partial recovery of RSA dfrom most signiﬁcant bits is not
+possible . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+4.2.9 Partial recovery of RSA d from least signiﬁcant bits . . . 20
+4.3 Non-consecutive bits known with redundancy . . . . . . . . . . . 21
+4.3.1 Random known bits of p and q . . . . . . . . . . . . . . . 21
+4.3.2 Random known bits of the Chinese remainder coeﬃcients
+dmod (p−1) and dmod (q−1) . . . . . . . . . . . . . . 23
+4.3.3 Recovering RSA keys from indirect information . . . . . . 24
+4.3.4 Open problem: Random known bits without redundancy 24
+5 Key recovery methods for DSA and ECDSA 26
+5.1 DSA and ECDSA preliminaries . . . . . . . . . . . . . . . . . . . 26
+5.1.1 DSA . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+5.1.2 ECDSA . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+5.1.3 Nonce recovery and (EC)DSA security. . . . . . . . . . . . 27
+5.2 (EC)DSA key recovery from most signiﬁcant bits of the nonce k 27
+5.2.1 Lattice attacks . . . . . . . . . . . . . . . . . . . . . . . . 28
+5.2.2 (EC)DSA key recovery from least signiﬁcant bits of the
+nonce k . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+5.2.3 (EC)DSA key recovery from middle bits of the nonce k . 32
+5.2.4 (EC)DSA key recovery from many chunks of nonce bits . 34
+6 Key recovery method for the Diﬃe-Hellman Key Exchange 35
+6.1 Finite ﬁeld and elliptic curve Diﬃe-Hellman preliminaries . . . . 35
+6.2 Most signiﬁcant bits of ﬁnite ﬁeld Diﬃe-Hellman shared secret . 36
+6.3 Discrete log from contiguous bits of Diﬃe-Hellman secret exponents 37
+6.3.1 Known most signiﬁcant bits of the Diﬃe-Hellman secret
+exponent. . . . . . . . . . . . . . . . . . . . . . . . . . . . 37
+6.3.2 Unknown most signiﬁcant bits of the Diﬃe-Hellman secret
+exponent . . . . . . . . . . . . . . . . . . . . . . . . . . . 40
+6.3.3 Open problem: Multiple unknown chunks of the Diﬃe-
+Hellman secret exponent . . . . . . . . . . . . . . . . . . . 40
+7 Conclusion 40
+8 Acknowledgements 41
+1 Introduction
+You are dangling in a rope sling hung from the ceiling of a datacenter
+in an undisclosed location, high above the laser tripwires criscrossing
+the ﬂoor. You hold an antenna over the target’s computer, watching
+the bits of their private key appear one by one on your smartwatch
+display. Suddenly you hear a scuﬄing at the door, the soft beep of
+keypad presses. You’d better get out of there! You pull your emer-
+gency release cable and retreat back to the safety of the ventilation
+2
+duct. Drat! You didn’t have time to get all the bits! Mr. Bond is
+going to be very disappointed in you. Whatever are you going to do?
+In a side-channel attack, an attacker exploits side eﬀects from computation or
+storage to reveal ostensibly secret information. Many side-channel attacks stem
+from the fact that a computer is a physical object in the real world, and thus
+computations can take diﬀerent amounts of time [Koc96], cause changing power
+consumption [KJJ99], generate electromagnetic radiation [QS01], or produce
+sound [GST14], light [FH08], or temperature [HS14] ﬂuctuations. The speciﬁc
+character of the information that is leaked depends on the high- and low-level
+implementation details of the algorithm and often the computer hardware itself:
+branch conditions, error conditions, memory cache eviction behavior, or the
+speciﬁcs of capacitor discharges.
+The ﬁrst work on side-channel attacks in the published literature did not
+directly target cryptography [EL85], but since Kocher’s work on timing and
+power analysis in the 90s [Koc96, KJJ99], cryptography has become a popular
+target for side-channel work. However, it is rare that an attacker will be able to
+simply read a full cryptographic secret through a side channel. The information
+revealed by many side channel attacks is often indirect or incomplete, or may
+contain errors.
+Thus in order to fully understand the nature of a given vulnerability, the side-
+channel analyst often needs to make use of additional cryptanalytic techniques.
+The main goal for the cryptanalyst in this situation is typically: “I have obtained
+the following type of incomplete information about the secret key. Does it allow
+me to eﬃciently recover the rest of the key?” Unfortunately there is not a one-
+size-ﬁts-all answer: it depends on the speciﬁc algorithm used, and on the nature
+of the information that has been recovered.
+The goal of this work is to collect some of the most useful techniques in this
+area together in one place, and provide a reasonably comprehensive classiﬁcation
+on what is known to be eﬃcient for the most commonly encountered scenarios
+in practice. That is, this is a non-exhaustive survey and a concrete tutorial with
+motivational examples. Many of the algorithmic papers in this area give con-
+structions in full generality, which can sometimes obscure the reader’s intuition
+about why a method works. Here, we aim to give minimal working examples to
+illustrate each algorithm for simple but nontrivial cases. We restrict our focus
+to public-key cryptography, and in particular, the algorithms that are currently
+in wide use and thus the most popular targets for attack: RSA, (EC)DSA, and
+(elliptic curve) Diﬃe-Hellman.
+Throughout this work, we will illustrate the information known for key values
+as follows:
+Most signiﬁcant bits Least signiﬁcant bits
+Known bits
+3
+The organization of this survey is given in Table 1.
+2 Motivation
+While this tutorial is mostly operating at a higher level of mathematical ab-
+straction than the side-channel attacks that we are motivated by, we will give a
+few examples of how attackers can learn partial information about secrets.
+Modular exponentiation. All of the public-key cryptographic algorithms we
+discuss involve modular exponentiation or elliptic curve scalar addition operat-
+ing on secret values. For RSA signatures, the victim computes s= md mod N
+where d is the secret exponent. For DSA signatures, the victim computes a
+per-signature secret value k and computes the value r= gk mod p, where g and
+pare public parameters. For Diﬃe-Hellman key exchange, the victim generates
+a secret exponent aand computes the public key exchange value A= ga mod p,
+where g and p are public parameters.
+Naive modular exponentiation algorithms like square-and-multiply operate
+bit by bit over the bits of the exponent: each iteration will execute a square
+operation, and if that bit of the exponent is a 1, will execute a multiply op-
+eration. More sophisticated modular exponentiation algorithms precompute a
+digit representation of the exponent using non-adjacent form (NAF), windowed
+non-adjacent form (wNAF) [M¨ ol03], sliding windows, or Booth recoding [Boo51]
+and then operate on the precomputed digit representation. [Gor98].
+Cache attacks on modular exponentiation. Cache timing attacks are one
+of the most commonly exploited families of side-channel attacks in the academic
+literature [Pag02, TTMH02, TSS +03, Per05, Ber05, OST06]. There are many
+variants of these attacks, but they all share in common that the attacker is able
+to execute code on a CPU that is co-located with the victim process and shares a
+CPU cache. While the victim code executes, the attacker measures the amount
+of time that it takes to load information from locations in the cache, and thus
+deduces information about the data that the victim process loaded into those
+cache locations during execution. In the context of the modular exponentiation
+or scalar addition algorithms discussed above, a cache attack on a vulnerable
+implementation might reveal whether a multiply operation was executed at a
+particular bit location if the attacker can detect whether the code to execute
+the multiply instruction was loaded into the cache. Alternatively, for a pre-
+computed digit representation of the number, the attacker may be able to use
+a cache attack to observe the digit values that were accessed [ASK07, AS08,
+BH09, BvSY14].
+Other attacks on modular exponentiation. Other families of side chan-
+nels that have been used to exploit vulnerable modular exponentiation imple-
+mentations include power analysis and diﬀerential power analysis attacks [KJJ99,
+KJJR11], electromagnetic radiation [QS01], acoustic emanations [GST14], raw
+timing [Koc96], photonic emission [FH08], and temperature [HS14]. These at-
+tacks similarly exploit code or circuits whose execution varies based on secrets.
+4
+Scheme Secret information Bits known Technique Section
+RSA p≥50% most signiﬁcantbits Coppersmith’s method §4.2.2
+RSA p≥50% least signiﬁcantbits Coppersmith’s method §4.2.3
+RSA pmiddle bits Multivariate Coppersmith§4.2.4
+RSA pmultiple chunks of bits Multivariate Coppersmith§4.2.4
+RSA >log logNchunks ofp Open problem
+RSA dmod (p−1) MSBs Coppersmith’s method §4.2.7
+RSA dmod (p−1) LSBs Coppersmith’s method§4.2.7 and§4.2.3
+RSA dmod (p−1) middle bits Multivariate Coppersmith§4.2.7 and§4.2.4
+RSA dmod (p−1) chunks of bits Multivariate Coppersmith§4.2.7 and§4.2.4
+RSA dmost signiﬁcant bits Not possible §4.2.8
+RSA d≥25% least signiﬁcantbits Coppersmith’s method §4.2.9
+RSA ≥50% random bits ofpandq Branch and prune §4.3.1
+RSA ≥50% of bits ofdmod (p−1) anddmod (q−1) Branch and prune §4.3.2
+(EC)DSA MSBs of signature nonces Hidden Number Problem §5.2
+(EC)DSA LSBs of signature nonces Hidden Number Problem §5.2
+(EC)DSA Middle bits of signaturenonces Hidden Number Problem §5.2
+(EC)DSA Chunks of bits of signaturenonces Extended HNP §5.2.4
+EC(DSA) Many bits of nonce Scales poorly
+Diﬃe-Hellman Most signiﬁcant bits ofshared secretgab Hidden Number Problem §6.2
+Diﬃe-Hellman Secret exponenta Pollard kangaroo method §6.3
+Diﬃe-Hellman Chunks of bits of secret ex-ponent Open problem
+Table 1: Visual table of contents for key recovery methods for public-key cryp-
+tosystems.
+5
+Cold boot and memory attacks. An entirely diﬀerent class of side-channel
+attacks that can reveal partial information against keys include attacks that
+may leak the contents of memory. These include cold boot attacks [HSH +08],
+DMA (Direct Memory Access), Heartbleed, and Spectre/Meltdown [LSG +18,
+KHF+19]. While these attacks may reveal incomplete information, and thus
+serve as theoretical motivation for some of the algorithms we discuss, most of
+the vulnerabilities in this family of attacks can simply be used to read arbitrary
+memory with near-perfect precision, and cryptanalytic algorithms are rarely
+necessary.
+Length-dependent operations. A ﬁnal vulnerability class is implementa-
+tions whose behavior depends on the length of a secret value, and thus variations
+in the behavior may leak information about the number of leading zeros in a se-
+cret. Simple examples include copying a secret key to a buﬀer in such a way that
+it reveals the bit length of a secret key, or iterating a modular exponentiation
+algorithm only until the most signiﬁcant nonzero digit. [BT11] In another exam-
+ple, the Raccoon attack observes that TLS versions 1.2 and below strips leading
+zeros from the Diﬃe-Hellman shared secret before applying the key derivation
+function, resulting in a timing diﬀerence depending on the number of hash input
+blocks required for the length of the secret. [MBA +20]
+3 Mathematical background
+Lattices and lattice reduction algorithms Several of the algorithms we
+present make use of lattices and lattice algorithms. We will state a few facts
+about lattices, but try to avoid being too formal.
+For the purposes of this tutorial, we will specify a lattice by giving a basis
+matrix B which is a n×n matrix of linearly independent row vectors with
+rational (but in our applications usually integer) entries. The lattice generated
+by B, written as L(B), consists of all vectors that are integer linear combinations
+of the row vectors of B. The determinant of a lattice is the absolute value of
+the determinant of a basis matrix: det L(B) = |det B|.
+Geometrically, a lattice resembles a discrete, possibly skewed, grid of points
+in n-dimensional space. This discreteness property ensures that there is a short-
+est vector in the lattice: there is a non-inﬁnitesimal smallest length of a vector
+in the lattice, and there is at least one vector v1 that achieves this length. For
+a random lattice, the Euclidean length of this vector is approximated using the
+Gaussian heuristic: |v1|2 ≈
+√
+n/(2πe)(det L)1/n. We often don’t need this much
+precision; for lattices of very small dimension we will often use the quick and
+dirty approximation that |v1|2 ≈(det L)1/n.
+The shortest vector in an arbitrary lattice is NP-hard to compute exactly,
+but the LLL algorithm [LLL82] will compute an exponential approximation
+to this shortest vector in polynomial time: in the worst case, it will return
+a vector b1 satisfying ||b1||2 ≤ 2(n−1)/4(det L)1/n. In practice, for random
+lattices, the LLL algorithm obtains a better approximation factor ||b1||2 ≤
+1.02n(det L)1/n [NS06]. In fact, the LLL algorithm will return an entire ba-
+sis for the lattice whose vectors are good approximations for what are called the
+6
+successive minima for the lattice; for our purposes the only fact we need is that
+these vectors will be fairly short, and for a random lattice they will be close
+to the same length. Current implementations of the LLL algorithm can be run
+fairly straightforwardly on lattices of a few hundred dimensions.
+To compute a closer approximation to the shortest vector than LLL, one can
+use the BKZ algorithm [Sch87, SE94]. This algorithm runs in time exponential
+in a block size, which is a parameter to the algorithm that determines the quality
+of the approximation factor. The theoretical guarantees of this algorithm are
+complicated to express; for our purposes we only need to know that for lattices
+of dimension below around 100, one can easily compute the shortest vector in
+the heuristically random-looking lattices we consider using the BKZ algorithm,
+and often can often ﬁnd the shortest vector, or a “good enough” approximation
+to it, by using smaller block sizes. Theoretically, the LLL algorithm is equivalent
+to using BKZ with block size 2.
+4 Key recovery methods for RSA
+4.1 RSA Preliminaries
+Parameter Generation. To generate an RSA key pair, implementations
+typically start by choosing the public exponent e. By far the most common
+choice is to simply ﬁx e = 65537. Some implementations use small primes
+like 3 or 17. Almost no implementations use public exponents larger than 32
+bits. This means that attacks that involve brute forcing values less than e are
+generally feasible in practice.
+In the next step, the implementation generates two random primes p and
+q such that p−1 and q−1 are relatively prime to e. The public modulus is
+N = pq. The private exponent is then computed as d= e−1 mod (p−1)(q−1).
+The public key is the pair (e,N). In theory, the secret key is the pair (d,N),
+but in practice many implementations store keys in a data structure including
+much more information. For example, the PKCS#1 private key format includes
+the ﬁelds p, q, dp = dmod (p−1), dq = dmod (q−1), and qinv = q−1 mod p
+to speed encryption using the Chinese Remainder Theorem.
+Encryption and Signatures. In textbook RSA, Alice encrypts the message
+m to Bob by computing c = me mod N. In practice, the message m is not a
+“raw” message, but has ﬁrst been transformed from the content using a padding
+scheme. The most common encryption padding scheme in network protocols is
+PKCS#1v1.5, but OAEP [BR95] is also sometimes used or speciﬁed in protocols.
+To decrypt the encrypted ciphertext, Bob computes m= cd mod N and veriﬁes
+that m has the correct padding.
+To generate a digital signature, Bob ﬁrst hashes and pads the message he
+wishes to sign using a padding scheme like PKCS#1v1.5 signature padding
+(most common) or PSS (less common); letmbe the hashed and padded message
+of this form. Then Bob generates the signature as s = md mod N. Alice can
+verify the signature by computing the value m′= se mod N and verifying that
+m′is the correct hashed and padded value.
+7
+Since encryption and signature veriﬁcation only use the public key, decryp-
+tion and signature generation are the operations typically targeted by side-
+channel attacks.
+RSA-CRT. To speed up decryption, instead of computing cd mod N directly,
+implementations often use the Chinese remainder theorem (CRT). RSA-CRT
+splits the exponent dinto two parts dp = dmod (p−1) and dq = dmod (q−1).
+To decrypt using the Chinese remainder theorem, Alice would computemp =
+cdp mod pand mq = cdq mod q. The message can be recovered with the help of
+the pre-computed value qinv = q−1 mod p by computing
+m= mpqqp + mq(1 −qqp) = (mp −mq)qqinv + mq mod N.
+This is called Garner’s formula [Gar59].
+Relationships Between RSA Key Elements. For the purpose of secret
+key recovery, we typically assume that the attacker knows the public key.
+RSA keys have a lot of mathematical structure that can be used to relate the
+diﬀerent components of the public and private keys together for key recovery
+algorithms. The RSA public and private keys are related to each other as
+ed≡1 mod (p−1)(q−1)
+The modular equivalence can be removed by introducing a new variable k to
+obtain an integer relation
+ed= 1 + k(p−1)(q−1) = 1 + k(N −(p+ q) + 1)
+We know that d< (p−1)(q−1), so k <e. The value of k is not known to the
+attacker, but since generally e ≤65537 in practice it is eﬃcient to brute force
+over all possible values of k.
+For attacks against the CRT coeﬃcients dp and dq, we can obtain similar
+relations:
+edp = 1 + kp(p−1) and edq = 1 + kq(q−1) (1)
+for some integers kp <e and kq <e. Brute forcing over two independent 16-bit
+values can be burdensome, but we can relate kp and kq as follows:
+Rearranging the two relations, we obtainedp−1−kp = kppand edq−1−kq =
+kqq. Multiplying these together, we get
+(edp −1 + kp)(edq −1 −kq) = kpkqN
+Reducing the above modulo e, we get
+(kp −1)(kq −1) ≡kpkqN mod e (2)
+Thus given a value for kp, we can solve for the unique value of kq mod e, and
+for applications that require brute forcing values of kp and kq we only need to
+brute force at most e pairs. [IGA+15]
+8
+The multiplier k also has a nice relationship to these values. Multiplying
+the relations from Equation 1 together, we have
+(edp −1)(edq −1) = kp(p−1)kq(q−1)
+Substituting (p−1)(q−1) = (ed−1)/k and reducing modulo e, we can relate
+the coeﬃcients as
+k≡−kpkq mod e
+Any of the secret values p, q, d, dp, dq, or qinv suﬃces to compute all of the
+other values when the public key ( N,e) is known.
+From either p or q, computing the other values is straightforward.
+For small e, N can be factored from d by computing
+ed= 1 + k(p−1)(q−1) = 1 + k(N −(p+ q) + 1) (3)
+The integer multiplier k can be recovered by rounding ⌈(ed−1)/N⌋. Once
+k is known, then Equation 3 can be rearranged to solve for s= p+ q. Once sis
+known, we have (p+q)2 = s2 = p2+2N+q2 and s2−4N = p2−2N+q2 = (p−q)2.
+Then N can be factored by computing gcd(( p+ q) −(p−q),N).
+When e is small, p can be computed from dp as
+p= gcd((edp −1)/kp + 1,N)
+where kp can be brute forced from 1 to e.
+If kp is not known and is too large to brute force, with high probability for
+a random a,
+p= gcd(aedp−1 −1,N).
+Factoring from qinv is more complex. As noted in [HS09], qinv satisﬁes
+qinvq2 −q ≡0 mod N, and q can be recovered using Coppersmith’s method,
+described below.
+4.2 RSA Key Recovery with Consecutive bits known
+This section covers techniques for recovering RSA private keys when large con-
+tiguous portions of the secret keys are known. The main technique used in this
+case is lattice basis reduction.
+For the key recovery problems in this section, we can typically recover a
+large unknown chunk of bits of an unknown secret key value ( p, dmod (p−1),
+or d). We typically assume that the attacker has access to the public key ( N,e)
+but does not have any other auxiliary information (about q or dmod (q−1),
+for example.
+Knowledge of large contiguous portions of secret keys is unlikely to arise
+in side channels that involve noisy measurements, but could arise in scenarios
+where secrets are being read out of memory that got corrupted in an identiﬁable
+region. They can also help make attacks more eﬃcient if a high cost is paid to
+recover known bits.
+9
+4.2.1 Warm-up: Lattice attacks on low-exponent RSA with bad
+padding.
+The main algorithmic technique used for RSA key recovery with contiguous bits
+is to formulate the problem as ﬁnding a small root of a polynomial modulo an
+integer, and then to use lattice basis reduction to solve this problem.
+In order to introduce the main tool of using lattice basis reduction to ﬁnd
+roots of polynomials, we will start with an illustrative example for the concrete
+application of breaking small-exponent RSA with known padding. In later sec-
+tions we will show how to modify the technique to cover diﬀerent RSA key
+recovery scenarios.
+The original formulation of this problem is due to Coppersmith [Cop96].
+Howgrave-Graham [HG97] gave a dual approach that we ﬁnd easier to explain
+and easier to implement. May’s survey [May10] contains a detailed description
+of the Coppersmith/Howgrave-Graham algorithm.
+To set up the problem, we have an integer N, and a polynomial f(x) of
+degree k that has a root r modulo N, that is, f(r) ≡0 mod N. We wish to ﬁnd
+r. Finding roots of polynomials can be done eﬃciently modulo primes [LLL82],
+so this problem is easy to solve if N is prime or the prime factorization of N is
+known. The Coppersmith/Howgrave-Graham methods are generally of interest
+when the prime factorization of N is not known: it gives an eﬃcient algorithm
+for ﬁnding all small roots (if they exist) modulo N of unknown factorization.
+Problem setup. For our toy example, we will use the 96-bit RSA modulus
+N = 0x98664cf0c9f8bbe76791440d
+and e = 3. Consider a broken PKCS#1v1.5-esque RSA encryption padding
+scheme that pads a message m as
+pad(m) = 0x01FFFFFFFFFFFFFFFF00 || m
+Now imagine that we have obtained a ciphertext
+c= 0xeb9a3955a7b18d27adbf3a1
+and we wish to recover the unknown message m.
+10
+pad(m)
+c
+a m
+N
+Figure 1: Illustration of low-exponent RSA message recovery attack setup.
+The attacker knows the public modulus N, a ciphertext c, and the padding a
+prepended to the unknown message m before encryption. The attacker wishes
+to recover m.
+Cast the problem as ﬁnding roots of a polynomial. Let
+a= 0x01FFFFFFFFFFFFFFFF0000
+be the known padding string, oﬀset to the correct byte location. We also know
+the length of the message; in this case m < 216. Thus we have that c =
+(a+ m)3 mod N, for unknown small m. Let f(x) = (a+ x)3 −c; we have set up
+the problem so that we wish to ﬁnd a small root msatisfying f(m) ≡0 mod N
+for the polynomial
+f(x) =x3 + 0x5fffffffffffffffd0000x2 + 0x6f1c485f406ba1c069460efex
++ 0x203211880cdc43afe1c5c5f9
+(We have reduced the coeﬃcients modulo N so that they will ﬁt on the page.)
+Construct a lattice. Let the coeﬃcients of f be f(x) = x3 +f2x2 +f1x+f0.
+Let M = 216 be an upper bound on the size of the root m. We construct the
+matrix
+B =
+
+
+M3 f2M2 f1M f 0
+0 NM2 0 0
+0 0 NM 0
+0 0 0 N
+
+
+We then apply the LLL lattice basis reduction algorithm to the matrix. The
+shortest vector of the reduced basis is
+v=(−0x66543dd72697M3,−0x35c39ac91a11c04M2,0x3f86f973d67d25eae138M,
+−0x10609161b131fd102bc2a8)
+Extract a polynomial from the lattice and ﬁnd its roots. We then
+construct the polynomial
+g(x) = −0x66543dd72697x3 −0x35c39ac91a11c04x2
++ 0x3f86f973d67d25eae138x−0x10609161b131fd102bc2a8
+11
+The polynomial g has one integer root, 0x42, which is the desired solution
+for m.
+This speciﬁc 4 ×4 lattice construction works to ﬁnd roots up to size N1/6.
+For the small key size we used in our example, this is only 16 bits, but since
+it scales directly with the modulus size, this same lattice construction would
+suﬃce to learn 170 unknown bits of message for a 1024-bit RSA modulus, or
+341 bits of message for a 2048-bit RSA modulus. Lattice reduction on a 4 ×4
+lattice basis is instantaneous.
+More detailed explanation. Why does this work? The rows of this matrix
+correspond to the coeﬃcient vectors of the polynomials f(x), Nx2, Nx, and
+N. We know that each of these polynomials evaluated at x = m will be 0
+modulo N. Each column is scaled by a power of M, so that the ℓ1 norm of
+any vector in this lattice is an upper bound on the value of the corresponding
+(un-scaled) polynomial evaluated at r. For a vector v= (v3M3,v2M2,v1M,v0)
+in the lattice,
+|f(m)|= |v3m3 + v2m2 + v1m+ v0|≤| v3M3|+ |v2M2|+ |v1M|+ |v0|= |v|1
+for any |m|≤ M.
+We have constructed the lattice so that every polynomialgwe extract from it
+has the property that g(m) ≡0 mod N. We have also constructed our lattice so
+that the length of the shortest vector in a reduced basis will be less thanN. The
+only integer multiple of N less than N is 0, so by construction the polynomial
+corresponding to this short vector satisﬁes g(m) = 0 over the integers, not just
+modulo N. Since ﬁnding roots of polynomials over the integers, rationals, reals,
+and complex numbers can be done in polynomial time, we can compute the
+roots of this polynomial and check which of them is our desired solution.
+This method will always work if the lattice is constructed properly. That
+is, we need to ensure that the reduced basis will contain a vector of length less
+than N. For this example, det B = M6N3. Heuristically, the LLL algorithm
+will ﬁnd a vector of ℓ2 norm |v|2 ≤1.02n(det B)1/ dim B. We ignore the 1 .02n
+factor, and the diﬀerence between the ℓ2 and ℓ1 norms for the moment. Then
+the condition we wish to satisfy is
+g(m) ≤|v|2 ≤(det B)1/n <M
+For our example, we have (det B)1/ dim L = (M6N3)1/4 < N. Solving for M,
+this will be satisﬁed when M <N1/6. In this case, N has 96 bits, and m is 16
+bits, so the condition is satisﬁed.
+This can be extended to N1/e, where e is the degree of the polynomial f
+by using a larger dimension lattice. Howgrave-Graham’s dissertation [HG] and
+May’s survey [May10] give detailed explanations of this method and improve-
+ments.
+12
+4.2.2 Factorization from consecutive bits of p.
+In this section we show how to use lattices to factor the RSA modulus N if a
+large portion of contiguous bits of one of the factors (without loss of generality
+p) is known.
+q
+p
+2ℓb r
+N
+Figure 2: Factorization of N = pq given contiguous known most signiﬁcant bits
+of p.
+Coppersmith solves this problem in [Cop96] but we ﬁnd the reformulation
+from Howgrave-Graham as “approximate integer common divisors” [HG01] sim-
+pler to apply, and will give that construction here.
+Problem setup. Let N = pq be an RSA modulus with equal-sized p and q.
+Choosing an example with numbers small enough to ﬁt on the page, we have a
+240-bit RSA modulus
+N = 0x4d14933399708b4a5276373cb5b756f312f023c43d60b323ba24cee670f5.
+We assume N is known. Assume we know a large contiguous portion of the
+most signiﬁcant bits b of p, so that p = a+ r, where we do not know r but
+do know the value a = 2 ℓb. Here ℓ = 30 is the number of unknown bits, or
+equivalently the left shift of the known bits.
+In our example, we have
+a= 0x68323401cb3a10959e7bfdc0000000
+Cast the problem as ﬁnding the roots of a polynomial. Let f(x) = a+x.
+We know that there is some value r such that f(r) = p≡0 mod p. We do not
+know p, but we know that p divides N and we know N.
+We know that the unknown r is small, and in particular |r|< Rfor some
+bound R that is known. Here, R= 230.
+Construct a lattice. We can form the lattice basis
+B =
+
+
+R2 Ra 0
+0 R a
+0 0 N
+
+
+13
+We then run the LLL algorithm on our lattice basis B. Let v= (v2R2,v1R,v0)
+be the shortest vector in the reduced basis. In our example, we get the vector
+v=(−0x0x17213d8bc94R2,−0x1d861360160a4f86181R,
+0xf9decdc1447c3f3843819a5d)
+Extract a polynomial and ﬁnd the roots. We form a polynomial f(x) =
+v2x2 + v1x+ v0. For our example,
+f(x) =−0x17213d8bc94x2 −0x1d861360160a4f86181x
++ 0xf9decdc1447c3f3843819a5d
+We can then calculate the roots of f. In this example, f has one integer root,
+r = 0x873209. We can then reconstruct a+ r and verify that gcd( a+ r,N)
+factors N.
+This 3 ×3 lattice construction works for any |r|< p1/3, and directly scales
+as p increases. In our example, we chose p and q so that they have 120 bits,
+and rhas 30 bits. However, this same construction will work to recover 170 bits
+from a 512-bit factor of a 1024-bit RSA modulus, or 341 bits from a 1024-bit
+factor of a 2048-bit RSA modulus.
+More detailed explanation. The rows of this matrix correspond to the
+coeﬃcient vectors of the polynomials x(x+ a), x+ a, and N. We know that
+each of these polynomials evaluated at x= rwill be 0 modulo p, and thus every
+polynomial corresponding to a vector in the lattice has this property. As in the
+previous example, each column is scaled by a power of R, so that the ℓ1 norm
+of any vector in this lattice is an upper bound on the value of the corresponding
+(un-scaled) polynomial evaluated at r.
+If we can ﬁnd a vector in the lattice of length less thanp, then it corresponds
+to a polynomial g that must satisfy g(r) < p. Since by construction, g(r) = 0
+(mod p), this means that g(r) = 0 over the integers.
+We compute the determinant of the lattice to verify that it contains a suf-
+ﬁciently small vector. For this example, det B = R3N. This means we need
+(det B)1/ dim L = (R3N)1/3 <p. Solving for R, this gives R<p 1/3. For an RSA
+modulus we have p≈N1/2, or R<N 1/6.
+This method works up to R<p 1/2 at the limit by increasing the dimension
+of the lattice. This is accomplished by taking higher multiples of f and N. See
+Howgrave-Graham’s dissertation [HG] and May’s survey [May10] for details on
+how to do this.
+4.2.3 RSA key recovery from least signiﬁcant bits of p
+It is also straightforward to adapt this method to deal with a contiguous chunk
+of unknown bits in the least signiﬁcant bits of p: if the chunk begins at bit
+position ℓ, the input polynomial will have the form f(x) = 2 ℓx+ a. This can
+be multiplied by 2−ℓ mod N and solved exactly as above.
+14

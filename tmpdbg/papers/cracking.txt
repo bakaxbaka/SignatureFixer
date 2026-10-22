@@ -1,0 +1,236 @@
+ECDSA Cracking Methods
+William J. Buchanan 1, Jamie Gilchrist1, and Keir Finlow-Bates 2
+Blockpass ID Lab, Edinburgh Napier University, Edinburgh.
+Abstract. The ECDSA (Elliptic Curve Digital Signature Algorithm) is
+used in many blockchain networks for digital signatures. This includes the
+Bitcoin and the Ethereum blockchains. While it has good performance
+levels and as strong current security, it should be handled with care. This
+care typically relates to the usage of the nonce value which is used to
+create the signature. This paper outlines the methods that can be used to
+break ECDSA signatures, including revealed nonces, weak nonce choice,
+nonce reuse, two keys and shared nonces, and fault attack.
+1 Introduction
+ECDSA has been around for over two decades and was first proposed in [1]. The
+ECDSA method significantly improved the performance of signing messages than
+the RSA-based DSA method. Its usage of elliptic curve methods speeded up the
+whole process and supported much smaller key sizes. In 2009, Satoshi Nakamoto
+selected it for the Bitcoin protocol, and it has since been adopted into Ethereum
+and many other blockchain methods. This paper provides a review of the most
+well-known methods of breaking ECDSA.
+2 Basics of Elliptic Curve Cryptography
+One of the most basic forms of elliptic curves is:
+y2 = x3 + ax + b (mod p) (1)
+and where the elliptic curve is defined with p, a, b , gx, gy, and n, and where
+(gx,gy) is a base point on our curve, and n is the order of the curve.
+With ECDSA, the curve used in Bitcoin and Ethereum is secp256k1, and
+which has the form of:
+y2 = x3 + 7 (mod p) (2)
+and where p = 2256 − 232 − 977. We can also use the NIST P256 (secp256r1)
+curve or the NIST-defined P521 curve.
+ECDSA signatures are non-deterministic and will change each time based on
+the nonce used. For the public keys, we have an ( x, y) point on the curve. This
+thus has 512 bits (for secp256k1), and where the private key is a 256-bit scalar
+value.
+3 Creating the ECDSA signature
+An outline of ECDSA is shown in Figure 1. With our curve, we have a generator
+point of G and an order n. We start by generating a private key ( d) and then
+generate the public key of:
+Q = d.G (3)
+The public key is a point on the curve, and where it is derived from adding
+the point G, d times.
+3.1 Signing the message
+With a message (m), we aim to apply the private key and then create a signature
+(r, s). First, we create a random nonce value ( k) and then determine the point:
+P = k.G (4)
+Next, we compute the x-axis point of this point:
+r = Px (mod n) (5)
+This gives us the r value of the signature. Next, we take the hash value of
+the message:
+e = H(m) (6)
+And then compute the s value as:
+s = k−1.(e + d.r) (mod n) (7)
+3.2 Verifying the signature
+We can verify by taking the message ( m, the signature (r, s) and the public key
+(Q):
+e = H(m) (8)
+Next, we compute:
+w = s−1 (mod n) (9)
+u1 = e.w (10)
+u2 = r.w (11)
+We then compute the point:
+X = u1.G + u2.Q (12)
+And then take the x-co-ordinate of X:
+x = Xx (mod n) (13)
+If x is equal to r, the signature has been verified.
+Fig. 1.ECDSA signature
+4 ECDSA attacks
+4.1 Revealed nonce
+If the signer reveals just one nonce value by mistake, an intruder can discover
+the private key [2]:
+priv = r−1 × ((k · s) − H(M)) (14)
+This works because:
+s · k = H(M) + r · priv (15)
+and so:
+r · priv = s · k − H(M) (16)
+and for priv:
+priv = r−1(s · k − H(M)) (17)
+As r, s, H(M), and k are known, priv can therefore be calculated.
+4.2 Weak nonce choice
+A weak nonce can be broken with the Lenstra–Lenstra–Lov´ asz (LLL) method
+[3], and where we crack the signature and discover the private key used to sign
+the message [4].
+4.3 Nonce re-use
+It is well-known that simply keeping the selected nonce secret is not enough to
+secure the private key [5]. If a nonce is used to sign a first message to produce
+a first signature ( s1) and is then reused to sign a second message to produce
+a second signature ( s2), then s1 and s2 will have the same r value, and it is
+possible to derive the private key ( priv) from the two signatures.
+In ECDSA, Bob creates a random private key ( priv) and then a public key
+from [6]:
+pub = priv × G (18)
+Next, to create a signature for a message M1, he creates a random number
+(k) and generates the signature from the SHA-256 hash of the message, H(M1),
+using the private key priv. We denote H(M1) as h1.
+r1 = k · G (19)
+s1 = k−1(H(M1) + r · priv) (20)
+The signature is then ( r1, s1), where r1 is the x-co-ordinate of the point kG.
+Bob now signs a second message M2 using the SHA-256 hash of the second
+message, H(M2), the same random number k to produce a second signature. We
+denote H(M2) as h2.
+r2 = k · G (21)
+s2 = k−1(H(M1) + r · priv) (22)
+Note that r1 is equal to r2 (see equations 19 and 21). In general, if two
+signatures generated using the same private key have the same r value, then the
+same nonce value has been used for each signature. This provides a quick way
+of checking whether the nonce reused attack applies.
+We can then recover the private key with:
+s2 · h1 − s1 · h2
+r(s1 − s2) = h1 · h2 + r · h1 · priv − h1 · h2 − r · h2 · priv
+r · h1 · r · priv − r · h2 − r · priv (23)
+= r · h1 · priv − r · h2 · priv
+r · h1 − r · h2
+(24)
+= priv (25)
+We can also recover the nonce with:
+h1 − h2
+s1 − s2
+= h1 − h2
+k−1(h1 − h2 + priv(r − r)) = k (26)
+4.4 Two keys and shared nonces
+With an ECDSA signature, we sign a message with a private key ( priv) and
+prove the signature with the public key (pub). A random value (a nonce) is then
+used to randomize the signature. Each time we sign, we create a random nonce
+value, which will produce a different (but verifiable) signature. The private key,
+though, can be discovered if Alice signs four messages with two keys and two
+nonces [5]. In this case, she will sign message 1 with the first private key ( x1),
+sign message 2 with a second private key ( x2), sign message 3 with first private
+key (x1) and sign message 4 with the second private key ( x2) The same nonce
+(k1) is used in the signing for messages 1 and 2, and another nonce ( k2) is used
+in the signing of messages 3 and 4 [7].
+In ECDSA, Bob creates a random private key ( priv), and then a public key
+from:
+pub = priv · G (27)
+Next, in order to create a signature for a message of M, he creates a random
+number (k) and generates the signature of:
+r = k · G (28)
+s = k−1(H(M) + r · priv) (29)
+The signature is then (r, s) and where r is the x-co-ordinate of the point kG.
+H(M) is the SHA-256 hash of the message ( M), and converted into an integer
+value. In this case, Alice will have two key pairs and two private keys ( x1 and
+x2). She will sign message 1 ( m1) with the first private key (x1), sign message 2
+(m2) with a second private key ( x2), sign message 3 ( m3) with the first private
+key (x1) and sign message 4 ( m4) with the second private key ( x2). The same
+nonce (k1) is used in the signing of messages 1 and 2, and another nonce ( k2)
+is used in the signing of messages 3 and 4. Now let’s say we have four messages
+(m1 .. m4) and have hashes of:
+h1 = H(m1) (30)
+h2 = H(m2) (31)
+h3 = H(m3) (32)
+h4 = H(m4) (33)
+The signatures for the messages will then be ( s1, r1), (s2, r1), (s3, r2), and
+(s4, r2):
+s1 = k1
+−1(h1 + r1 · x1) (34)
+s2 = k1
+−1(h2 + r1 · x2) (35)
+s3 = k2
+−1(h3 + r2 · x1) (36)
+s4 = k2
+−1(h4 + r2 · x2) (37)
+Using Gaussian elimination, we can also recover the private keys with:
+x1 = h1r2s2s3 − h2r2s1s3 − h3r1s1s4 + h4r1s1s3
+r1r2(s1s4 − s2s3) (38)
+and:
+x2 = h1r2s2s4 − h2r2s1s4 − h3r1s2s4 + h4r1s2s3
+r1r2(s2s3 − s1s4) (39)
+4.5 Fault Attack
+In the case of a fault attack in ECDSA, we only require two signatures. One is
+produced without a fault ( r, s), and the other has a fault ( rf , sf ). From these,
+we can generate the private key [8,9].
+In ECDSA, Bob creates a random private key ( priv), and then a public key
+from [10]:
+pub = priv · G (40)
+Next, in order to create a signature for a message of M, he creates a random
+number (k) and generates the signature of:
+r = k · G (41)
+s = k−1(h + r · d) (42)
+and where d is the private key and h = H(M) The signature is then ( r, s)
+and where r is the x-co-ordinate of the point kG. h is the SHA-256 hash of the
+message (M), and converted into an integer value.
+Now, let’s say we have two signatures. One has a fault and the other one is
+valid. We then have (r, s) for the valid one, and ( rf , sf ) for the fault. These will
+be:
+sf = k−1 · (h + d · rf ) (43)
+s = k−1 · (h + d · r) (44)
+and where h is the hash of the message. Now, if we subtract the two s values,
+we get:
+s − sf = k−1 · (h + d · r) − k−1 · (h + d · rf ) (45)
+Then:
+s − sf = k−1 · (d · r − d · rf ) (46)
+k · (s − sf ) = (d · r − d · rf ) (47)
+k = (d · r − d · rf ) · (s − sf )−1 (48)
+This can then be substituted in:
+s = k−1(h + r · d) (49)
+This gives:
+s = (s − sf ) · (d · r − d · rf )−1 · (h + d · r) (50)
+s · (d · r − d · rf ) = (s − sf ) · (h + d · r) (51)
+s · d · r − s · d · rf = s · h + s · d · r − h · sf − d · r · sf (52)
+−s · d · rf = s · h − h · sf − d · r · sf (53)
+d · r · sf − s · d · rf = s · h − h · sf (54)
+d · (r · sf − s · rf ) = h · (s − sf ) (55)
+We can then rearrange this to derive the private key ( d) from:
+d = h · (s − sf ) · (sf · r − s · rf )−1 (56)
+5 Conclusions
+We can see that ECDSA needs to be handled carefully, especially when using
+the nonce value.
+References
+1. D. Johnson, A. Menezes, and S. Vanstone, “The elliptic curve digital signature
+algorithm (ecdsa),” International journal of information security, vol. 1, pp. 36–
+63, 2001.
+2. W. J. Buchanan, “Ecdsa: Revealing the private key, if nonce known (secp256k1),”
+https://asecuritysite.com/ecdsa/ecd3, Asecuritysite.com, 2025, accessed: April 09,
+2025. [Online]. Available: https://asecuritysite.com/ecdsa/ecd3
+3. A. K. Lenstra, H. W. Lenstra, and L. Lov´ asz, “Factoring polynomials with rational
+coefficients,” 1982.
+4. W. J. Buchanan, “Ecdsa crack using the lenstra–lenstra–lov´ asz (lll) method,”
+https://asecuritysite.com/ecdsa/ecd, Asecuritysite.com, 2025, accessed: April 04,
+2025. [Online]. Available: https://asecuritysite.com/ecdsa/ecd
+5. M. Brengel and C. Rossow, “Identifying key leakage of bitcoin users,” in Research
+in Attacks, Intrusions, and Defenses: 21st International Symposium, RAID 2018,
+Heraklion, Crete, Greece, September 10-12, 2018, Proceedings 21. Springer, 2018,
+pp. 623–643.
+6. W. J. Buchanan, “Ecdsa: Revealing the private key, if nonce revealled (secp256k1),”
+https://asecuritysite.com/ecdsa/ecd5, Asecuritysite.com, 2025, accessed: April 09,
+2025. [Online]. Available: https://asecuritysite.com/ecdsa/ecd5
+7. ——, “Ecdsa: Revealing the private key, from two keys and shared nonces
+(secp256k1),” https://asecuritysite.com/ecdsa/ecd6, Asecuritysite.com, 2025,
+accessed: April 04, 2025. [Online]. Available: https://asecuritysite.com/ecdsa/ecd6
+8. G. A. Sullivan, J. Sippe, N. Heninger, and E. Wustrow, “Open to a fault: On the
+passive compromise of {TLS} keys via transient errors,” in 31st USENIX Security
+Symposium (USENIX Security 22), 2022, pp. 233–250.
+9. D. Poddebniak, J. Somorovsky, S. Schinzel, M. Lochter, and P. R¨ osler, “Attack-
+ing deterministic signature schemes using fault attacks,” in 2018 IEEE European
+Symposium on Security and Privacy (EuroS&P). IEEE, 2018, pp. 338–352.
+10. W. J. Buchanan, “Cracking rsa: Fault analysis,” https://asecuritysite.com/rsa/
+rsa fault, Asecuritysite.com, 2025, accessed: April 09, 2025. [Online]. Available:
+https://asecuritysite.com/rsa/rsa fault

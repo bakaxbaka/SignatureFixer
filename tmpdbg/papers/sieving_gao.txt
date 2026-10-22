@@ -1,0 +1,870 @@
+Attacking ECDSA with Nonce Leakage by Lattice
+Sieving: Bridging the Gap with Fourier
+Analysis-based Attacks
+Yiming Gao1,⋆, Jinghui Wang1,⋆, Honggang Hu1,2(B), and Binang He1
+1 School of Cyber Science and Technology
+University of Science and Technology of China, Hefei 230027, China
+{qw1234567,liqing21,hebinang}@mail.ustc.edu.cn
+2 Hefei National Laboratory, Hefei 230088, China
+hghu2005@ustc.edu.cn
+Abstract. The Hidden Number Problem (HNP) has found extensive
+applications in side-channel attacks against cryptographic schemes, such
+as ECDSA and Diﬃe-Hellman. There are two primary algorithmic ap-
+proaches to solving the HNP: lattice-based attacks and Fourier analysis-
+based attacks. Lattice-based attacks exhibit better eﬃciency and require
+fewer samples when suﬃciently long substrings of the nonces are known.
+However, they face signiﬁcant challenges when only a small fraction of
+the nonce is leaked, such as 1-bit leakage, and their performance degrades
+in the presence of errors.
+In this paper, we address an open question by introducing an al-
+gorithmic tradeoﬀ that signiﬁcantly bridges the gap between these t-
+wo approaches. By introducing a parameterx to modify Albrecht and
+Heninger’s lattice, the lattice dimension is reduced by approximately
+(log2 x)/l, where l represents the number of leaked bits. We present a
+series of new methods, including the interval reduction algorithm, sever-
+al predicates, and the pre-screening technique. Furthermore, we extend
+our algorithms to solve the HNP with erroneous input. Our attack out-
+performs existing state-of-the-art lattice-based attacks against ECDSA.
+We obtain several records including 1-bit and less than 1-bit leakage on
+a 160-bit curve, while the best previous lattice-based attack for 1-bit
+leakage was conducted only on a 112-bit curve.
+Keywords: ECDSA·HiddenNumberProblem ·LatticeSieving ·Lattice-
+based Attacks
+1 Introduction
+The Hidden Number Problem (HNP) was originally proposed by Boneh and
+Venkatesan as a number theoretic problem to investigate the bit security of the
+Diﬃe-Hellman key exchange scheme [12]. Their work was subsequently extended
+by Nguyen and Shparlinski to analyze the security of ECDSA with partial known
+⋆ Yiming Gao and Jinghui Wang are the co-ﬁrst authors of this work.
+2 Yiming Gao, Jinghui Wang, Honggang Hu B, and Binang He
+nonce leakage [29]. In the scenario that an attacker can obtain some information
+about the nonce used in each signature generation of ECDSA, it is possible
+to recover the secret key by solving the corresponding HNP instance. Currently,
+therearetwotypesofattacksforsolvingtheHNP:Fourieranalysis-basedattacks
+and lattice-based attacks.
+The foundational principles of Fourier analysis-based attacks were initially
+introduced by Bleichenbacher [10], providing the basis for subsequent research
+[5,6,14,35]. These attacks have been considered to be more tractable to break
+HNP instances with limited known bits and even with errors. However, they
+demand a substantial number of samples and exhibit a high computational over-
+head [5,6,11]. The latest advance is obtained by Aranha et al., who successfully
+broke 192-bit ECDSA with less than 1-bit leakage [6].
+In lattice-based attacks, the HNP is transformed into the Bounded Distance
+Decoding (BDD) Problem, which is a variant of the Closest Vector Problem
+(CVP). Using Kannan’s embedding [23], it can be further transformed into the
+Unique Shortest Vector Problem (uSVP). The success of lattice-based attacks
+highly depends on whether the target vector corresponding to the secret is suf-
+ﬁciently short in the lattice. It is believed that the lattice-based attacks would
+become ineﬀective when only a small fraction of the nonce is revealed, particu-
+larly in the case of 1-bit leakage. Aranha et al. emphasized that exploiting a 1-bit
+nonce leakage to attack ECDSA is infeasible due to the underlying structure of
+the HNP lattices [5]. Additionally, lattice-based attacks have been considered
+to behave very poorly with noisy data, which poses constraints on practical
+side-channel attacks.
+At EUROCRYPT 2021, Albrecht and Heninger extended the applicability
+of lattice-based attacks with their Sieving with Predicate (Sieve-Pred) algorith-
+m [3] and the state-of-the-art lattice sieving library G6K [2]. The Sieve-Pred
+algorithm no longer treats sieving algorithms as black boxes for SVP. Instead,
+it uses a predicate to check all the vectors in the database output by sieving
+algorithms. The predicate they used involves scalar multiplication on the elliptic
+curve, which is a nonlinear operation and results in signiﬁcant overhead. The
+nonlinear predicate was improved to a linear predicate by Xu et al. [38].
+Lattice-based attacks and Fourier analysis-based attacks have their unique
+characteristics. Current lattice-based attacks are known for their minimal sam-
+ple requirements and eﬃcient processing. However, they are considered to be
+infeasible when dealing with challenging HNP instances. In contrast, Fourier
+analysis-based attacks can handle more diﬃcult instances such as 1-bit leak-
+age on a 192-bit curve [6], but demand a signiﬁcantly larger sample size and
+computational time. This raises open questions [20]:Can lattice-based attacks
+be enhanced by utilizing more samples? Is there a smooth tradeoﬀ that can be
+characterized between these two types of algorithms?
+1.1 Contributions
+In this work, we enhance the lattice-based attacks by utilizing more samples,
+signiﬁcantly bridging the gap between lattice-based attacks and Fourier analysis-
+Attacking ECDSA with Nonce Leakage by Lattice Sieving 3
+based attacks. The main idea of our attack is using more samples to obtain the
+speciﬁc ones employed in the lattice construction. This allows us to increase
+the lattice determinant while keeping the norm of the target vector roughly
+unchanged. Consequently, it results in a reduction of lattice dimension while
+still satisfying the enabling condition for the attack.
+In practice, we successfully address the case of 1-bit leakage on a 160-bit
+curve, surpassing the best previous lattice-based attack for 1-bit leakage, which
+was only conducted on a 112-bit curve [38]. Moreover, despite the belief that
+lattice-based attacks are ineﬀective for erroneous input [6], we demonstrate the
+eﬀectiveness of our new attack in handling erroneous input, and successfully
+break the 160-bit ECDSA with less than 1-bit leakage. Our main contributions
+are detailed as follows.
+Improved Algorithms for Solving the HNP.Firstly, we propose a new
+lattice construction that introduces a parameterxto trade oﬀ the lattice dimen-
+sion. Our modiﬁcation is based on Albrecht and Heninger’s lattice [3], where the
+hidden numberα is transformed intok′
+0 using the elimination method and the
+recentering technique.
+In our construction, we employ a decomposition technique in whichk′
+0 is
+decomposed asx·α0 +α1, with the condition that|α1|≤ x/2. The target lattice
+vector contains the information ofα0, which is expected to be included in the
+database output by sieving algorithms.
+Compared to Albrecht and Heninger’s lattice [3], our construction can oﬀer a
+dimension reduction of approximately(log2 x)/l, wherelrepresents the number
+of leaked bits. The reduction in lattice dimension leads to a signiﬁcant eﬃciency
+advantagebecausesievingalgorithmshaveexponential complexity.As atradeoﬀ,
+our algorithm needs a larger number of samples to select the speciﬁc ones used
+in the lattice construction. Moreover, we prove the existence of a constantc> 0
+which serves as a lower bound for the success probability of our algorithm. This
+is a new theoretical ﬁnding not reported in the literature.
+Secondly, in order to determine the unique hidden number, we propose an
+improved linear predicate that makes use of the linear constraints from2 log2 q
+HNP samples. Our predicate demonstrates superior eﬃciency compared to the
+non-linear predicate proposed by Albrecht and Heninger [3], which involves time-
+consuming scalar multiplication over elliptic curves. Our predicate also outper-
+forms the linear predicate used by Xu et al. [38]. Their predicate requires knowl-
+edge of all elements of the candidate vector, whereas ours only requires the last
+two elements. Furthermore, we identify an issue with Xu et al.’s predicate that
+may cause it to return true for some incorrect candidates. We provide a cor-
+rected version of their predicate for a fair comparison and demonstrate that our
+approach achieves superior performance while maintaining the desired function-
+ality.
+Thirdly, a predicate for the decomposition technique is proposed. We de-
+sign an interval reduction algorithm with expected time complexityO(log2 x) to
+recover the remaining partα1, instead of an exhaustive search over the range
+[−x/2,x/2]. Moreover, we also present a pre-screening technique to pre-select
+4 Yiming Gao, Jinghui Wang, Honggang Hu B, and Binang He
+candidates. This technique can eﬀectively eliminate most incorrect candidates
+before checking the predicate.
+Modiﬁed Algorithms for Handling Errors.We deﬁne HNP with erroneous
+input to handle practical scenarios in side-channel attacks where errors may exist
+in the leaked nonce. We demonstrate the eﬀectiveness of our lattice construction
+for solving this problem, and provide the estimation for the minimum lattice
+dimension. In this case, our construction oﬀers a greater reduction in lattice di-
+mension of more thanlog2 x/l. Furthermore, our new algorithms and techniques
+for solving the HNP are extended to address the case of erroneous input.
+New Records of Lattice-based Attacks against ECDSA.We carry out
+experiments on lattice-based attacks against ECDSA with nonce leakage. Our at-
+tackdemonstratesasigniﬁcanteﬃciencyadvantageoverpreviousworks[3,34,38].
+The most notable achievement is the successful key recovery for the ECDSA in-
+stance with 1-bit leakage on a 160-bit curve, which is considered to be extremely
+diﬃcult by previous lattice-based approaches. Moreover, we also successfully
+conduct attacks for the case of less than 1-bit leakage on various elliptic curves,
+including a 160-bit curve. Our source code is publicly available on GitHub1.
+1.2 Comparison with Related Work
+In Table 1, our work is compared with previous records of lattice-based attacks.
+Several new records are listed, including 1-bit and less than 1-bit leakage on
+a 160-bit curve. To the best of our knowledge, we carry out the ﬁrst lattice-
+based attack against ECDSA with less than 1-bit leakage (the leaked 1-bit of
+the nonce is exact with a probability of less than 1). For the case of 4-bit leakage,
+we also make signiﬁcant progress. While the previous record for 4-bit leakage was
+achieved on a 384-bit curve [3,34], we extend the attack to a 512-bit curve.
+Table 1: Lattice-based attacks against ECDSA with nonce leakage
+Nonce leakage
+Modulus 4-bit 3-bit 2-bit 1-bit <1-bit
+112-bit - - - [38], Ours (faster) Ours
+128-bit - - - Ours Ours
+160-bit - [29] [3,34] Ours Ours
+256-bit [3] [3,34] [38], Ours (faster) - -
+384-bit [3,34] [38], Ours (faster) - - -
+512-bit Ours - - - -
+Among lattice-based attacks, the currently best one is the Sieve-Pred algo-
+rithm in [3]. The eﬃciency of the predicate is essential, as it is used to check the
+1 https://github.com/JinghuiWW/ecdsa-leakage-attack
+Attacking ECDSA with Nonce Leakage by Lattice Sieving 5
+vectors in the database generated by sieving algorithms. Our linear predicate
+outperforms both predicates proposed in [3] and [38]. Our attack demonstrates
+superior eﬃciency when targeting various ECDSA instances. For example, we
+break the 112-bit ECDSA with 1-bit leakage in 6 minutes which is approximately
+43 times faster than the currently fastest attack in [38].
+Our work can also be viewed as a comprehensive extension of the work con-
+ducted by Sun et al. [34], who recognized the connection between Fourier-based
+attacks and lattice-based attacks, and proposed a general framework to enhance
+lattice attacks with more samples. However, they did not consider reducing the
+lattice dimension, nor did they utilize sieving algorithms to handle more chal-
+lenging cases, such as 256-bit ECDSA with 2-bit leakage or 1-bit leakage case.
+Compared with their work, our algorithm requires signiﬁcantly fewer samples
+and achieves higher success rates. For instance, when targeting 160-bit ECD-
+SA with 2-bit leakage, their algorithm required approximately227 samples and
+achieved a success rate of 15%, while our algorithm only needs 411 samples
+with a success rate of approximately 100%. Moreover, according to their esti-
+mation, the time complexity of their algorithm is2110 BKZ-30 operations for
+160-bit ECDSA with 1-bit leakage, which is impractical. However, we break this
+instance in only 13.7 hours using approximately225 ECDSA samples.
+Our work shares some similarities with Fourier analysis-based attacks. How-
+ever, except for very diﬃcult cases, our attack works more eﬃciently with far
+fewer samples. Another advantage of our approach is the capability to recover
+the entire secret key all at once, while Fourier analysis-based attacks can only
+recover a few bits of the secret key in a single execution.
+2 Preliminaries
+Let N+ be the set{1,2,3,···}. The logarithm with base two is denoted aslog(·),
+and the Euclidean norm is denoted as∥·∥. For any integerz, the unique integer
+x satisfying 0 ≤x < qand x ≡z mod q is denoted by|z|q. A functionf(k)
+is called negl(k) if for every positive polynomial functionP(k), there exists an
+integer NP > 0 such that for allk>N P, |f(k)|<1/P(k).
+2.1 Lattices and Hard Problems
+Given a matrixB = (b0,..., bd−1)T ⊂Rd×d with linearly independent rows,
+the lattice generated by the basisB is deﬁned asL(B) :={∑d
+i xibi : xi ∈Z}.
+We deﬁneπi as the projections orthogonal to the span ofb0,..., bi−1, and the
+Gram-Schmidt orthogonalisation as B∗ = (b∗
+0,..., b∗
+d−1), where b∗
+i := πi(bi).
+For any0 ≤l < r≤d, the projected sublatticeL[l:r] is deﬁned as the lattice
+with basisB[l:r] := (πl(bl),...,π l(br−1)).
+Let λi(L) be the radius of the smallest ball centred at the origin containing
+at leastilinearly independent lattice vectors. Thenλ1(L) is the Euclidean norm
+of the shortest non-zero vector in latticeL.
+6 Yiming Gao, Jinghui Wang, Honggang Hu B, and Binang He
+The Gaussian heuristic predicts the number of lattice points inside a mea-
+surable body B⊂ Rn, and it tells us that the number|L∩B| of lattice points
+inside Bis approximately equal toVol(B)/Vol(L). Applying it to the Euclidean
+d-ball, the prediction ofλ1(L) can be obtained.
+Deﬁnition 1 (Gaussian Heuristic (GH)).We denote byGH(L) the expected
+ﬁrst minimum of a latticeL. For a full rank latticeL⊂ Rd, it is given by
+GH(L) =Γ
+(
+1 +d
+2
+)1/d
+√π ·Vol(L)1/d ≈
+√
+d
+2πe ·Vol(L)1/d.
+The ﬁnal step above is obtained from Stirling’s formula, and we utilize this
+asymptotic estimation in our theoretical analysis. In practical attacks and cal-
+culations, we directly compute the value of the Gamma function.
+Albrecht and Heninger formalized two lattice problems augmented with a
+predicate [3], which are deﬁned as follows:
+Deﬁnition 2 (α-BoundedDistanceDecodingwithPredicate( BDDα,f(·))).
+Given a lattice basisB, a vectort and a parameterα> 0 such that the Euclidean
+distance dist(t,B) < α·λ1(L(B)), ﬁnd the lattice vectorv ∈L(B) satisfying
+f(v −t) = 1that is closest tot.
+Deﬁnition 3 (uniqueShortestVectorProblemwithPredicate( uSVPf(·))).
+Given a lattice basisB and a predicatef(·), ﬁnd the shortest non-zero vector
+v ∈L(B) that satisﬁesf(v) = 1.
+BDDα,f(·) can be solved using auSVPf(·) oracle due to Kannan embedding
+technique, by constructing the lattice
+C =
+[B 0
+t τ
+]
+,
+where τ is the embedding factor. Ifv is the closest vector tot, then the short
+vector (t −v,τ) is contained in the latticeL(C).
+2.2 Lattice Algorithms
+BKZ.The Block Korkine-Zolotarey (BKZ) algorithm, which can be regarded as
+an extended version of the LLL algorithm [26], was ﬁrst introduced by Schnorr
+and Euchner [33]. It uses an oracle that solves the SVP in the lattice with a block
+size ofβ, spanned byB[0,β−1]. The short vector is then recursively inserted into
+the lattice basis. A BKZ tour is initiated by calling an SVP-solver on consecutive
+blocks B[i,min(i+β,d−1)] for i = 0,...,d −2. The algorithm will proceed with
+these tours until there are no further changes observed within a single tour. We
+abbreviate BKZ with a block size ofβ as BKZ-β.
+Lattice Sieving. Sieving algorithms are not only asymptotically superior to
+enumeration techniques [23,17,33,19], but also showing better practical perfor-
+mance in higher lattice dimensions, due to the recent progress in both theory
+[24,9,8,21] and practice [18,15,25,2,16].
+Attacking ECDSA with Nonce Leakage by Lattice Sieving 7
+The ﬁrst sieving algorithm was proposed by Ajtai et al. [1] in 2001. It starts
+with a list of lattice vectorsL ⊂L and searches for shorter sums and diﬀer-
+ences of these vectors. The shorter combinations then replace the original longer
+vectors in the database. This process iterates until the database contains a sig-
+niﬁcant number of short vectors, with the expectation of eventually ﬁnding the
+shortest vector.
+Latticesievingalgorithmscanbecategorizedintoprovablysievingalgorithms
+and heuristic sieving algorithms. Heuristic sieving algorithms fall in the practical
+regime because of lower time and memory complexities. They are analyzed under
+the heuristic that the points inLare independently and uniformly distributed in
+a thin spherical shell. Nguyen and Vidick [30] proposed the ﬁrst practical siev-
+ing algorithm, utilizing a database of(4/3)d/2+o(d) = 20.2075d+o(d) vectors and
+running in time20.415d+o(d). The time complexity was subsequently improved to
+20.292d+o(d) through nearest neighbor search techniques [8]. Various sieving al-
+gorithms have been eﬃciently implemented in G6K [2] and its GPU-accelerated
+version, G6K-GPU [16].
+2.3 Hidden Number Problem
+In the Hidden Number Problem (HNP) [12], we have ann-bit sized public mod-
+ulus q, and there is a secret integerα∈Zq, referred to as the hidden number. For
+i= 0,1,...,m −1, ti are uniformly random integers inZq, and we are provided
+with the corresponding valueai such that|ti·α−ai|q = ki <q/2l. The problem
+is to recover the hidden numberαwhen msamples (ti,ai) are given. We denote
+the above problem asHNP(n,l).
+2.4 Breaking ECDSA with Nonce Leakage
+ECDSA. The global parameters for an ECDSA signature include an elliptic
+curve E(Fp) and a generator pointG on E(Fp) of a prime orderq. The secret
+signing key is an integer0 ≤sk<q , and the public verifying key is a point[sk]G.
+To sign a message hashh, the signer ﬁrst generates a random integer nonce
+0 ≤k < q, then computes the signature(r,s) = (([k]G)x,|k−1 ·(h+ sk·r)|q),
+where x subscript represents thex coordinate of the point.
+ECDSA as a HNP.In a side-channel attack against ECDSA, the adversary
+may knowl least signiﬁcant bits of the noncek. If we writek= kmsb·2l+ klsb,
+where 0 ≤kmsb < q/2l and 0 ≤klsb < 2l, then we can obtain the following
+equation based ons= |k−1 ·(h+ r·sk)|q:
+2−l(klsb −s−1 ·h) +kmsb = 2−l ·s−1 ·r·skmod q.
+This can be regarded as a HNP instance with(ti,ai) = (|2−l·s−1 ·r|q,|2−l·(klsb−
+s−1 ·h)|q) and hidden numberα = sk. In the case where the most signiﬁcant
+bits of the nonce are leaked, the method of transformation into a HNP instance
+remains similar.
+For convenience, we abbreviateECDSA(n,l) as an n-bit ECDSA instance
+with l-bit leakage.
+8 Yiming Gao, Jinghui Wang, Honggang Hu B, and Binang He
+2.5 Solving the HNP with Lattices
+To solve the HNP, in 1996, Boneh and Venkatesan [12] constructed the(m+ 1)-
+dimensional lattice generated by the rows of the following matrix:
+
+
+q 0 ··· 0 0
+0 q ··· 0 0
+... ... ... ...
+0 0 ··· q 0
+t0 t1 ··· tm−1 1/2l
+
+
+.
+There exists a lattice vectorv = (t0 ·αmod q,...,t m−1 ·αmod q,α/2l). This
+lattice vector is close to the target vectort = (a0,...,a m−1,0) since the distance
+∥v −t∥can be bounded by√m+ 1·q/2l. If the distance is suﬃciently small
+compared with other lattice vectors, the lattice vector can be found by solving
+the BDD problem using the nearest plane algorithm [7], or Kannan’s embedding
+[23]. With Kannan’s embedding, we construct the(m+ 2)-dimensional lattice
+basis 
+
+q 0 ··· 0 0 0
+0 q ··· 0 0 0
+... ... ... ... ...
+0 0 ··· q 0 0
+t0 t1 ··· tm−1 1/2l 0
+a0 a1 ··· am−1 0 τ
+
+
+,
+where τ is the embedding number, which can be set to the upper bound ofki,
+i.e., τ = q/2l. The target lattice vector becomesv = ±(k0,...,k m−1,α/2l,−τ)
+with a bounded norm of√m+ 2·q/2l.
+Recentering Technique.In the deﬁnition of HNP,0 ≤ki < q/2l, for i =
+0,1,...,m −1. Since the lattice can work for any sign ofki, we can make a
+variable substitutionk′
+i = ki −w where w= q/2l+1. The target vector becomes
+(k′
+0,k′
+1,...,k ′
+m−1,α/2l,−τ) and has a much shorter length. This technique can
+bring a signiﬁcant improvement in practice and is widely used in the lattice
+attacks on HNP [3,13,28,29,38].
+EliminationMethod. GivenasetofHNPequations ai+ki = tiαmod q,where
+i= 0,1,··· ,m −1, we can eliminate the variableα by substitutingα= |(a0 +
+k0)t−1
+0 |q. This yields a new set of HNP equations. Incorporating the recentering
+technique, we have
+ai + w−(a0 + w)t−1
+0 ti + k′
+i = t−1
+0 tik′
+0 mod q,
+where i = 1,...,m −1. This produces a transformed HNP instance(t′
+i,a′
+i) =
+(t−1
+0 ti,ai + w−(a0 + w)t−1
+0 ti) with the transformed hidden numberk′
+0. Then
+Attacking ECDSA with Nonce Leakage by Lattice Sieving 9
+the new lattice is generated by:
+
+
+q 0 ··· 0 0 0
+0 q ··· 0 0 0
+... ... ... ... ...
+0 0 ··· q 0 0
+t′
+1 t′
+2 ··· t′
+m−1 1 0
+a′
+1 a′
+2 ··· a′
+m−1 0 τ
+
+
+,
+referred to as the Albrecht and Heninger’s lattice [3]. The lattice dimension,
+denoted as d, is reduced to m + 1. The target lattice vector becomes v =
+±(k′
+1,...,k ′
+m−1,k′
+0,−τ), with a bounded norm of
+√
+mw2 + τ2. To ﬁnd the target
+vector using a black box SVP solver, we expect the target vector to be the short-
+est vector, i.e.,∥v∥≤
+√
+mw2 + τ2 ≤GH(L). Combining this withd= m+ 1, we
+can estimate the minimal lattice dimension. Moreover, instead of using the upper
+bound of∥v∥, Albrecht and Heninger considered the expected squared norm [3],
+i.e., E[∥v∥2] =mw2/3 +m/6 +w2. Then the minimal lattice dimension can be
+estimated as the minimal integerd satisfying E
+[
+∥v∥2]
+≤GH2(L).
+Sieving with Predicate.The sieving with predicate (Sieve-Pred) algorithm
+checks over the database generated by sieving algorithms using the predicate
+[3]. It does not treat the sieving algorithm as a black box SVP solver. This idea
+is inspired by Micciancio et al. [27], which suggests that the sieving algorithm
+not only outputs the shortest vector, but also provides all vectors with norm less
+than
+√
+4/3 GH(L), under speciﬁc heuristic assumptions. Algorithm 1 is expected
+to ﬁnd the target vector under Assumption 1 stated below.
+Assumption 1 ([15])When a 2-sieve algorithm terminates, it outputs a database
+L containing all vectors with norm≤
+√
+4/3 GH(L).
+Theorem 1 ([3]). Let L ⊂Rd be a lattice containing a vectorv such that
+∥v∥≤
+√
+4/3 GH(L). Under Assumption 1, Algorithm 1 is expected to ﬁnd the
+minimal v satisfying f(v) = 1in 20.292d+o(d) steps and(4/3)d/2+o(d) calls to the
+predicatef(·).
+Algorithm 1:Sieving with Predicate
+Input: LatticeL(B), predicatef(·)
+Output: v such that∥v∥≤
+√
+4/3 GH(L) and f(v) = 1or⊥
+1 r ←⊥;
+2 Run the sieving algorithm onL(B) and output listL;
+3 for v ∈L do
+4 if f(v) = 1and (r=⊥ or ∥v∥<∥r∥) then
+5 r ←v;
+6 return r;
+Thus, using the Sieve-Pred algorithm, the minimal lattice dimension can be
+estimated as the minimal integerd satisfying E
+[
+∥v∥2]
+≤4 GH2(L)/3.
+10 Yiming Gao, Jinghui Wang, Honggang Hu B, and Binang He
+3 Improved Algorithms
+In this section, we propose several new algorithms for solving the HNP. We
+decompose the hidden numberk′
+0 as x·α0 + α1, and introduce a new lattice
+construction that usesx to trade oﬀ the lattice dimension. Through theoretical
+analysis, we demonstrate that our lattice can oﬀer a reduction of approximately
+(log x)/l compared to the lattice presented by Albrecht and Heninger [3]. While
+the target vector contains information aboutα0, the lack of information about
+α1 makes it impossible to directly compute the hidden numberα. This makes
+previous predicates ineﬀective [3,38]. Due to the idea of Sieve-Pred algorithm [3],
+we need to search within the exponentially large database output by the sieving
+algorithms. Therefore, an eﬃcient process that excludes incorrect candidates is
+essential. To address this issue, we propose a prescreening technique, an inter-
+val reduction algorithm, and a linear predicate. Moreover, we show that under
+Assumption 1, there exists a constantc> 0 such that the success probability of
+our algorithm is at leastc.
+3.1 New Lattice Construction Based on Decomposition Technique
+The main idea behind our attack is using more HNP samples to obtain equations
+with smallt′
+i. Having many samples with smallt′
+i allows us to increase the lattice
+determinant, while keeping the norm of the target vector roughly unchanged.
+This enables us to reduce the lattice dimension, while still satisfying the enabling
+condition E[∥v∥2] ≤4/3 GH2(L) for the attack.
+Lattice Construction.Following Albrecht and Heningerąŕs lattice [3], we con-
+struct the lattice generated by
+
+
+q 0 ··· 0 0 0
+0 q ··· 0 0 0
+... ... ... ... ...
+0 0 ··· q 0 0
+x·t′
+1 x·t′
+2 ··· x·t′
+m−1 y 0
+a′
+1 a′
+2 ··· a′
+m−1 0 τ
+
+
+,
+where x,y >0, andτ are undetermined coeﬃcients. This modiﬁcation increases
+Albrecht and Heninger’s original lattice volume by a factor ofy.
+In [34], Sun et al. decomposed the hidden numberα as α = 2c ·α0 + α1,
+where 0 ≤α1 <2c. We propose a more generalized form of decomposition to the
+new hidden number:k′
+0 = x·α0 + α1, where|α1|≤ x/2. Here,x is an arbitrary
+positive integer and|α1|is 1-bit smaller. Then, fori = 1,...,m −1, we have
+x·t′
+i ·α0 −a′
+i ≡k′
+i −α1 ·t′
+i mod q. The target vector in the lattice becomes
+v = ±(k′
+1 −α1 ·t′
+1,...,k ′
+m−1 −α1 ·t′
+m−1,y ·α0,−τ).
+To keep the norm of the target vector approximately the same as in Albrecht
+andHeningerąŕslattice[3],weneedtomaketheratio r= E
+[
+(k′
+i −α1t′
+i)2]
+/E
+[
+(k′
+i)2]
+Attacking ECDSA with Nonce Leakage by Lattice Sieving 11
+close to 1. Now, we show how to achieve this. The following analysis is based on
+the assumption thatα1 is independent ofk′
+i and a′
+i.
+Recall that k′
+i and t′
+i are uniformly distributed in[−w,w) and [−q/2,q/2),
+respectively. By setting the upper bound of|t′
+i|to be B, t′
+i becomes uniformly
+distributed in [−B,B). Moreover, to makeα1 close to a uniform distribution
+over [−x/2,x/2), the conditionx ≪w should be satisﬁed. Thus, we can set a
+theoretical upper bound w/210 = q/(2l+11) for x. Under these conditions, we
+have:
+r= E
+[
+(k′
+i −α1t′
+i)2]
+E[(k′
+i)2] = E
+[
+(k′
+i)2]
+−2E[α1] E[k′
+it′
+i] +E
+[
+α2
+1
+]
+E
+[
+t′2
+i
+]
+E[(k′
+i)2]
+= 1 +E
+[
+α2
+1
+] E
+[
+t′2
+i
+]
+E[(k′
+i)2].
+Note that if an integer variablek is uniformly distributed over[−w,w), then
+E
+[
+k2]
+= w2/3 + 1/6. Thus, we have
+r= 1 +
+(x2
+12 + 1
+6
+)(2B2 + 1
+2w2 + 1
+)
+≤1 +
+(x2
+12 + 1
+6
+)(B2
+w2 + 1
+2w2 + 1
+)
+≤1 + 2−20 +
+(x2
+12 + 1
+6
+)B2
+w2 .
+Itcanbeseenthatas Bdecreases,rapproaches1.However,theexpectednumber
+of required samples increases by a factor ofq/(2B). To balance keepingr close
+to 1 and minimizing the number of required samples, we setB = w/(23x) =
+q/(2l+4x). With this setting, we only need2l+3x times the original number of
+samples,and risapproximately 1+(x2B2+2B2)/(12w2) = 1+1/768+1/(384x2),
+which is close to 1.
+Next, we focus on the selection of parameters to optimize the performance
+of our attack. Given that|k′
+0|is bounded byw, we know that|α0|≤ w/x. Then
+we have
+E
+[
+∥v∥2]
+= (m−1)w2
+3 + y2 w2
+3x2 + τ2.
+Our goal is to minimize the ratioE
+[
+∥v∥2]
+/GH2(L), where
+GH2(L) =(m+ 1)
+2πe ·q
+2(m−1)
+m+1 ·y
+2
+m+1 ·τ
+2
+m+1 .
+Given x, according to the AMĺCGM inequality, we have
+E
+[
+∥v∥2]
+= w2
+3 + ··· + w2
+3  
+m−1
++y2 w2
+3x2 + τ2
+≥(m+ 1)
+((w2
+3
+)m−1
+·y2 w2
+3x2 ·τ2
+)1/(m+1)
+= (m+ 1)
+(w2
+3
+)m/(m+1)
+·x− 2
+m+1 ·y
+2
+m+1 ·τ
+2
+m+1 .
+12 Yiming Gao, Jinghui Wang, Honggang Hu B, and Binang He
+Thus, E
+[
+∥v∥2]
+/GH2(L) attains its minimum value wheny= xand τ = w/
+√
+3.
+Reduction of Lattice Dimension.The new lattice construction can lead to a
+reduction in the lattice dimension, which is described in Theorem 2. This signif-
+icantly improves the eﬃciency of lattice-based attacks, as the time complexity
+of sieving algorithms increases exponentially with an increase in the lattice di-
+mension d.
+Theorem 2. For any positive integerx and the number of leaked bitsl, the
+reduction of lattice dimension between our lattice and Albrecht and Heninger’s
+lattice is given by
+2 logx
+2l+ 3−log(πe) ≈log x
+l .
+Proof. According to Assumption 1, the lattice dimension is the minimal integer
+d satisfying E
+[
+∥v∥2]
+≤4/3 ·GH2(L). In Albrecht and Heninger’s lattice [3], let
+τ = w/
+√
+3, then we have
+E
+[
+∥v∥2]
+= m
+(w2
+3 + 1
+6
+)
++ τ2 ≈d·w2
+3 ,
+GH2(L) = d
+2πe ·q
+2(d−2)
+d ·
+(w2
+3
+)1
+d
+.
+Substituting w= q/2l+1, and taking the logarithm, we have
+d≥2l+ 2 + 2 logq+ log 3
+2l+ 3−log(πe) .
+In our lattice,E[∥v∥2] remains approximately the same, butGH2(L) increases
+by a factor ofx2/d. Thus, the new lattice dimensiond′needs to satisfy
+d′≥2l+ 2 + 2 logq+ log 3−2 logx
+2l+ 3−log(πe) .
+The reduction of lattice dimension is given by
+2 logx
+2l+ 3−log(πe) ≈log x
+l .
+⊓ ⊔
+Figure 1 illustrates the reduction of lattice dimension asx increases. Four
+linesareplottedinFigure1,representing HNP(160,1),HNP(192,1),HNP(224,1),
+and HNP(384,2), respectively. Solving these instances is believed to be impracti-
+cal by previous lattice-based approaches [3,5,6,34,38]. However, our experimental
+results in Section 5 demonstrate the feasibility of solvingHNP(160,1) by using
+a large x. More computational resources and samples are required for solving
+more diﬃcult instances such asHNP(192,1).
+Attacking ECDSA with Nonce Leakage by Lattice Sieving 13
+0
+5 1 01 52 02 53 03 54 0120140160180200220240lattice dimensionl
+og x 
+HNP(160,1) HNP(192,1) HNP(224,1) HNP(384,2)
+Fig.1: Lattice dimension andx.
+Success Probability.Under Assumption 1, the sieving algorithm outputs all
+vectors satisfying ∥v∥2 ≤4 GH2(L)/3. Consequently, the probability that the
+sieving algorithm can output the target vector is represented as Pr(∥v∥2 ≤
+E
+[
+∥v∥2]
+), which is the success probability of our algorithm.
+Theorem 3. Let v be the target vector of our lattice described in Section 3.1.
+For alld≥3, there exists a constantc> 0 such thatPr(∥v∥2 ≤E
+[
+∥v∥2]
+) ≥c.
+Proof. Recall the vector representation
+v = (k′
+1 −α1t′
+1,...,k ′
+m−1 −α1t′
+m−1,xα0,−w/
+√
+3)
+= (v0,vd−3,vd−2,vd−1).
+For k′
+i, t′
+i, α0, andα1, they are all uniformly distributed:k′
+i is over[−w,w), t′
+i
+is over[−w/(8x),w/(8x)), α0 is over[−w/x,w/x), andα1 is over[−x/2,x/2).
+It follows thatv0,...,v d−3 are independent and identically distributed.
+Let Pd = Pr
+(
+1
+d−2
+∑d−3
+i=0 v2
+i ≤E
+[
+v2
+0
+])
+. Then we have
+Pr
+(
+∥v∥2 ≤E
+[
+∥v∥2])
+= Pr
+(d−3∑
+i=0
+v2
+i + x2α2
+0 ≤(d−2)E
+[
+v2
+0
+]
++ w2
+3
+)
+≥Pr
+(d−3∑
+i=0
+v2
+i ≤(d−2)E
+[
+v2
+0
+]
+)
+·Pr
+(
+x2α2
+0 ≤w2
+3
+)
+=
+√
+3
+3 Pr
+(
+1
+d−2
+d−3∑
+i=0
+v2
+i ≤E
+[
+v2
+0
+]
+)
+=
+√
+3
+3 Pd.
+14 Yiming Gao, Jinghui Wang, Honggang Hu B, and Binang He
+Since Var[v2
+0] <+∞, by the Central Limit Theorem, it holds that
+lim
+d→+∞
+Pr
+(
+1
+d−2
+d−3∑
+i=0
+v2
+i ≤E
+[
+v2
+0
+]
+)
+= 1
+2.
+Hence, there exists a positive constantc1 >0 such thatPd ≥c1 for anyd≥3.
+Let c= c1/
+√
+3. Finally, we get
+Pr
+(
+∥v∥2 ≤E
+[
+∥v∥2])
+≥
+√
+3
+3 Pd ≥c.
+⊓ ⊔
+3.2 Improved Linear Predicate
+In Albrecht and Heninger’s approach, they employ non-linear constraints as a
+predicate to determine the unique hidden number [3,4]. Their predicate initially
+checks whether the absolute value of the last element of the candidate vector is
+τ. Subsequently, it determines the target vector by checking whetherris equal to
+([k]G)x, whereGis the generator point on the curve,ris a speciﬁc signature, and
+k is the corresponding nonce that can be computed from the candidate vector.
+The predicate involves time-consuming scalar multiplication on the curve.
+In this section, we propose an improved linear predicate that utilizes linear
+constraints from2 logqHNP samples and only involves two vector inner product-
+s, providing a signiﬁcant eﬃciency advantage. Moreover, we present a modiﬁed
+version of the Sieve-Pred algorithm to integrate our predicate, and achieve higher
+eﬃciency.
+Linear Predicate.Our linear predicate is described in Algorithm 2. It oper-
+ates on a 2-dimensional vectorv = (v0,v1), representing the last two elements
+of a candidate vector in the database. This predicate determines whether the
+candidate vector satisﬁes a set of linear conditions. If these conditions are met,
+the predicate reveals the hidden number; otherwise, it returns⊥. The algorithm
+follows these steps:
+(1) Check if0 <|v0|≤ w and whether|v1|equals ±τ. If this condition is met,
+proceed to the next step; otherwise, return⊥.
+(2) Calculate the candidateα′from v and the HNP sample(t0,a0).
+(3) For N HNP samples (ti,ai), check whether |ti ·α′−ai|q < q/2l for i =
+0,...,N −1. If this condition holds, return the candidateα′ as the correct
+hidden number; otherwise, return⊥.
+Note that the HNP samples used in step (3) are distinct from those used in our
+lattice construction.
+Theoretical Analysis of Linear Predicate.According to the deﬁnition of
+HNP, the correct candidateα′should satisfy all the constraints from these HNP
+samples. However, for an incorrect candidate, there still exists a small chance

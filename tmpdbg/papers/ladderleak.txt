@@ -1,0 +1,1266 @@
+LadderLeak: Breaking ECDSA
+With Less Than One Bit Of Nonce Leakage
+Diego F. Aranha
+DIGIT, Aarhus University
+Denmark
+dfaranha@eng.au.dk
+Felipe Rodrigues Novaes
+University of Campinas
+Brazil
+ra135663@students.ic.unicamp.br
+Akira Takahashi
+DIGIT, Aarhus University
+Denmark
+takahashi@cs.au.dk
+Mehdi Tibouchi
+NTT Corporation
+Japan
+mehdi.tibouchi.br@hco.ntt.co.jp
+Yuval Yarom
+University of Adelaide and Data61
+Australia
+yval@cs.adelaide.edu.au
+ABSTRACT
+Although it is one of the most popular signature schemes today,
+ECDSA presents a number of implementation pitfalls, in particular
+due to the very sensitive nature of the random value (known as the
+nonce) generated as part of the signing algorithm. It is known that
+any small amount of nonce exposure or nonce bias can in principle
+lead to a full key recovery: the key recovery is then a particular
+instance of Boneh and Venkatesan’s hidden number problem (HNP).
+That observation has been practically exploited in many attacks
+in the literature, taking advantage of implementation defects or
+side-channel vulnerabilities in various concrete ECDSA implemen-
+tations. However, most of the attacks so far have relied on at least2
+bits of nonce bias (except for the special case of curves at the 80-bit
+security level, for which attacks against 1-bit biases are known,
+albeit with a very high number of required signatures).
+In this paper, we uncover LadderLeak, a novel class of side-
+channel vulnerabilities in implementations of the Montgomery
+ladder used in ECDSA scalar multiplication. The vulnerability is in
+particular present in several recent versions of OpenSSL. However,
+it leaks less than 1 bit of information about the nonce, in the sense
+that it reveals the most significant bit of the nonce, but with proba-
+bility < 1. Exploiting such a mild leakage would be intractable using
+techniques present in the literature so far. However, we present
+a number of theoretical improvements of the Fourier analysis ap-
+proach to solving the HNP (an approach originally due to Bleichen-
+bacher), and this lets us practically break LadderLeak-vulnerable
+ECDSA implementations instantiated over thesect163r1 and NIST
+P-192 elliptic curves. In so doing, we achieve several significant
+computational records in practical attacks against the HNP.
+KEYWORDS
+side-channel attack, cache attack, ECDSA, OpenSSL, Montgomery
+ladder, hidden number problem, Bleichenbacher’s attack, general-
+ized birthday problem
+1 INTRODUCTION
+The ECDSA algorithm is one of the most widely deployed signa-
+ture schemes today, and is part of many practical cryptographic
+protocols such as TLS and SSH. Its signing operation relies on an
+An extended abstract appears at CCS 2020. This is the full paper.
+ephemeral random value called nonce, which is particularly sensi-
+tive: it is crucial to make sure that the nonces are kept in secret
+and sampled from the uniform distribution over a certain integer
+interval. It is easy to see that if the nonce is exposed or reused
+completely, then an attacker is able to extract the secret signing key
+by observing only a few signatures. By extending this simple obser-
+vation, cryptanalysts have discovered stronger attacks that make
+it possible to recover the secret key even if short bit substrings of
+the nonces are leaked or biased. These extended attacks relate key
+recovery to the so-called hidden number problem (HNP) of Boneh
+and Venkatesan [15], and are part of a line of research initiated by
+Howgrave-Graham and Smart [36], who described a lattice-based
+attack to solve the corresponding problem, and Bleichenbacher [13],
+who proposed a Fourier analysis-based approach.
+Lattice-based attacks are known to perform very efficiently when
+sufficiently long substrings of the nonces are known to the attacker
+(say over 4 bits for signatures on a256-bit elliptic curve, and at least
+2 bits for a 160-bit curve). As a result, a number of previous works
+adapted Howgrave-Graham and Smart’s technique to practically
+break vulnerable implementations of ECDSA and related schemes
+like Schnorr signatures [60], for instance by combining it with side-
+channel analysis on the nonces (see related works in Section 2.4).
+However, a limitation of lattice-based attacks is that they become
+essentially inapplicable when only a very small fraction of the
+nonce is known for each input sample. In particular, for a single-
+bit nonce leakage, it is believed that they should fail with high
+probability, since the lattice vector corresponding to the secret is
+no longer expected to be significantly shorter than other vectors in
+the lattice [6, 49]. In addition, lattice-based approaches assume that
+inputs are perfectly correct, and behave very poorly in the presence
+of erroneous leakage information.
+In contrast, Bleichenbacher’s Fourier analysis-based attack can
+in principle tackle arbitrarily small nonce biases, and handles er-
+roneous inputs out of the box, so to speak. Despite those features,
+it has garnered far less attention from the community than lattice-
+based approaches, perhaps in part due to the lack of formal publica-
+tions describing the attack until recently (even though some attack
+records were announced publicly [14]). It was only in 2013 that De
+Mulder et al. [23] revisited the theory of Bleichenbacher’s approach
+in a formally published scholarly publication, followed soon after
+by Aranha et al. [ 6], who overcame the 1-bit “lattice barrier” by
+breaking 160-bit ECDSA with a single bit of nonce bias. Takahashi,
+Diego F. Aranha, Felipe Rodrigues Novaes, Akira Takahashi, Mehdi Tibouchi, and Yuval Yarom
+Table 1: Comparison with the previous records of solutions to the hidden number problem with small nonce leakages. Each row
+corresponds to the size of group order in which the problem is instantiated. Each column corresponds to the maximum number
+of leaked nonce bits per signature. Citations in green (resp. purple) use Bleichenbacher’s approach (resp. lattice attacks).
+< 1 1 2 3 4
+256-bit – – [64] [64] [45, 57, 58, 70]
+192-bit This work This work – – –
+160-bit This work [6, 14], this work (less data) [13], [41] [47] –
+Tibouchi and Abe [64] improved the space complexity of Bleichen-
+bacher’s attack and broke qDSA [55] (a variant of Schnorr) with
+2-bit nonce leaks. However, the practicality of these works may
+seem limited: indeed, De Mulder et al. attacked parameters (i.e.,
+384-bit with 5-bit bias) that can be solved more efficiently by lattice
+attacks; Aranha et al. required over 8 billion signatures as input; and
+Takahashi et al. only mounted the attack by artificially injecting
+physical faults into the modified, non-standard implementation.
+In this work, we present the first real-world ECDSA vulnerabili-
+ties that arenot susceptible to lattice attacks, but become practically
+exploitable with the Fourier analysis method, thanks to novel theo-
+retical improvements that we propose over existing literature.
+1.1 Contributions
+New Cache Timing Attacks Against OpenSSL Montgomery Ladder.
+We first propose LadderLeak, a new class of vulnerabilities lurk-
+ing in scalar multiplication algorithms invoked by ECDSA. Our
+attack exploits small timing differences within the implementations
+of Montgomery ladder [ 46] relying on inappropriate coordinate
+handling, and allows the attacker to learn a single-bit of the secret
+scalar (which corresponds to nonces in ECDSA) with high proba-
+bility. We discoveredLadderLeak vulnerabilities in several versions
+of OpenSSL (particularly in the 1.0.2 and 1.1.0 branches), and
+in version 0.4.0 of RELIC toolkit [5]. We present two attack fla-
+vors: one for binary curves and the other for prime curves. Both
+have been experimentally validated, and provide high-precision
+distinguishers for ECDSA nonces in our target versions of OpenSSL.
+In principle, the vulnerability affects various curve parameters in
+the above implementations, including NIST P-192, P-224, P-256,
+P-384, P-521, B-283, K-283, K-409, B-571, sect163r1, secp192k1,
+secp256k1 1. In Section 3 we describe the attack idea, as well as
+concrete side-channel experiments carried out using Flush+Reload
+cache timing attacks [73]. As concrete targets we choose ECDSA
+instantiated over NIST P-192 and sect163r1, and successfully re-
+trieve 1-bit of nonce information with high probability.
+Improved Theoretical Analysis of Bleichenbacher’s Solution to the
+HNP. In Section 4 we establish a unified time–space–data tradeoff
+formula for Bleichenbacher style attacks, and use it to concretely
+find optimal attack parameter choices for a given group size and a
+given amount of nonce bias. Our formula relies on the connection
+1OpenSSL does not invoke the vulnerable ladder implementation for P-256 by de-
+fault and relies instead on custom code enabled during compilation. Custom code
+can also be similarly enabled at build time for P-224 and P-521 with the switch
+enable-ec_nistp_64_gcc_128 (see https://wiki.openssl.org/index.php/Compilation_
+and_Installation#Configure_Options). We thank an anonymous reviewer for pointing
+out these behaviors of OpenSSL.
+between the hidden number problem on the one hand and the K-
+list sum problem on the other (the latter of which is a sub-problem
+of Wagner’s generalized birthday problem (GBP) [69], particularly
+well-known in symmetric key cryptology). Our approach is generic,
+allowing to integrate in principle anyK-list integer sum algorithms
+to derive a similar tradeoff formula. Although Bleichenbacher’s
+method was thought to require billions of signatures as input to
+attack 1-bit of nonce leakage, we prove that it is possible to signifi-
+cantly reduce the data complexity by carefully choosing the inputs
+to our tradeoff formula. Our analysis also provides significant im-
+provements to the data complexity for leaks of more than 1 bit,
+allowing the side-channel attacker to recover the ECDSA key given
+only several thousands signatures in many cases, or even several
+hundreds in some scenarios. The complete complexity estimates
+given in Appendix D may therefore be of independent interest. We
+further incorporate the effect of misdetection in the most significant
+bit of the HNP samples, which becomes crucial when combining
+with the practical side-channel leakage we consider.
+Optimized Implementation and New Attack Records for the HNP.
+Putting both contributions together, we mount a full signing key re-
+covery attack on ECDSA signatures instantiated over thesect163r1
+binary curve and over the NIST P-192 prime curve, using less than
+1 bit of nonce leakage (in the sense that we recover 1 bit of the
+nonces, but with probability less than 1). The tradeoff formula we
+develop allows us to break the corresponding HNP instances with
+realistic computational resources. In our attack experiments, pre-
+sented in Section 5, the data complexity required for the former
+case is significantly less than Aranha et al. [6], by a factor of around
+210. Furthermore, to the best of our knowledge, 192-bit ECDSA
+has never been broken before with 1 bit of leakage or less (see
+Table 1 for the comparison with previous HNP records), and our
+concrete attack therefore marks a dramatic advance in concrete
+attacks on the HNP. This was made possible by tuning the trade-
+offs to optimize the time complexity and by running our highly
+optimized scalable implementation in Amazon Web Service (AWS)
+EC2 cloud instances. The approach and implementation devised in
+this work can be applied to various types of leakage from ECDSA
+independent of the LadderLeak vulnerability, and hence offer an
+interesting avenue for future cryptanalytic work. For example, our
+empirical results also indicate that breaking larger instances like
+P-224 with 1-bit leak, or P-256 with 2-bit leak would be practically
+doable with relatively modest data complexity. The experimental
+results regarding cache attacks, submitted patches with counter-
+measures, tradeoff formula solver, and optimized implementation
+of Bleichenbacher’s attack are available in our GitHub repository2.
+2https://github.com/akiratk0355/ladderleak-attack-ecdsa
+LadderLeak: Breaking ECDSA With Less Than One Bit Of Nonce Leakage
+1.2 Vulnerable Software Versions and
+Coordinated Disclosure
+In December 2019, we originally reported to the OpenSSL develop-
+ment team the vulnerabilities in versions 1.0.2t and 1.0.1l in ac-
+cordance with the OpenSSL security policy3 before the end of long-
+term support for those versions. After version1.0.2u was released,
+we confirmed that the same vulnerabilities were still present, and
+hence we proposed a patch with corresponding countermeasures,
+which has already been approved4. Although the 1.0.2 branch is
+now out of public support as of May 2020, the OpenSSL develop-
+ment team still provides its customers with an extended support
+for 1.0.2 and our patch is included in their further internal re-
+leases. While it is hard to estimate how the vulnerability would
+affect real products due to the lack of public releases containing the
+patch, searching over GitHub revealed several projects updating
+their build process to take into account a new release from the
+1.0.2 branch. Similar steps have also been taken to address the
+vulnerability in RELIC, and a fix was pushed in January 2020.
+2 PRELIMINARIES
+Notations. We denote the imaginary unit by roman i. For any
+positive integer x a function MSBn(x)returns its most significant n
+bits. When a and b are integers such that a < b we use the integer
+interval notation [a,b]to indicate{a, a + 1, . . . ,b }. Throughout the
+paper logc denotes the binary logarithm of c > 0.
+2.1 Cache Attacks
+To deliver the high performance expected of modern computers,
+processors employ an array of techniques that aim to predict pro-
+gram behavior and optimize the processor for such behavior. As
+a direct consequence, program execution affects the internal state
+of the processor, which in turn affects the speed of future program
+execution. Thus, by monitoring its own performance, a program
+can learn about execution patterns of other programs, creating an
+unintended and unmonitored communication channel [29].
+Unintended leakage of cryptographic software execution pat-
+terns can have a devastating impact on the security of the implemen-
+tation. Over the years, multiple attacks have demonstrated complete
+key recovery, exploiting leakage through the internal state of vari-
+ous microarchitectural components, including caches [1, 40, 51, 66],
+branch predictors [2, 39], functional units [3, 18], and translation
+tables [31].
+Flush+Reload [34, 73] is a prominent attack strategy, in which
+the attacker monitors victim access to a memory location. The
+attack consists of two steps. In the flush step, the attacker evicts
+the monitored memory location from memory, typically using a
+dedicated instruction such asclflush. The attacker then waits a bit
+to allow the victim time to execute. Finally, in the reload step, the
+attacker accesses the memory location, while measuring how long
+the access takes. If the victim has not accessed the monitored loca-
+tion, it will remain uncached, and access will be slow. Conversely,
+if the victim has accessed the monitored location between the flush
+and the reload steps, the memory location will be cached, and access
+3https://www.openssl.org/policies/secpolicy.html
+4https://github.com/openssl/openssl/pull/11361
+will be fast. Repeating the attack, an attacker can recover the mem-
+ory usage patterns of the victim, allowing attacks on symmetric
+ciphers [34, 37], public key primitives, both traditional [10, 52, 73]
+and post-quantum [32, 53], as well as on non-cryptographic soft-
+ware [33, 71].
+2.2 The Montgomery Ladder and its Secure
+Implementation
+An elliptic curve E defined over a finite fieldF is the set of solutions
+(x,y)∈ F that satisfy the curve equation, together with a point at
+infinity O. The chord-and-tangent rule defines a group law (⊕) for
+adding and doubling points on the curve, with Othe identity ele-
+ment. Given P ∈E(F)and k ∈Z, the scalar multiplication operation
+computes R = [k]P, which corresponds to adding P to itself (k −1)
+times. Cryptographic protocols rely on multiplication by a secret
+scalar as a fundamental operation to base security on the Elliptic
+Curve Discrete Logarithm Problem (ECDLP): find k given inputs
+(P, [k]P). Concrete instances of elliptic curves used in cryptography
+employ a subgroup of points of large prime order q for which the
+ECDLP is known to be hard. For efficiency reasons, it is common to
+represent points in projective coordinates (X,Y, Z)and avoid the
+computation of expensive field inversions during the evaluation of
+the group law.
+In many settings, an adversary able to recover leakage from the
+scalar multiplication operation, in particular bits of the scalar, can
+substantially reduce the effort necessary to solve the ECDLP. The
+Montgomery ladder, which was initially proposed for accelerat-
+ing the ECM factorization method [ 46], later became crucial for
+secure implementations of elliptic curve cryptography due to its
+inherent regularity in the way the scalar is processed: the same
+number of group operations is required no matter the bit pattern of
+k. Algorithm 1 illustrates the idea. There is a rich literature about
+coordinate systems and elliptic curve models for securely imple-
+menting the algorithm [ 21, 50]. Unfortunately, these techniques
+do not always work for the standardized curves in the Weierstrass
+model that greatly contributed to the adoption of elliptic curves in
+industry through the SECG and NIST standards [38].
+A constant-time implementation of the Montgomery ladder pro-
+tected against timing attacks must satisfy three basic preconditions:
+(i) the number of loop iterations must be fixed; (ii) memory opera-
+tions cannot depend on bits of the secret scalar, to avoid leakage
+through the memory hierarchy; (iii) the group law must be eval-
+uated with the same number and type of field operations in the
+same order, independently of the bits of the scalar. The first is easier
+to guarantee, by conditionally adding q or 2q until the resulting
+scalar ˆk has fixed length. Note that this approach has the interest-
+ing side-effect of preserving the MSB of k in the second MSB of
+ˆk when q is just below a power of 2. The second can be achieved
+by simply replacing branches with conditional operations to swap
+the accumulators (R0, R1). The third is more involved, but greatly
+simplified by complete addition laws that compute the correct result
+for all possible inputs [12] (even when the point is being doubled)
+without any exceptions or corner cases. While complete addition
+laws for Weierstrass curves do exist [54], they incur a substantial
+performance penalty and have not been popularized enough for
+current implementations of classical standardized curves. A ver-
+sion of the algorithm with these countermeasures applied can be
+Diego F. Aranha, Felipe Rodrigues Novaes, Akira Takahashi, Mehdi Tibouchi, and Yuval Yarom
+Algorithm 1 Montgomery ladder
+Require: k ∈Zq, point P on E(F).
+Ensure: The results of the scalar multiplication R = [k]P.
+1: (R0, R1)←( P, 2P)
+2: for i = ⌊lg(k)⌋−1 downto 0 do
+3: if ki = 0 then
+4: (R0, R1)←([ 2]R0, R0 ⊕R1)
+5: else
+6: (R0, R1)←( R0 ⊕R1, [2]R1)
+7: end if
+8: end for
+9: return R0
+found in Appendix A. As we further discuss in Section 3, attempts
+to improve side-channel security of current implementations of
+scalar multiplication risk retrofitting an otherwise constant-time
+Montgomery ladder on top of a group law implementation that still
+leaks information through optimizations.
+2.3 ECDSA and Hidden Number Problem with
+Erroneous Input
+The signing key extraction from the nonce leakages in ECDSA
+signatures typically amounts to solving the so-calledhidden number
+problem (HNP) . We present a generalized variant of the original
+HNP by Boneh and Venkatesan [15], incorporating some erroneous
+information of the most significant bits. In particular, the error
+distribution below models the attacker’s misdetection during the
+side-channel acquisition.
+Definition 2.1 (Hidden Number Problem with Erroneous Input).
+Let q be a prime and sk ∈Zq be a secret. Let hi and ki be uniformly
+random elements in Zq for each i = 1, . . . ,M and define zi =
+ki −hi ·sk mod q. Suppose some fixed distribution χb on {0, 1}b
+for b > 0 and define a probabilistic algorithm EMSBχb (x)which
+returns MSBb (x)⊕ e for some error bit string e sampled from χb .
+Given (hi ,zi )and EMSBχb (ki )for i = i, . . . ,M, the HNP with error
+distribution χb asks one to find sk.
+In our concrete attacks against OpenSSL ECDSA, we focus on the
+case where b = 1 and χb is the Bernoulli distribution Bϵ for some
+error rate parameter ϵ ∈[0, 1/2], i.e., EMSBχb (x)simply returns the
+negation of the most significant bit of x with probability ϵ, and
+otherwise returns the correct bit.
+A straightforward calculation shows that a set of ECDSA signa-
+tures with leaky nonces is indeed an instance of the HNP. Notice
+that the ECDSA signature (r,s)generated as in Algorithm 2 satis-
+fies s = (H(msg)+ r ·sk)/k mod q for uniformly chosen k ∈Zq.
+Rearranging the terms, we get
+H(msg)/s = k −(r/s)·sk mod q.
+Hence letting z = H(msg)/s mod q and h = r/s mod q, we obtain
+a HNP sample if the MSB of k is leaked with some probability.
+2.4 Lattice Attacks on HNP
+Boneh and Venkatesan [15] suggest solving the Hidden Number
+Problem by first reducing it to the lattice Closest Vector Problem
+Algorithm 2 ECDSA signature generation
+Require: Signing key sk ∈Zq, message msg ∈{0, 1}∗, group order
+q, base pointG, and cryptographic hash functionH : {0, 1}∗→
+Zq.
+Ensure: A valid signature (r,s)
+1: k ←$ Zq
+2: R = (rx ,ry)←[ k]G; r ←rx mod q
+3: s ←(H(msg)+ r ·sk)/k mod q
+4: return (r,s)
+(CVP). Howgrave-Graham and Smart [36] show the reduction of
+partial nonce leakage from DSA to HNP, which they solve by reduc-
+tion to CVP. Nguyen and Shparlinski [47] prove that the Howgrave-
+Graham and Smart approach works with a leak of log logq bits
+from a polynomial number of ephemeral keys. They later extend
+the result to ECDSA [48].
+Brumley and Tuveri [17] demonstrate a timing attack on OpenSSH
+acquiring a small number of bits from the ephemeral keys. Follow-
+ing works present electromagnetic emanation [8, 30], cache [4, 9, 52,
+68] and other microarchitectural [18] attacks, all use a conversion
+of HNP to a lattice problem. Dall et al. [ 22] explore the viability
+of solving HNP with errors using a lattice attack. One of the main
+target curves in our work is NIST P-192, which was also exploited
+by Medwed and Oswald [43] using several bits of nonce acquired
+via template-based SPA attacks.
+2.5 Bleichenbacher’s Attack Framework
+The Fourier analysis-based approach to the HNP was first pro-
+posed by Bleichenbacher [13] and it has been used to break ECDSA,
+Schnorr and variants with small nonce leakages that are hard to
+exploit with the lattice-based method [6, 24, 64]. This section cov-
+ers the fundamentals of Bleichenbacher’s framework, summarized
+in Algorithm 3. For more theoretical details we refer to the afore-
+mentioned previous works. The essential idea of the method is to
+quantify the modular bias of nonce k using the bias functions in the
+form of inverse discrete Fourier transform (iDFT).
+Definition 2.2 (Bias Functions). Let K be a random variable over
+Zq. The modular bias Bq(K)is defined as
+Bq(K)= E
+h
+e(2πK /q)i
+i
+where E(K)represents the mean and i is the imaginary unit. Like-
+wise, the sampled bias of a set of pointsK = {ki }M
+i=1 in Zq is defined
+by
+Bq(K)= 1
+M
+MÕ
+i=1
+e(2πki /q)i.
+When the l MSBs of K are fixed to some constant and K is
+otherwise uniform modulo q, then it is known that the norm of
+bias |Bq(K)|converges to 2l ·sin(π/2l )/π for large q [64, Corollary
+1]. The estimate holds for the sampled bias Bq(K)as well for a
+given set of biased nonces {ki }M
+i=1. For example, if the first MSB
+of each ki is fixed to a constant bit then the bias is estimated as
+|Bq(K)|≈ 2/π ≈0.637. Moreover, if the ki ’s follow the uniform
+distribution over Zq then the mean of the norm of sampled bias
+LadderLeak: Breaking ECDSA With Less Than One Bit Of Nonce Leakage
+is estimated as 1/
+√
+M, which is a direct consequence of the well-
+known fact about average distance from the origin for a random
+walk on the complex plane [6].
+Small linear combinations. Given such a function, it would be
+straightforward to come up with a naive approach to find sk: for
+each candidate secret keyw ∈Zq, compute the corresponding set of
+candidate nonces Kw = {zi + hiw mod q }M
+i=1 and then conclude
+that w = sk if the sampled bias |Bq(Kw )|shows a peak value. This
+is of course no better than the exhaustive search over the entireZq.
+To avoid this issue, the so-called collision search of input samples
+is required, which is the crucial preliminary step to expand the
+peak width. De Mulder et al. [ 24] and Aranha et al. [ 6] showed
+that the peak width broadens to approximately q/LFFT, by taking
+linear combinations of input samples {(hi ,zi )}M
+i=1 to generate new
+samples {(h′
+j ,z′
+j )}M′
+j=1 such that h′
+j < LFFT. This way, one could hit
+somewhere in the broadened peak by only checking the sampled
+biases at LFFT candidate points over Zq. As the inverse DFT atLFFT
+points can be efficiently computed by fast Fourier transform (FFT)
+algorithms in O(LFFT log LFFT)time and O(LFFT)space, the first
+goal of the collision search phase is to find sufficiently small linear
+combinations of the samples so that the FFT on the table of size
+LFFT becomes practically computable. A few different approaches
+have been explored to the collision search phase, such as lattice
+reduction [24], sort-and-difference [6] and 4-list sum algorithm [64].
+Sparse linear combinations. One may be tempted to repeat such
+collision search operations as many times as needed until the linear
+combinations with the desired upper bound are observed. How-
+ever, the linear combinations come at a price; in exchange of the
+broader peak width, the peak height gets reduced exponentially.
+Concretely, if the original modular bias of nonce is |Bq(K)|and all
+coefficients in the linear combinations are restricted to {−1, 0, 1}
+then the peak bias gets exponentiated byL1-norm of the coefficient
+vector [64]. Thus, for the peak height to be distinguishable from the
+noise value the diminished peak should be significantly larger than
+the noise value (which is 1/
+√
+M′on average as mentioned above).
+This imposes another constraint on the collision search phase: the
+sparsity of linear combinations. In summary, the efficiency of Ble-
+ichenbacher’s attack crucially relies upon the complexities of small
+and sparse linear combination search algorithm.
+2.6 K-list Sum Problem
+We introduce a variant of the K-list sum problem [ 25] (a sub-
+problem of GBP [ 69]) instantiated over the integers. The latter
+part of the paper discusses the connection between this problem
+and Bleichenbacher’s framework.
+Definition 2.3 ( K-list Sum Problem). Given Ksorted lists L1,
+. . . ,LK, each of which consists of 2a uniformly random ℓ-bit in-
+tegers, the K-list sum problem asks one to find a non-empty list
+L′consisting of x′= ÍK
+i=1 ωixi , where K-tuples (x1, . . . ,xK)∈
+L1 ×. . .×LKand (ω1, . . . ,ωK)∈ {−1, 0, 1}Ksatisfy MSBn(x′)= 0
+for some target parameter n ≤ℓ.
+Algorithm 4 is an instance of the K-list sum algorithm for
+K= 4. This is essentially a parameterized variant of the Howgrave–
+Graham–Joux [35], which we analyze by extending Dinur’s frame-
+work [25] in Section 4.
+Algorithm 3 Bleichenbacher’s attack framework
+Require:
+{(hi ,zi )}M
+i=1 - HNP samples over Zq.
+M′- Number of linear combinations to be found.
+LFFT - FFT table size.
+Ensure: Most significant bits of sk
+1: Collision search
+2: Generate M′ samples {(h′
+j ,z′
+j )}M′
+j=1, where (h′
+j ,z′
+j ) = Í
+i ωi,jhi , Í
+i ωi,jzi
+ is a pair of linear combinations
+with the coefficients ωi,j ∈{−1, 0, 1}, such that for j ∈[1, M′]
+(1) Small: 0 ≤h′
+j < LFFT and
+(2) Sparse:
+Bq(K)
+Ωj ≫1/
+√
+M′for all j ∈[1, M′], where Ωj BÍ
+i |ωi,j |.
+3: Bias Computation
+4: Z B(Z0, . . . ,ZLFFT−1)←( 0, . . . ,0)
+5: for j = 1 to M′do
+6: Zh′
+j
+←Zh′
+j
++ e(2πz′
+j /q)i
+7: end for
+8:
+
+Bq(Kwi )
+	LFFT−1
+i=0 ←FFT(Z), where wi = iq/LFFT.
+9: Find the value i such that
+Bq(Kwi )
+ is maximal.
+10: Output most significant log LFFT bits of wi .
+Algorithm 4 Parameterized 4-list sum algorithm based on
+Howgrave–Graham–Joux [35]
+Require:
+{Li }4
+i=1 - Sorted lists of 2a uniform random ℓ-bit samples.
+n - Number of nullified top bits per each round.
+v ∈[0, a]- Parameter.
+Ensure: L′- List of (ℓ −n)-bit samples.
+1. For each c ∈[0, 2v):
+a. Look for pairs(x1, x2)∈L 1 ×L2 such that MSBa(x1 +x2)=
+c. Store the expected number of 22a−a = 2a output sums
+x1 + x2 in a new sorted list L′
+1. Do the same for L3 and
+L4 to build the sorted list L′
+2.
+b. Look for pairs (x′
+1, x′
+2)∈L ′
+1 ×L′
+2 such that MSBn(|x′
+1 −
+x′
+2|)= 0. Store the expected number of 22a−(n−a)= 23a−n
+output sums |x′
+1 −x′
+2|in the list L′.
+2. Output L′of the expected length M′= 23a+v−n
+3 TIMING ATTACKS ON MONTGOMERY
+LADDER
+An implementation of the Montgomery ladder must be built on top
+of a constant-time implementation of the group law to enjoy its side-
+channel resistance guarantees. Any minor deviation in the number
+of field operations or memory access pattern in the group law
+can leak information about which of the two branches of a certain
+iteration are being evaluated, which further leaks information about
+the key bit. In this work, we exploit a vulnerability in the way
+the Montgomery ladder is prepared (line 1 of Algorithm 1), by
+observing that implementations employing projective coordinates
+will have accumulators R0 in affine coordinates in which input
+point P is typically given; and R1 in projective coordinates after a
+point doubling is performed. This coordinate mismatch allows the
+Diego F. Aranha, Felipe Rodrigues Novaes, Akira Takahashi, Mehdi Tibouchi, and Yuval Yarom
+attacker to mount a cache-timing attack against the first iteration
+of the ladder, revealing the second MSB of the scalar. We found
+the issue in the popular OpenSSL cryptographic library, and in
+the research-oriented RELIC toolkit [5], both apparently caused by
+attempting to implement a constant-time ladder on top of a group
+law optimized for special cases. This generality motivated us to
+name the discovered vulnerability under the moniker LadderLeak.
+3.1 Cache-timing vulnerabilities in OpenSSL’s
+implementation
+OpenSSL contains multiple implementations of the Montgomery
+ladder in its codebase, depending on the choice of curve and field,
+so we split the discussion based on the choice of underlying field.
+Binary curves. For curves defined over F2m , OpenSSL employs
+the well-known López-Dahab scalar multiplication algorithm [42],
+which amounts to the Montgomery ladder over points represented
+in López-Dahab coordinates (x = X/Z,y = Y /Z2). Parameters
+affected are SECG curve sect163r1; and NIST curves B-283, K-283,
+K-409 and B-571 (i.e. binary curves with group order slightly below
+the power of two) in versions1.0.2u and 1.1.0l. The latest 1.1.1
+branch is not affected due to a unified and protected implementation
+of the ladder.
+The Montgomery ladder is implemented in function ec_GF2m
+_montgomery_point_multiply() in file crypto/ec/ec2_mult.c.
+The function computes scalar multiplication [k]P for fixed-length
+scalar k and input point P = (x,y). The ladder starts by initializing
+two points (X1, Z1)= (x, 1)and (X2, Z2)= [2]P = (x4 + b, x2).
+The first loop iteration follows after a conditional swap function
+that exchanges these two points based on the value of the second
+MSB. The first function to be called within the first iteration is
+gf2m_Madd() for point addition, which starts by multiplying by
+value Z1. However, since the finite field arithmetic is not imple-
+mented in constant-time for binary fields, there is a timing differ-
+ence between multiplying by (1)or (x2), since modular reduction
+is only needed in the latter case. In particular, a modular reduction
+will be computed when Z1 = x2 after the conditional swap. This
+happens when the second MSB is 1 because the conditional swap
+effectively swapped the two sets of values. A cache-timing attack
+can then monitor when the modular reduction code is called to
+reduce a non-trivial intermediate multiplication result.
+Prime curves. In curves defined overFp for large primep, OpenSSL
+1.0.2u employs the Montgomery ladder when precomputation is
+turned off, a scenario prevalent in practice since precomputation
+must be manually turned on for a certain point (typically a fixed
+generator) [67]. Parameters affected are NIST curves P-192, P-224,
+P-384 and P-521; and SECG curves secp192k1 and secp256k1 (i.e.
+prime curves with group order slightly below the power of two).
+Curve P-256 is affected in principle, but OpenSSL has customized
+code enabled by default at build time. Note that secp256k1 refers
+to the curve adopted for signing Bitcoin transactions with ECDSA.
+In this case, OpenSSL implements the Montgomery ladder by
+using optimized formulas for elliptic curve arithmetic in the Weier-
+strass model. The ladder is implemented in ec_mul_consttime()
+within /crypto/ec/ec_mult.c, but which does not run in constant-
+time from a cache perspective, despite the naming. The ladder starts
+by initializing two accumulators R0 = P (in affine coordinates) and
+R1 = 2P (in projective coordinates). The first loop iteration is non-
+trivial and computes a point addition and a point doubling after a
+conditional swap. Depending on the key bit, the conditional swap
+is effective and only one point will remain stored in projective
+coordinates. Both the point addition and point doubling functions
+have optimizations in place for mixed addition, and the Z coor-
+dinate of the input point can be detected for the point doubling
+case implemented in function ec_GFp_simple_dbl(). When the
+input point for the doubling function is in affine coordinates, a field
+multiplication by Z is replaced by a faster call to BN_copy(). This
+happens when the two accumulators are not swapped in the ladder,
+which means that point R0 in affine coordinates is doubled and the
+second MSB is 0. The timing difference is very small, but can be
+detected with a cache-timing attack.
+3.2 Implementation of the attacks
+We implemented cache-timing attacks using Flush+Reload from the
+FR-trace program available in the Mastik side-channel analysis
+toolkit [72]. We targeted OpenSSL by running the command-line
+signature computation in two Broadwell CPUs with models Core
+i7-5500U and i7-3520M clocked at 2.4GHz and 2.9GHz, respectively,
+and TurboBoost disabled. OpenSSL was built using a standard con-
+figuration with debugging symbols and optimizations enabled. Tar-
+geted parameters were at lowest security in each class: sect163r1
+for the binary and P-192/secp192k1 for the prime case. Although
+the observed timing difference was very small in both cases, we
+managed to amplify it using performance degradation [4]: multiple
+threads running in the background penalize the targeted pieces of
+code (modular reduction in the binary case and BN_copy() in the
+prime case) by constantly evicting their addresses from the cache.
+The timing difference for computing the first iteration of the ladder
+was amplified to around 100,000 and 15,000 cycles for the binary
+and prime case, respectively. Amplifying the timing difference made
+it feasible to detect the second MSB with high probability: around
+99% for curves sect163r1 and P-192. We configured the slot, or
+the time between two consecutive probings by the Flush+Reload
+thread, to 5,000 cycles to obtain finer granularity.
+In the binary case, the detection strategy consisted of first locat-
+ing in the traces a cache-hit matching the execution of the first field
+multiplication by Z1 in gf2m_Madd() at the beginning of the first
+ladder iteration, and then looking for the next cache-hit matching
+the second field multiplication which marks the end of the first. If
+the number of slots between the two was above 15, this means a
+timing difference of at least 75,000 cycles. The first version of the
+attack achieved 97.3% precision, which was later improved. When
+running the attack against 10,000 signature computations, we were
+able to correctly detect 2,735 signatures with second MSB 1 and
+only 27 false positives, amounting to a precision of 99.00%. Sample
+traces illustrating the strategy can be found in Figure 1.
+In the prime case, the detection strategy consisted of looking for
+the first ladder iteration by locating in the traces for a cache-hit
+matching the execution of ec_GFp_simple_dbl() and then count-
+ing the number of consecutive cache-hits matching the execution
+of BN_copy(). If the next two slots had cache-hits for the latter, this
+means that the copy took around 3 slots, or 15,000 cycles. When
+running the attack against 10,000 signature computations, we were
+LadderLeak: Breaking ECDSA With Less Than One Bit Of Nonce Leakage
+ 0
+ 200
+ 400
+ 600
+ 800
+ 1000
+ 1200
+ 0  10  20  30  40  50  60  70  80  90  100
+Access time (cycles)
+Sample number
+Sample trace for binary curve case when second MSB is 0
+Call to first field mult.
+Call to second field mult.
+Cache hit threshold
+ 0
+ 100
+ 200
+ 300
+ 400
+ 500
+ 600
+ 700
+ 800
+ 0  10  20  30  40  50  60  70  80  90  100
+Access time (cycles)
+Sample number
+Sample trace for binary curve case when second MSB is 1
+Call to first field mult.
+Call to second field mult.
+Cache hit threshold
+Figure 1: Pattern in traces collected by FR-trace for the bi-
+nary curve case. Cache accesses are considered hits when be-
+low the default threshold of 100 cycles. The cache hits cor-
+respond to executions of the two first field multiplications
+inside point addition, the first by Z1. When the second MSB
+is 0 and Z1 = 1 in the first trace above, there is no modular re-
+duction, hence the two first field multiplications in point ad-
+dition quickly follow in succession. When the second MSB
+is 1 and Z1 = x2 in the second trace, performance degrada-
+tion penalizes modular reduction and the time between the
+two field multiplications grows much larger.
+ 0
+ 100
+ 200
+ 300
+ 400
+ 500
+ 600
+ 700
+ 800
+ 0  10  20  30  40  50  60  70  80  90  100
+Access time (cycles)
+Sample number
+Sample trace for prime case when second MSB is 1
+Call to BN_copy().
+Call to next field operation
+Cache hit threshold
+ 0
+ 100
+ 200
+ 300
+ 400
+ 500
+ 600
+ 700
+ 0  10  20  30  40  50  60  70  80  90  100
+Access time (cycles)
+Sample number
+Sample trace for prime case when second MSB is 0
+Call to BN_copy().
+Call to next field operation
+Cache hit threshold
+Figure 2: Pattern in traces collected by FR-trace for the
+prime curve case. Cache accesses are again considered hits
+when below the default threshold of 100 cycles. The cache
+hits correspond to the time a BN_copy() operation inside
+point doubling takes to complete under performance degra-
+dation. When the second MSB is 1 in the first trace, BN_copy()
+is not called inside point doubling, but the cache line con-
+taining the function call and next field operation is brought
+to the cache. When the second MSB is 0, BN_copy() is actu-
+ally called and takes longer to complete due to performance
+degradation. The pattern is visible between slots 20 and 30.
+able to correctly detect 2,343 signatures with second MSB 0 and
+only 12 false positives, amounting to a precision of 99.53%. Sample
+traces illustrating the strategy can be found in Figure 2.
+3.3 Translating Nonce Leakages to the Hidden
+Number Problem Instance
+In OpenSSL, the nonce k ∈{1, . . . ,q −1}is rewritten to be either
+ˆk = k + q or ˆk = k + 2q before passed to a scalar multiplication
+algorithm, so that the resulting ˆk has the fixed bit length. This
+is to countermeasure the remote timing attacks of Brumley and
+Tuveri [17]. For the curves with group order slightly below the
+power of 2 (denoted byq = 2ℓ −δ), it holds thatˆk = k+q except with
+negligible probability. Our LadderLeak attack detects the second
+MSB of ˆk and we argue that it coincides with the first MSB ofk with
+overwhelming probability. Let us denote the ℓ-th bit of k (resp. ˆk)
+by kℓ (resp. ˆkℓ). Then Pr[kℓ , ˆkℓ]< Pr[kℓ = 0 ∧k < δ]+ Pr[kℓ =
+1 ∧k < δ+ 2ℓ−1]since the ℓ-th bit of q is 1 and kℓ gets flipped only
+if there’s no carry from the lower bits in the additionk +q. It is easy
+to see that the right-hand side of the above inequality is negligibly
+small if δ is negligibly smaller than q. Therefore, putting together
+with the usual conversion in Section 2.3 we have obtained HNP
+instances with error rate at most ϵ = 0.01 for P-192 and ϵ = 0.027
+for sect163r1.
+4 IMPROVED ANALYSIS OF
+BLEICHENBACHER’S ATTACK
+4.1 Unified Time–Space–Data Tradeoffs
+The FFT-based approach to the HNP typically requires significant
+amount of input signatures, compared to lattice-based attacks. The
+sort-and-difference method attempted by Aranha et al. [6], for in-
+stance, required 233 input signatures to break 160-bit ECDSA with
+1-bit bias. We could of course take the same approach to exploit
+the leakage of sect163r1 from the previous section, but collecting
+over 8 million signatures via cache attacks doesn’t seem very easy
+in practice. Takahashi, Tibouchi and Abe [ 64] took much more
+space-efficient approach by making use of Howgrave–Graham and
+Joux’s (HGJ) knapsack solver [35]. They also provide “lower bounds”
+for the required amount of input samples to attack given signature
+parameters and bit biases. However, their lower bound formula
+implicitly relies on two artificial assumptions: (1) the number of
+input and output samples, space complexity, and FFT table size
+are all equal (i.e., M = M′ = LFFT in Algorithm 3), and (2) the
+number of collided bits to be found by the HGJ algorithm is fixed
+to some constant. Such assumptions do help stabilizing time and
+space complexities throughout the entire attack, but at the same
+time seem to sacrifice the true potential of applying the HGJ algo-
+rithm. In [27], Fouque et al. briefly mentioned that an algorithm
+for the GBP helps reducing the number of signatures required in
+Bleichenbacher-style attacks by initially amplifying the amount of
+samples, although their analysis was neither detailed nor general.
+In fact, the HGJ-like algorithm implemented in [64] can be regarded
+as an instance of the generalized birthday algorithm analyzed by
+Wagner [69] and Dinur [25]. The latter in particular analyzes the
+time–space tradeoffs in detail, which we would like to apply and
+extend by introducing the third parameter, thedata complexity. Our
+Diego F. Aranha, Felipe Rodrigues Novaes, Akira Takahashi, Mehdi Tibouchi, and Yuval Yarom
+formulation below is motivated by a practical situation where the
+adversary may want to trade the “online” side-channel detection
+costs (i.e., data complexity) for the “offline” resources required by
+Bleichenbacher’s attack (i.e., time and space complexities). We are
+now set out to address the following question.
+For given most significant bits information in the HNP
+and the attacker’s budget for computational resources,
+what would be the optimal balance between the time,
+memory, and input data complexities?
+4.1.1 Tradeoffs for Parameterized 4-list Sum Algorithm. We begin
+by presenting our mild generalization of Dinur’s tradeoff formula
+(the one for the algorithm denoted by A4,1). The main difference is
+that we made the number of output samples arbitrary M′.
+Theorem 4.1. For Algorithm 4, the following tradeoff holds.
+24M′N = T M2
+or put differently
+m′= 3a + v −n
+where each parameter is defined as follows: N = 2n, where n is the
+number of top bits to be nullified; M = 2m = 4 ×2a is the number of
+input samples, where 2a is the length of each sublist; M′= 2m′
+≤22a
+is the number of output samples such that the top n bits are 0; v ∈[0, a]
+is a parameter deciding how many iterations of the collision search to
+be executed; T = 2t = 2a+v is the time complexity.
+Proof. For each partial target value c ∈[0, 2v), Step 1.a. takes
+˜O(2a)time and O(2m)space to find 2a pairs that sum to c in the
+top a bits, e.g., by employing the sort-merge join-like algorithm of
+[64]. At Step 1.b. since two pairsx′
+1 and x′
+2 are guaranteed to collide
+in the top a bits the probability that the collision occurs in the top
+n bits is 1/2n−a. Hence we get approximately 22a/2n−a = 23a−n
+linear combinations5. Iterating these steps 2v times, we get in total
+M′= 2m′
+= 23a+v−n samples in ˜O(2a+v)time and O(2m)space.
+As the algorithm goes through at most 2a ×2v linear combinations
+of four it follows that 2m′
+≤22a. □
+The above tradeoff gives more flexibility to the sample amplifica-
+tion; as the formula implies one could amplify the number of input
+samples to at most 22a by reducing nullified bits, or by increasing
+time or memory complexity. This is in particular important in Ble-
+ichenbacher’s framework, since it allows us to carefully coordinate
+the number of output samples so that the noise floor is sufficiently
+smaller than the peak.
+4.1.2 Integration with Bleichenbacher and Linear Programming. We
+now integrate the above basic tradeoff formula with two crucial
+constraints for Bleichenbacher’s attack to work; namely, smallness
+and sparsity of the output linear combinations. In Bleichenbacher’s
+attack, the adversary could repeat the 4-list sum algorithm for
+r rounds to find small linear combinations of 4r integers below
+certain budget parameter for the FFT table, LFFT = 2ℓFFT , so that
+5We remark that one could obtain slightly more solutions here thanks to the carries of
+additions and subtractions, when the problem is instantiated over integers (but not
+over F2) [64, Theorem 1]. Accordingly the tradeoff above should be adjusted by a
+small constant term on the right-hand side, although this of course doesn’t matter
+asymptotically.
+Algorithm 5 Iterative HGJ 4-list sum algorithm
+Require:
+L- List of M = 4 ×2a uniform random ℓ-bit samples.
+{ni }r −1
+i=0 - Number of nullified top bits per each round.
+{vi }r −1
+i=0 - Parameter where vi ∈[0, ai ].
+Ensure: L′- List of (ℓ −Ír −1
+i=0 ni )-bit samples of the length 2mr .
+1. Let a0 = a.
+2. For each i = 0, . . . ,r −1 :
+a. Divide Linto 4 disjoint lists L1, . . . ,L4 of length 2ai and
+sort them.
+b. Apply Algorithm 4 to {Li }4
+i=1 with parameters ni and
+vi . Obtain a single list L′of the expected length 2mi+1 =
+23ai +vi −ni . Let LBL′.
+3. Output L′.
+Table 2: Linear programming problems based on the itera-
+tive HGJ 4-list sum algorithm (Algorithm 5). Each column
+corresponds to the objective and constraints of linear pro-
+gramming problems for optimizing time, space, and data
+complexities, respectively. The boxed equations are the com-
+mon constraints for all problems.
+Time Space Data
+minimize t0 = . . .= tr−1 m0 = . . .= mr−1 min
+subject to — ti ≤tmax ti ≤tmax
+subject to mi ≤mmax — mi ≤mmax
+subject to mi+1 = 3ai +vi −ni i ∈[0,r −1]
+ti = ai +vi i ∈[0,r −1]
+vi ≤ai i ∈[0,r −1]
+mi = ai + 2 i ∈[0,r −1]
+mi+1 ≤2ai i ∈[0,r −1]
+min = m0 + f
+ℓ ≤ℓFFT + f + Ír−1
+i=0 ni
+mr = 2(logα−4r log(|Bq(K)|))
+the computation of FFT becomes tractable. Hence we rewrite the
+tradeoff formula for each round i = 0, . . . ,r −1 as
+m′
+i = 3ai + vi −ni
+where we define ni ,mi ,m′
+i , ai ,vi , and ti as in Theorem 4.1. Algo-
+rithm 5 describes the iterative HGJ 4-list sum algorithm, which
+calls Algorithm 4 as a subroutine. Note that now the 2m′
+i outputs
+from the i-th round are used as inputs to the (i + 1)-th round, so
+we have mi+1 = m′
+i . Moreover, we could also incorporate a simple
+filtering technique that trades the initial problem size for the data
+complexity: given 2min uniformly random ℓ-bit samples, one could
+keep only 2m0 = 2min−f samples below (ℓ −f )-bit for any f ≥0.
+With these notations in mind, the smallness condition from Al-
+gorithm 3 is expressed as logh′
+j ≤ℓ −f −Ír −1
+i=0 ni ≤ℓFFT, since
+after r iterations the topÍr −1
+i=0 ni bits of (ℓ−f )-bit input samples get
+nullified. On the other hand, recall that the peak height decays expo-
+nentially in the L1-norm of the coefficient vectors (see Section 2.5),
+many sparse linear combinations need to be found in the end to
+satisfy the second condition |Bq(K)|4r
+≫1/
+√
+M′, where M′= 2mr
+LadderLeak: Breaking ECDSA With Less Than One Bit Of Nonce Leakage
+is the number of outputs afterr rounds. By introducing a new slack
+variable α ≥1 and taking the logarithm the inequality can be con-
+verted to the equivalent equation mr = 2(log α −4r log(|Bq(K)|)).
+Here we remark that the slack variable α should be determined
+depending on the possible largest noise value, which should be
+somewhat larger than the average 1/
+√
+M′. This can be estimated
+by checking the distribution of {h′
+j }M′
+j=1 after the collision search in
+Algorithm 3: let H′and Z′be random variables corresponding to
+h′
+j = Í
+j ωi,jhi and z′
+j = Í
+j ωi,jzi , and hence let K′= Z′+ skH′.
+Since Bleichenbacher’s attack should detect the peak at a candidate
+point within q/(2LFFT)distance from the actual secret sk, all the
+modular biases of incorrect guess K′x = Z′+ (sk ±x)H′ mod q
+for x ∈ [q/(2LFFT),q/2)are noise. Thus the largest noise value
+is maxx |Bq(K′x )| = maxx (|Bq(K′)|·| Bq(xH′)|)(due to Lemma
+1 of [ 24]), which relies on the distribution that H′follows. For
+each concrete collision search algorithm one could experimentally
+find the maximum value of |Bq(K′x )|, and therefore can choose
+the appropriate α to make sure that the bias peak is larger than
+that. For instance, for two rounds of the iterative HGJ we observed
+maxx |Bq(K′x )|≈ 5/
+√
+M′. In Appendix C we discuss the estimation
+of noise floor in a more formal fashion.
+Putting together, we obtain the unified tradeoffs in the form of
+linear programming problem, summarized in Table 2. For instance,
+to optimize the data complexity the goal of linear programming is to
+minimize the (logarithm of) number of inputsmin while the problem
+receives budget parameterstmax,mmax, ℓFFT, slack parameterα, and
+estimated bias Bq(K)as fixed constants. We can further iteratively
+solve the linear programming over choices of r to find the optimal
+number of rounds that leads to the best result. For small number
+of bit biases like less than 4-bit biases, r is at most 5, so we can
+efficiently find the optimal parameters. We present in Figs. 3 and 4
+the optimal time and data complexities for attacking 1-bit biased
+HNP, with different FFT table sizes and max memory bounds. These
+results are obtained by solving the linear programming problems
+with our SageMath [65] script available in our GitHub repository.
+More tradeoff graphs in case of few bits nonce leakages are also
+given in Appendix D.
+One caveat is, that simply iterating Algorithm 4 r rounds does
+not necessarily guarantee the 4r sums in the resulting list; the same
+element in the original list may be used more than once in a single
+linear combinations of 4r when the output list of i-th round is used
+as input to thei +1-th round. This would violate the coefficient con-
+straints of the collision search phase required in Algorithm 3, since
+due to the [24, Lemma 1.d.] if K follows the uniform distribution
+over [0,q/2l )then the bias peak cancels out, i.e., |Bq(2l K)|= 0. To
+circumvent the issue one could alternatively use the “layered” HGJ
+algorithm due to Dinur [25], of which we present a generalized vari-
+ant in Algorithm 7 together with its tradeoff linear programming
+problems in Table 4. This way, the input list is first divided into 4r
+sub-lists and the algorithm guarantees to find linear combinations
+composed of single element per each sub-list, while we observe that
+the concrete complexities for attacking our OpenSSL targets are
+worse than the iterative HGJ. In practice, a few iterations of HGJ
+algorithm outputs a negligible fraction of such undesirable linear
+combinations, and hence the actual bias peak is only slightly lower
+than the estimated |Bq(K)|4r
+. This heuristic was also implicitly
+exploited by [64] and we chose to make use of Algorithm 5 for the
+better performance in the attack experiments.
+Finally, we remark that our approach is generic, allowing to in-
+tegrate in principle any K-list integer sum algorithms to establish
+a similar time–space–data tradeoff formula. In Appendix E, we
+present more linear programming problems derived from other
+K-list sum algorithms, such as the 16-list sum due to Becker, Coron
+and Joux (BCJ) [7] and its multi-layer variant by Dinur [ 25]. For
+the specific HNP instances related to our attack on OpenSSL, these
+K-list sum algorithms provide slightly worse complexities than the
+iterative HGJ. We leave for future work the discovery of parame-
+ter ranges where those alternatives perform better, as well as the
+adaptation of further list sum algorithms.
+4.2 Bias Function in Presence of Misdetection
+All previous FFT-based attack papers [6, 24, 64] only considered
+the idealized setting where input HNP samples have no errors
+in MSB information (corresponding to ϵ = 0 in Section 2.3). As
+observed in Section 3, however, this is usually not the case in
+practice since the side-channel detection is not 100 percent ac-
+curate. This motivates us to consider the behavior of the bias func-
+tion on non-uniformly biased samples. Below we show how to
+concretely calculate biases when there are ϵ errors in the input.
+For instance, our cache timing attack yields HNP samples with
+ϵ = 0.01 for P-192 (resp. ϵ = 0.027 for sect163r1), and the present
+lemma gives |Bq(K)| = (1 −2ϵ)|Bq(K0)| ≈0.98 ×0.637 (resp.
+|Bq(K)|= (1 −2ϵ)|Bq(K1)|≈ 0.946 ×0.637). Note that the extreme
+case where ϵ = 1/2 simply means that the samples are not biased
+at all, and therefore |Bq(K)|degenerates to 0. This also matches
+the intuition; when the attacker gains no side-channel information
+about nonces it should be information theoretically impossible to
+solve the HNP (except with some auxiliary information like the
+knowledge of public key corresponding to the secret).
+Lemma 4.2. For b ∈{0, 1}, any ϵ ∈[0, 1/2]and even integer q > 0
+the following holds.
+Let K be a random variable following the weighted uniform distribu-
+tion over Zq below.
+Pr[K = ki ]= (1 −b)· 1 −ϵ
+q/2 + b · ϵ
+q/2 if 0 ≤ki < q/2
+Pr[K = ki ]= b ·1 −ϵ
+q/2 + (1 −b)· ϵ
+q/2 if q/2 ≤ki < q
+Then the modular bias of K is
+Bq(K)= (1 −2ϵ)Bq(Kb )
+where Kb follows the uniform distributions over [0+bq/2,q/2+bq/2).
+Proof. We prove the case for b = 0. The other case holds by
+symmetry. By Definition 2.2 the bias for K is rewritten as follows
+Diego F. Aranha, Felipe Rodrigues Novaes, Akira Takahashi, Mehdi Tibouchi, and Yuval Yarom
+20 25 30 35 40 45 50
+Data25
+30
+35
+40
+45
+50
+55
+Time sect163r1
+ℓFFT = 35
+ℓFFT = 40
+ℓFFT = 45
+25 30 35 40 45 50 55
+Data25
+30
+35
+40
+45
+50
+55
+Time P-192
+ℓFFT = 35
+ℓFFT = 40
+ℓFFT = 45
+40 45 50 55 60 65 70
+Data25
+30
+35
+40
+45
+50
+55
+Time P-224
+ℓFFT = 35
+ℓFFT = 40
+ℓFFT = 45
+70 75 80 85 90 95 100
+Data25
+30
+35
+40
+45
+50
+55
+Time P-256
+ℓFFT = 35
+ℓFFT = 40
+ℓFFT = 45
+Figure 3: Time–Data tradeoffs where mmax = 30, nonce k is 1-bit biased, slack parameter α = 8 and the number of rounds r = 2.
+20 25 30 35 40 45 50
+Data25
+30
+35
+40
+45
+50
+55
+60
+65
+Time sect163r1
+ℓFFT = 35
+ℓFFT = 40
+ℓFFT = 45
+25 30 35 40 45 50 55
+Data25
+30
+35
+40
+45
+50
+55
+60
+65
+Time P-192
+ℓFFT = 35
+ℓFFT = 40
+ℓFFT = 45
+30 35 40 45 50 55 60
+Data25
+30
+35
+40
+45
+50
+55
+60
+65
+Time P-224
+ℓFFT = 35
+ℓFFT = 40
+ℓFFT = 45
+40 45 50 55 60 65 70
+Data25
+30
+35
+40
+45
+50
+55
+60
+65
+Time P-256
+ℓFFT = 35
+ℓFFT = 40
+ℓFFT = 45
+Figure 4: Time–Data tradeoffs where mmax = 35, nonce k is 1-bit biased, slack parameter α = 8 and the number of rounds r = 2.
+due to the law of the unconscious statistician.
+Bq(K)=E
+h
+e(2πK /q)i
+i
+=
+Õ
+ki ∈Zq
+e(2πki /q)i ·Pr[K = ki ]
+=1 −ϵ
+q/2
+Õ
+ki ∈[0,q/2)
+e(2πki /q)i + ϵ
+q/2
+Õ
+ki ∈[q/2,q)
+e(2πki /q)i
+=1 −ϵ
+q/2
+Õ
+ki ∈[0,q/2)
+e(2πki /q)i + ϵ
+q/2
+Õ
+k′
+i ∈[0,q/2)
+e(2π(k′
+i +q/2)/q)i
+=1 −ϵ
+q/2
+Õ
+ki ∈[0,q/2)
+e(2πki /q)i − ϵ
+q/2
+Õ
+k′
+i ∈[0,q/2)
+e(2πk′
+i /q)i
+=1 −2ϵ
+q/2
+Õ
+ki ∈[0,q/2)
+e(2πki /q)i = (1 −2ϵ)E
+h
+e(2πK 0/q)i
+i
+where k′
+i Bki −q/2 and we used e(2π(k′
+i +π)/q)i = −e(2πk′
+i /q)i. □
+For brevity, we omit an almost identical result for odd q. We
+remark that if q is odd then there is a tiny additive error of order
+1/q. In practice, such an error is negligible since q is always signifi-
+cantly large for the actual HNP instances, and we experimentally
+confirmed that the bias peak for odd q behaves as if q was even.
+4.3 Concrete Parameters to Attack OpenSSL
+sect163r1. To showcase the power of our tradeoff formula we
+describe how to concretely choose the optimal parameters to exploit
+error-prone 1-bit leakages from OpenSSL ECDSA. For sect163r1,
+the attacker would be able to obtain ℓ = 162-bit HNP samples
+with error rate at most ϵ = 0.027 due to our cache timing side-
+channel analysis. By Lemma 4.2 the modular bias is estimated as
+|Bq(K)|≈ 0.602. Suppose the attacker’s computational budget is
+tmax = 44, mmax = 29, ℓFFT = 34 and let the slack variable α = 8.
+We show in the next section that such computational facilities are
+relatively modest in practice. If the attacker’s goal is to minimize the
+number of input samples min, then by solving the linear program-
+ming for the data complexity optimization we obtain the solution
+min = 24. Our solver script gives all intermediate attack parameters,
+suggesting the following attack strategy that amplifies the number
+of samples by 25 during the first round.
+•The first round generates 2m1 = 229 samples with top n0 =
+59 bits nullified via Algorithm 4 in time 2t0 = 2a0+v0 =
+222+22 = 244, given 2m0 = 2min = 224 input samples.
+•The second round generates 2m2 = 229 samples with top
+n1 = 69 bits nullified via Algorithm 4 in time 2t1 = 2a1+v1 =
+227+17 = 244, given 2m1 = 229 input samples.
+•After r = 2 rounds of the collision search phase, the bias com-
+putation phase does the FFT of table size 2ℓFFT = 2ℓ−n0−n1 =
+234, expecting to find the peak of height|Bq(K)|42
+= α/
+√
+2m2 ≈
+0.0003 and then recover the top 34 bits of sk.
+Notice that the required number of input signatures is now signifi-
+cantly lower than what would have been derived from the previous
+published works. For example, the implementation of Aranha et
+al. [6] would require over 233 input samples in our setting. The
+lower bound formula found in [64] with the same slack parameter
+would yield 229 signatures as input for 2 rounds of the HGJ algo-
+rithm. Surprisingly, the best previous attack record dates back to
+2005, in which Bleichenbacher informally claimed to break 160-bit
+DSA given only 224 signatures [14] although no details have been
+ever explained to date. Since the claimed number of samples does
+match our result, our parameter choice above may explain what he
+conducted back then. Moreover, all these works only considered the
+setting where HNP samples come without any errors in the MSB
+information. In such an ideal case, our tradeoff formula actually
+allows to mount the attack given only 223 samples with almost the

@@ -1,0 +1,746 @@
+A shorter version of this paper will appear in Proc. 21st USENIX Security Symposium, Aug. 2012. Rev. 2; July 11, 2012.
+For the newest revision of this paper, partial source code, and our online key-check service, visithttps://factorable.net.
+Mining Your Ps and Qs: Detection of
+Widespread Weak Keys in Network Devices
+Nadia Heninger†∗ Zakir Durumeric‡∗ Eric Wustrow‡ J. Alex Halderman‡
+† University of California, San Diego
+nadiah@cs.ucsd.edu
+‡ The University of Michigan
+{zakir, ewust, jhalderm}@umich.edu
+Abstract
+RSA and DSA can fail catastrophically when used with
+malfunctioning random number generators, but the extent
+to which these problems arise in practice has never been
+comprehensively studied at Internet scale. We perform
+the largest ever network survey of TLS and SSH servers
+and present evidence that vulnerable keys are surprisingly
+widespread. We ﬁnd that 0.75% of TLS certiﬁcates share
+keys due to insufﬁcient entropy during key generation,
+and we suspect that another 1.70% come from the same
+faulty implementations and may be susceptible to com-
+promise. Even more alarmingly, we are able to obtain
+RSA private keys for 0.50% of TLS hosts and 0.03% of
+SSH hosts, because their public keys shared nontrivial
+common factors due to entropy problems, and DSA pri-
+vate keys for 1.03% of SSH hosts, because of insufﬁcient
+signature randomness. We cluster and investigate the vul-
+nerable hosts, ﬁnding that the vast majority appear to be
+headless or embedded devices. In experiments with three
+software components commonly used by these devices,
+we are able to reproduce the vulnerabilities and identify
+speciﬁc software behaviors that induce them, including
+a boot-time entropy hole in the Linux random number
+generator. Finally, we suggest defenses and draw lessons
+for developers, users, and the security community.
+1 Introduction and Roadmap
+Randomness is essential for modern cryptography, where
+security often depends on keys being chosen uniformly at
+random. Researchers have long studied random number
+generation, from both practical and theoretical perspec-
+tives (e.g., [9, 14, 17, 19, 24, 26]), and a handful of major
+vulnerabilities (e.g., [6, 22]) have attracted considerable
+scrutiny to some of the most critical implementations.
+Given the importance of this problem and the effort and
+attention spent improving the state of the art, one might
+∗The ﬁrst two authors both made substantial contributions.
+expect that today’s widely used operating systems and
+server software generate random numbers securely. In this
+paper, we test that proposition empirically by examining
+the public keys in use on the Internet.
+The ﬁrst component of our study is the most compre-
+hensive Internet-wide survey to date of two of the most
+important cryptographic protocols, TLS and SSH (Sec-
+tion 3.1). By scanning the public IPv4 address space,
+we collected 5.8 million unique TLS certiﬁcates from
+12.8 million hosts and 6.2 million unique SSH host keys
+from 10.2 million hosts. This is 67% more TLS hosts
+than the latest released EFF SSL Observatory dataset [20].
+Our techniques take less than 24 hours to scan the entire
+address space for listening hosts and less than 96 hours
+to retrieve keys from them. The results give us a macro-
+scopic perspective of the universe of keys.
+Next, we analyze this dataset to ﬁnd evidence of several
+kinds of problems related to inadequate randomness. To
+our surprise, at least 5.57% of TLS hosts and 9.60% of
+SSH hosts use the same keys as other hosts in an appar-
+ently vulnerable manner (Section 4.1). In the case of TLS,
+at least 5.23% of hosts use manufacturer default keys that
+were never changed by the owner, and another 0.34%
+appear to have generated the same keys as one or more
+other hosts due to malfunctioning random number gener-
+ators. Only a handful of the vulnerable TLS certiﬁcates
+are signed by browser-trusted certiﬁcate authorities.
+Even more alarmingly, we are able to compute the
+private keys for 64,000 (0.50%) of the TLS hosts and
+108,000 (1.06%) of the SSH hosts from our scan data
+alone by exploiting known weaknesses of RSA and DSA
+when used with insufﬁcient randomness. In the case of
+RSA, distinct moduli that share exactly one prime factor
+will result in public keys that appear distinct but whose
+private keys are efﬁciently computable by calculating
+the greatest common divisor (GCD). We implemented
+an algorithm that can compute the GCDs of all pairs of
+11 million distinct public RSA moduli in less than 2 hours
+(Section 3.3). Using the resulting factors, we are able to
+obtain the private keys for 0.50% of TLS hosts and 0.03%
+of SSH hosts (Section 4.2). In the case of DSA, if a DSA
+key is used to sign two different messages with the same
+ephemeral key, an attacker can efﬁciently compute the
+signer’s long-term private key. We ﬁnd that our SSH scan
+data contain numerous DSA signatures that used the same
+ephemeral keys during signing, allowing us to compute
+the private keys for 1.6% of SSH DSA hosts (Section 4.3).
+To understand why these problem are occurring, we
+manually investigated hundreds of the vulnerable hosts,
+which were representative of the most commonly repeated
+keys as well as each of the private keys we obtained
+(Section 3.2). Nearly all served information identifying
+them as headless or embedded systems, including routers,
+server management cards, ﬁrewalls, and other network de-
+vices. Such devices typically generate keys automatically
+on ﬁrst boot, and may have limited entropy sources com-
+pared to traditional PCs. Furthermore, when we examined
+clusters of hosts that shared a key or factor, in nearly all
+cases these appeared to be linked by a manufacturer or
+device model. These observations lead us to conclude
+that the problems are caused by speciﬁc defective imple-
+mentations that generate keys without having collected
+sufﬁcient entropy. We identiﬁed vulnerable devices and
+software from 54 manufacturers, including some of the
+largest names in the technology industry, and worked to
+notify the responsible parties.
+In the ﬁnal component of our study, we experimen-
+tally explore the root causes of these vulnerabilities by
+investigating several of the most common open-source
+software components from the population of vulnerable
+devices (Section 5). Based on the devices we identiﬁed, it
+is clear that no one implementation is solely responsible,
+but we are able to reproduce the vulnerabilities in plau-
+sible software conﬁgurations. Every software package
+we examined relies on /dev/urandom to generate cryp-
+tographic keys; however, we ﬁnd that Linux’s random
+number generator (RNG) can exhibit a boot-time entropy
+hole that causes urandom to produce deterministic output
+under conditions likely to occur in headless and embed-
+ded devices. In experiments with OpenSSL and Dropbear
+SSH, we show how repeated output from the system RNG
+can lead not only to repeated long-term keys but also to
+factorable RSA keys and repeated DSA ephemeral keys
+due to the behavior of application-speciﬁc entropy pools.
+Given the diversity of the devices and software im-
+plementations involved, mitigating these problems will
+require action by many different parties. We draw lessons
+and recommendations for developers of operating sys-
+tems, cryptographic libraries, and applications, and for de-
+vice manufacturers, certiﬁcate authorities, end users, and
+the security and cryptography communities (Section 7).
+We have also created an online key-check service to allow
+users to test whether their keys are vulnerable (Section 8).
+It is natural to wonder whether these results should
+call into question the security of every RSA or DSA key.
+Based on our analysis, the margin of safety is slimmer
+than we might like, but we have no reason to doubt the
+security of most keys generated interactively by users on
+traditional PCs. While we took advantage of the details
+of speciﬁc cryptographic algorithms in this paper, we con-
+clude that the blame for these vulnerabilities lies chieﬂy
+with the implementations. Ultimately, the results of our
+study should serve as a wake-up call that secure random
+number generation continues to be an unsolved problem
+in important areas of practice.
+Online resources For the most recent version of this
+paper, partial source code, updated advisories, and our
+online key-check service, visit https://factorable.net.
+2 Background
+In this section, we review the RSA and DSA public-key
+cryptosystems and discuss the known weaknesses of each
+that we used to compromise private keys. We then discuss
+how an adversary might exploit compromised keys to
+attack SSH and TLS in practice.
+2.1 RSA review
+An RSA [45] public key consists of two integers: an ex-
+ponent e and a modulus N. The exponent can be shared
+among multiple public keys without compromising se-
+curity, but the modulus cannot. The modulus N is the
+product of two randomly chosen prime numbers p and q.
+The private key is the decryption exponent
+d = e−1 mod (p −1)(q −1).
+Anyone who knows the factorization of N can efﬁciently
+compute the private key for any public key (e,N) using
+the preceding equation. When p and q are unknown, the
+most efﬁcient known method to calculate the private key
+is to factor N into p and q and use the above equation to
+calculate d [10].
+Factorable RSA keys No one has been publicly
+known to factor a well-generated 1024-bit RSA mod-
+ulus; the largest known factored modulus is 768 bits,
+which was announced in December 2009 after a multi-
+year distributed-computing effort [34]. In contrast, the
+greatest common divisor (GCD) of two 1024-bit integers
+can be computed in microseconds. This asymmetry leads
+to a well-known vulnerability: if an attacker can ﬁnd two
+distinct RSA moduli N1 and N2 that share a prime factor
+p but have different second prime factors q1 and q2, then
+the attacker can easily factor both moduli by computing
+their GCD, p, and dividing to ﬁnd q1 and q2. The attacker
+can then compute both private keys as explained above.
+2
+2.2 DSA review
+A DSA [38] public key consists of three so-called do-
+main parameters (two prime moduli p and q and a gener-
+ator g of the subgroup of order q mod p) and an integer
+y = gx mod p, where x is the private key. The domain
+parameters may be shared among multiple public keys
+without compromising security. A DSA signature con-
+sists of a pair of integers (r,s): r = gk mod p mod q and
+s = (k−1(H(m) +xr)) mod q, where k is a randomly cho-
+sen ephemeral private key and H(m) is the hash of the
+message.
+Low-entropy DSA signatures DSA is known to fail
+catastrophically if the ephemeral keyk used in the signing
+operation is generated with insufﬁcient entropy [5]. (El-
+liptic curve DSA (ECDSA) is similarly vulnerable. [12])
+If k is known for a signature (r,s), then the private key
+x can be computed from the signature and public key as
+follows:
+x = r−1(ks −H(m)) mod q.
+If a DSA private key is used to sign two different messages
+with the same k, then an attacker can efﬁciently compute
+the value k from the public key and signatures and use
+the above equation to compute the private keyx [35]. If
+two messages m1 and m2 were signed using the same
+ephemeral key k to obtain signatures (r1,s1) and (r2,s2),
+then this will be immediately clear as r1 and r2 will be
+equal. The ephemeral key k can be computed as:
+k = (H(m1) −H(m2))(s1 −s2)−1 mod q.
+2.3 Attack scenarios
+The weak key vulnerabilities we describe in this paper can
+be exploited to compromise two of the most important
+cryptographic transport protocols used on the Internet,
+TLS and SSH, both of which commonly use RSA or DSA
+to authenticate servers to clients.
+TLS In TLS [18], the server sends its public key in a
+TLS certiﬁcate during the protocol handshake. The key
+is used either to provide a signature on the handshake
+(when Difﬁe-Hellman key exchange is negotiated) or to
+encrypt session key material chosen by the client (when
+RSA-encrypted key exchange is negotiated).
+If the key exchange is RSA encrypted, a passive eaves-
+dropper with the server’s private key can decrypt the mes-
+sage containing the session key material and use it to
+decrypt the entire session. If the session key is negoti-
+ated using Difﬁe-Hellman key exchange, then a passive
+attacker will be unable to compromise the session key
+from just a connection transcript. However, in both cases,
+an active attacker who can intercept and modify trafﬁc
+between the client and server can man-in-the-middle the
+connection in order to decrypt or modify the trafﬁc.
+SSH In SSH, host keys allow a server to authenticate
+itself to a client by providing a signature during the pro-
+tocol handshake. There are two major versions of the
+protocol. In SSH-1 [52], the client encrypts session key
+material using the server’s public key. SSH-2 [53] uses a
+Difﬁe-Hellman key exchange to establish a session key.
+The user manually veriﬁes the host key ﬁngerprint the
+ﬁrst time she connects to an SSH server. Most clients then
+store the key locally in a known_hosts ﬁle and automati-
+cally trust it for all subsequent connections.
+As in TLS, a passive eavesdropper with a server’s pri-
+vate key can decrypt an entire SSH-1 session. However,
+because SSH-2 uses Difﬁe-Hellman, it is vulnerable only
+to an active man-in-the-middle attack. In the SSH user au-
+thentication protocol, the user-supplied password is sent
+in plaintext over the encrypted channel. An attacker who
+knows a server’s private key can use the above attacks
+to learn a user’s password and escalate an attack to the
+system.
+3 Methodology
+In this section, we explain how we performed our Internet-
+wide survey of public keys, how we attributed vulnerable
+keys to devices, and how we efﬁciently factored poorly
+generated RSA keys.
+3.1 Internet-wide scanning
+We performed our data collection in three phases: dis-
+covering IP addresses accepting connections on TCP
+port 443 (HTTPS) or 22 (SSH); performing a TLS or
+SSH handshake and storing the presented certiﬁcate chain
+or host key; and parsing the collected certiﬁcates and
+host keys into a relational database. Table 1 summarizes
+the results.
+Host discovery In the ﬁrst phase, we scanned the pub-
+lic IPv4 address space to ﬁnd hosts with port 443 or 22
+open. We used the Nmap 5 network exploration tool [39]
+to perform a SYN scan1, which involves sending a TCP
+SYN packet to each candidate host and detecting whether
+the host responds with a SYN -ACK packet. We chose
+this scanning method based on its low bandwidth require-
+ments; for the vast majority of hosts (those with the target
+port closed), at most two packets need to be exchanged.
+We excluded address ranges reserved for location iden-
+tiﬁcation, private use, loopback, link local, multicast, or
+future use in the IANA IPv4 address space registry [32].
+1The Nmap options we used were: -sS -Pn -n -T5
+--min-hostgroup=2000 --max-rtt-timeout=500ms
+--min-rate=10000 We selected these parameters by choosing
+the most aggressive parameters that did not cause non-negligible
+dropoff in response on an EC2 Micro Instance.
+3
+SSL Observatory Our TLS scan Our SSH scans
+(12/2010) (10/2011) (2-4/2012)
+Hosts with open port 443 or 22 ≈16,200,000 28,923,800 23,237,081
+Completed protocol handshakes 7,704,837 12,828,613 10,216,363
+Distinct RSA public keys 3,933,366 5,656,519 3,821,639
+Distinct DSA public keys 1,906 6,241 2,789,662
+Distinct TLS certiﬁcates 4,021,766 5,847,957 —
+Trusted by major browsers 1,455,391 1,956,267 —
+Table 1: Internet-wide scan results — We exhaustively scanned the public IPv4 address space for TLS and SSH
+servers listening on ports 443 and 22, respectively. Our results constitute the largest such network survey reported to
+date. For comparison, we also show statistics for the EFF SSL Observatory’s most recent public dataset [20].
+We executed our ﬁrst host discovery scan beginning
+on October 6, 2011 from 25 Amazon EC2 Micro in-
+stances spread across ﬁve EC2 regions (Virginia, Cali-
+fornia, Japan, Singapore, and Ireland). The scan ran at an
+average of 40,566 IPs/second and ﬁnished in 25 hours; it
+found 28,923,800 IPs with port 443 open. We performed
+a second scan to ﬁnd SSH hosts, beginning on February
+12, 2012; it found 23,237,081 IPs with port 22 open.
+Certiﬁcate and host-key retrieval In the second
+phase of the scanning process, we attempted a TLS or
+SSH protocol handshake with the addresses accepting
+connections on port 443 or 22 and recorded the TLS cer-
+tiﬁcate or SSH host key presented by the server.
+For TLS, we implemented a certiﬁcate fetcher in
+Python using the Twisted event-driven network frame-
+work [33]. We fetched TLS certiﬁcates using an EC2
+Large instance with ﬁve processes each maintaining 800
+concurrent connections. We started fetching certiﬁcates
+on October 11, 2011. The fetcher processed a mean of 83
+hosts/second and completed in approximately 96 hours. It
+retrieved certiﬁcate chains from 12,828,613 IP addresses
+(44.4% of hosts listening on port 443). These certiﬁcate
+chains contained 5,656,519 distinct RSA public keys and
+6,241 distinct DSA public keys.
+To efﬁciently collect SSH host keys, we implemented
+a simple SSH client in C, which is able to process up-
+wards of 1200 hosts/second by concurrently perform-
+ing protocol handshakes using libevent [40]. Our client
+initiates a normal-looking connection and offers only
+Diffie-Hellman Group 1 key exchange 2, and then
+downloads and stores the host key provided by the server.
+Initially, we ran the fetcher from an EC2 Large instance
+in a run that started on February 12, 2012. This run tar-
+geted only RSA-based host keys and returned 3,821,639
+distinct keys from 10,216,363 IP addresses (44.0% of
+hosts listening on port 22). In two later runs, we targeted
+2Our SSH client implementation is greatly simpliﬁed by only sup-
+porting the Diffie-Hellman Group 1 key exchange, which is sup-
+ported by all SSH servers.
+DSA-based host keys, and rescanned those hosts that had
+offered DSA keys in the ﬁrst SSH scan. For these, we also
+stored the authentication signature provided by the server;
+we varied the client string to ensure that each signature
+would be distinct. The ﬁrst DSA run started on March
+26, 2012 from a host at UCSD; it returned 2,091,643 dis-
+tinct DSA host keys from 4,572,218 IP addresses (51.4%
+of listening hosts). The second run, from a host at the
+University of Michigan, started on April 1, 2012; it took
+3 hours to complete and returned 2,058,706 distinct DSA
+host keys from 4,542,707 IP addresses.
+TLS certiﬁcate processing For TLS, we performed a
+third processing stage in which we parsed the previously
+fetched certiﬁcate chains and generated a database from
+the X.509 ﬁelds. We implemented a certiﬁcate parser
+in Python and C primarily based on the M2Crypto [46]
+SWIG [3] interface to the OpenSSL library [16]. In to-
+tal, we found 5,847,957 distinct certiﬁcates, of which
+1,956,267(33.5%) were browser trusted. We deemed a
+certiﬁcate to be trusted if we could ﬁnd a chain of trust
+leading to a root CA trusted by the current version of
+Firefox, MacOS, OpenSSL, or Windows.
+3.2 Identifying vulnerable device models
+We attempted to determine what hardware and software
+generated or served the weak keys we identiﬁed using
+manual detective work. The most straightforward method
+was based on TLS certiﬁcate information—predominately
+the X.509 subject and issuer ﬁelds. In many cases, the
+certiﬁcate identiﬁed a speciﬁc manufacturer or device
+model. Other certiﬁcates contained less information; we
+attempted to identify these devices through Nmap host
+detection or by inspecting the public contents of HTTPS
+sites or other IP services hosted on the IP addresses.
+When we could identify a pattern in vulnerable TLS
+certiﬁcates that appeared to belong to a device model or
+product line, we constructed regular expressions to ﬁnd
+other similar devices in our scan results. Under the theory
+that the keys were vulnerable because of a problem with
+4
+the design of the devices (where they were most likely
+generated), this allows us to estimate the total population
+of devices that might be potentially vulnerable, beyond
+those serving immediately compromised keys.
+Identifying SSH devices was more problematic, as SSH
+keys do not include descriptive ﬁelds and the server iden-
+tiﬁcation string used in the protocol often indicated only
+a common build of a popular SSH server. We were able
+to classify many of the vulnerable SSH hosts using a
+combination of TCP/IP ﬁngerprinting and examination of
+information served over HTTP and HTTPS.
+When we were able to identify a vulnerable device
+model, we attempted to disclose the problem to the man-
+ufacturer. We provided these manufacturers with back-
+ground on the vulnerabilities, selected vulnerable IP ad-
+dresses from among the hosts we identiﬁed, and sugges-
+tions for remedying the problem.
+The device names and manufacturers that we report
+here have been identiﬁed with moderate or high conﬁ-
+dence given the available information. However, because
+we do not have physical access to the hosts, we cannot
+state with certainty that all our identiﬁcations are correct.
+3.3 Efﬁciently computing all-pairs GCDs
+We now describe how we efﬁciently computed the pair-
+wise GCD of all distinct RSA moduli in our multimillion-
+key dataset. This allowed us to calculate RSA private
+keys for 66,540 vulnerable hosts that shared one of their
+RSA prime factors with another host in our survey.
+The fastest known factoring method for general integers
+is the number ﬁeld sieve, which has heuristic complexity
+O(2n1/3(logn)2/3
+) for n-bit numbers [36]. With current com-
+puting power, factoring any of the 85,988 512-bit RSA
+public keys detected in our scan is within the reach of
+a dedicated amateur using existing implementations and
+common hardware [49], but factoring all of them would
+require thousands of years of computation.
+In contrast to factoring, the greatest common divi-
+sor (GCD) of two integers can be computed very ef-
+ﬁciently using Euclid’s algorithm, with computational
+complexity O(n2) bits for n-bit numbers. Using fast inte-
+ger arithmetic, the complexity of GCD can be improved
+to O(n(lgn)2 lglg n) [8]. Computing the GCD of two
+1024-bit RSA moduli using the GMP library [23] takes
+approximately 15 µs on a current mid-range computer.
+The naïve way to compute the GCDs of every pair of
+integers in a large set would be to apply a GCD algorithm
+to each pair individually. There are 6 ×1013 distinct
+pairs of RSA moduli in our data; at 15 µs per pair, this
+calculation would take 30 years. We can do much better
+by using a more efﬁcient algorithm.
+To accomplish this, we implemented a quasilinear-time
+algorithm for factoring a collection of integers into co-
+N1N2N3N4
+×
+N4N3
+×
+N2N1
+N1N2N3N4
+mod N2
+1 N2
+2
+mod N2
+1
+/N1
+·
+mod N2
+2
+/N2
+·
+mod N2
+3 N2
+4
+mod N2
+3
+/N3
+·
+mod N2
+4
+/N4
+·gcd( ,N1) gcd( ,N2)gcd( ,N3) gcd( ,N4)
+product
+tree
+remainder
+tree
+Figure 1: Computing all-pairs GCDs efﬁciently — We
+computed the GCD of every pair of RSA moduli in our
+dataset using an algorithm due to Bernstein [7]: First,
+compute the product of all moduli using a product tree,
+then use a remainder tree to reduce the product modulo
+each input. The ﬁnal output is the GCD of each input
+modulus with the product of all the other moduli.
+primes, due to Bernstein [7]. The relevant steps, illus-
+trated in Figure 1, are as follows:
+Algorithm 1 Quasilinear GCD ﬁnding
+Input: N1, . . . ,Nm RSA moduli
+1: Compute P = ∏Ni using a product tree.
+2: Compute zi = (P mod N2
+i ) for all i
+using a remainder tree.
+Output: gcd(Ni,zi/Ni) for all i.
+A product tree computes the product of m numbers by
+constructing a binary tree of products. A remainder tree
+computes the remainder of an integer modulo many in-
+tegers by successively computing remainders for each
+node in their product tree. For further discussion, see
+Bernstein [8].
+The ﬁnal output of the algorithm is the GCD of each
+modulus with the product of all the other moduli. We
+are interested in the moduli for which this GCD is not 1.
+However, if a modulus shares both of its prime factors
+with two other distinct moduli, then the GCD will be
+the modulus itself rather than one of its prime factors—
+therefore providing us no immediate factorization. This
+occurred in a handful of instances in our dataset; we
+factored these moduli using the naïve quadratic algorithm
+for pairwise GCDs.
+Using fast integer arithmetic algorithms, multiplication
+and modular reduction on n-bit integers can be done in
+time O(nlgnlglg n), and GCDs in time n(lgn)2 lglg n [8].
+Thus, the asymptotic running time of Algorithm 1 on m
+5
+Our TLS Scan Our SSH Scans
+Number of live hosts 12,828,613 (100.00%) 10,216,363 (100.00%)
+. . . using repeated keys 7,770,232 (60.50%) 6,642,222 (65.00%)
+. . . using vulnerable repeated keys 714,243 (5.57%) 981,166 (9.60%)
+. . . using default certiﬁcates or default keys 670,391 (5.23%)
+. . . using low-entropy repeated keys 43,852 (0.34%)
+. . . using RSA keys we could factor 64,081 (0.50%) 2,459 (0.03%)
+. . . using DSA keys we could compromise 105,728 (1.03%)
+. . . using Debian weak keys 4,147 (0.03%) 53,141 (0.52%)
+. . . using 512-bit RSA keys 123,038 (0.96%) 8,459 (0.08%)
+. . . identiﬁed as a vulnerable device model 985,031 (7.68%) 1,070,522 (10.48%)
+. . . model using low-entropy repeated keys 314,640 (2.45%)
+Table 2: Summary of vulnerabilities — We analyzed our TLS and SSH scan results to measure the population of
+hosts exhibiting several entropy-related vulnerabilities. These include use of repeated keys, use of RSA keys that were
+factorable due to repeated primes, and use of DSA keys that were compromised by repeated signature randomness.
+Under the theory that vulnerable repeated keys were generated by embedded or headless devices with defective designs,
+we also report the number of hosts that we identiﬁed as these device models. Many of these hosts may be at risk even
+though we did not speciﬁcally observe repeats of their keys.
+n-bit integers would be O(mnlgmlg(mn)lglg(mn)) for
+the product and remainder trees and O(mn(lgn)2 lglg n)
+to compute the GCDs.
+We implemented the algorithm in C using the GMP
+library [23] for the arithmetic operations and ran it on the
+11,170,883 distinct RSA moduli from our TLS and SSH
+datasets and the EFF SSL Observatory [20] dataset. Our
+product tree had 24 levels, each of which was about 2 GB
+in size. In addition, GMP allocates a large amount of
+scratch memory during the calculations—around 30 GB
+for our dataset. Due to memory limitations, we wrote
+each level to disk. We found that the product of all of the
+moduli was too large for GMP’s raw-integer I/O format,
+which cannot process numbers larger than 231 bytes. We
+patched the library to remove this limitation.
+The entire computation ﬁnished in 5.5 hours using a
+single core on a machine with a 3.30 GHz Intel Core i5
+processor and 32 GB of RAM. The remainder tree took
+approximately ten times as long to process as the product
+tree. Parallelized across sixteen cores on an EC2 Cluster
+Compute Eight Extra Large Instance with 60.5 GB of
+RAM and using EBS-backed storage for scratch data, the
+same computation took 1.3 hours at a cost of about $5.
+4 Vulnerabilities
+We analyzed the data from our TLS and SSH scans and
+identiﬁed several patterns of vulnerability that would have
+been difﬁcult to detect without a macroscopic view of
+the Internet. This section discusses the details of these
+problems, as summarized in Table 2.
+4.1 Repeated keys
+We found that 7,770,232 of the TLS hosts (61%) and
+6,642,222 of the SSH hosts (65%) served the same key
+as another host in our scans. To understand why, we
+clustered certiﬁcates and host keys that shared the same
+public key and manually inspected representatives of the
+largest clusters. In all but a few cases, the TLS certiﬁcate
+subjects, SSH version strings, or WHOIS information
+were identical within a cluster, or pointed to a single
+manufacturer or organization. This sometimes suggested
+an explanation for the shared keys.
+Not all of the repeated keys were due to vulnerabili-
+ties. For instance, many of the most commonly repeated
+keys appeared in shared hosting situations. Six of the ten
+most common DSA host keys and three of the ten most
+common RSA host keys were served by large hosting
+providers (see Figure 2). Another frequent reason for
+repeated keys was distinct TLS certiﬁcates all belonging
+to the same organization. For example, TLS hosts at
+google.com, appspot.com, and doubleclick.net all served
+distinct certiﬁcates with the same public key. We excluded
+these cases and attributed remaining clusters of shared
+keys to several classes of problems.
+Default keys A common reason for hosts to share
+the same key that we do consider a vulnerability is
+manufacturer-default keys. These are preconﬁgured in
+the ﬁrmware of many devices, such that every device of
+a given model shares the same key pair unless the user
+changes it. The private keys to these devices may be
+accessible through reverse engineering, and published
+databases of default keys such as littleblackbox [28] con-
+tain private keys for thousands of ﬁrmware releases.
+6
+104
+105
+50 most repeated RSA SSH keys
+Number of repeats
+Devices
+Hosting providers
+Unknown/other
+104
+105
+50 most repeated DSA SSH keys
+Number of repeats
+Devices
+Hosting providers
+Unknown/other
+Figure 2: Commonly repeated SSH keys — We investigated the 50 most repeated SSH host keys for both RSA and
+DSA. Nearly all of the repeats appeared to be due either to hosting providers using a single key on many IP addresses
+or to devices that used a default key or generated keys using insufﬁcient entropy. Note log scale.
+At least 670,391 (5.23%) of the TLS hosts appeared to
+serve manufacturer-default certiﬁcates or keys. We iden-
+tiﬁed 57 distinct TLS certiﬁcates from the littleblackbox
+0.1.3 database, revealing private keys for 23,476 (0.18%)
+of the TLS hosts. We were able to identify 170 addi-
+tional default certiﬁcates by manually inspecting the 654
+self-signed certiﬁcates that appeared on more than 250
+IP addresses. (Most browser-trusted certiﬁcates that were
+served on multiple IP addresses appeared to be legitimate
+HTTPS sites served from multiple web servers.) We clas-
+siﬁed a certiﬁcate as a manufacturer default if nearly all
+the devices of a given model used identical certiﬁcates, or
+if the certiﬁcate was labeled as a default certiﬁcate. Our
+manually identiﬁed manufacturer-default certiﬁcates were
+served by another 618,014 (4.82%) of the TLS hosts.
+The most common default certiﬁcate that we could
+ascribe to a particular device belonged to a model of
+consumer router. Our scan uncovered 90,779 instances
+of this device model sharing a single certiﬁcate. We also
+found a variety of enterprise products serving default keys,
+including server management devices, network storage
+devices, routers, remote access devices, and V oIP devices.
+At least another 85,046 TLS hosts (0.66%) served
+default Apache certiﬁcates (sometimes referred to as
+snake-oil certiﬁcates, because they often include the CN
+www.snakeoil.dom); we identiﬁed 832 distinct snake-
+oil certiﬁcates that were served on more than one host,
+as many Linux distributions ship distinct default certiﬁ-
+cates. We did not count these among the vulnerable
+manufacturer-default keys. However, we also found 58
+non-default certiﬁcates that shared an RSA modulus with
+one of these snake-oil certiﬁcates, including 22 that had
+been signed by browser-trusted CAs. In these cases, it
+is possible that organizations generated certiﬁcates with
+their own information but included the default public key
+shipped with Apache into their own certiﬁcate, rather than
+generating a new private key.
+We observed a similar phenomenon with default TLS
+keys served by Citrix remote access servers: we found
+1584 apparently unrelated Citrix hosts serving distinct cer-
+tiﬁcates (including 16 signed by trusted CAs) that shared
+keys with default certiﬁcates. The signed certiﬁcates
+belonged to entities including Fortune 500 companies,
+insurance providers, law ﬁrms, a major public transit au-
+thority, and the U.S. Navy. These organizations may be
+authenticating or encrypting remote-access service com-
+munication using these duplicate keys.
+For most of the repeated SSH keys, the lack of uniquely
+identifying host information prevents us from distinguish-
+ing default keys from keys generated with insufﬁcient
+entropy, so we address these together in the next section.
+Repeated keys due to low entropy Another common
+reason that hosts share the same key appears to be entropy
+problems during key generation. In these instances, when
+we investigated a key cluster, we would typically see
+thousands of hosts across many address ranges, and, when
+we checked the keys corresponding to other instances of
+the same model of device, we would see a long-tailed
+distribution in their frequencies. Intuitively, this type of
+distribution suggests that the key generation process may
+be using insufﬁcient entropy, with distinct keys due to
+relatively rare events. For TLS, our investigations began
+with the keys that occurred in at least 100 distinct self-
+signed certiﬁcates. For SSH, we started from the 50 most
+commonly repeated keys for each of RSA (appearing on
+more than 8000 hosts) and DSA (appearing on more than
+4000 hosts).
+With this process, we identiﬁed 43,852 TLS hosts
+(0.34%) that served repeated keys due apparently to low
+entropy during key generation. The repeated keys in-
+cluded 208 distinct TLS RSA keys. 27,545 certiﬁcates
+(98%) containing these repeated keys were self-signed; all
+577 CA-signed certiﬁcates identiﬁed Iomega StorCenter
+network storage devices. For most SSH hosts we were un-
+7
+100
+101
+102
+103
+Modulus frequency
+(a) Primes generated by Juniper network security devices
+0
+50
+100
+Modulus frequency (b) Primes generated by IBM remote management cards
+Figure 3: Visualizing RSA common factors — Different implementations displayed different patterns of vulnerable
+keys. These plots depict the distribution of vulnerable keys divisible by common factors generated by two different
+device models. Each column represents a collection of RSA moduli divisible by a single prime factor p. The color
+and internal rectangles show, for each p, the frequencies of each distinct prime factor q. The Juniper device (left; note
+log-log scale) follows a long-tailed distribution that is typical of many of the devices we identiﬁed. In contrast, the IBM
+remote access device (right) was unique among those we observed in that it generates RSA moduli roughly uniformly
+distributed among nine distinct prime factors.
+able to distinguish between default keys and keys repeated
+due to entropy problems, but 981,166 of the SSH hosts
+(9.60%) served keys repeated for one of these reasons.
+Our TLS and SSH datasets contained two RSA keys in
+common; one was served from the same host on both TLS
+and SSH, and the other was served by TLS and SSH on
+distinct and seemingly unrelated hosts.
+We used the techniques described in Section 3.2 to iden-
+tify apparently vulnerable devices from 27 manufacturers.
+These include enterprise-grade routers from Cisco; server
+management cards from Dell, Hewlett-Packard, and IBM;
+VPN devices; building security systems; network attached
+storage devices; and several kinds of consumer routers
+and V oIP products.
+Given cryptographic key sizes, we would not expect
+to see devices generate a single duplicated key for the
+population sizes we examined if the keys were generated
+with sufﬁcient entropy. Therefore, duplicated keys are a
+red ﬂag that calls the security of the device’s key gener-
+ation process into question, and all keys generated with
+the same model device should be considered suspect. For
+14 of the TLS devices generating repeated keys, we were
+able to infer a ﬁngerprint for the device model and esti-
+mate the total population of the device in our scan. The
+prevalence of duplicated keys varied greatly for different
+device models, from as low as 0.2% in the case of one
+router to 98% for one thin client. The total population of
+these identiﬁed, potentially vulnerable TLS devices was
+314,640 hosts, which represents 2.45% of the TLS hosts
+in our scan.
+In the above analyses, we excluded repeated keys that
+were due to the infamous Debian weak-key vulnerabil-
+ity [6, 51]. 4,147 (0.03%) of the hosts in our TLS dataset
+served certiﬁcates with Debian weak keys. 17 of the 2,904
+vulnerable certiﬁcates were signed by browser-trusted au-
+thorities and 11 were signed after the vulnerability was
+announced in August 2008. 31,111 (0.34%) of the RSA
+SSH hosts and 22,030 (0.34%) of the DSA SSH hosts
+served Debian weak keys. The most commonly repeated
+weak key appeared on 3,422 SSH RSA hosts and 2,357
+SSH DSA hosts. The most repeated Debian weak key in a
+TLS certiﬁcate occurred in 1,115 distinct certiﬁcates; the
+next most common keys appeared in 4 and 2 certiﬁcates.
+4.2 Factorable RSA keys
+A second way that entropy problems might manifest them-
+selves during key generation is if an RSA modulus shares
+one of its prime factors p or q with another key. As ex-
+plained in Section 2.1, ﬁnding such a pair immediately
+allows an adversary to efﬁciently factor both moduli and
+obtain their respective private keys. In order to ﬁnd such
+keys, we computed the GCD of all pairs of distinct RSA
+moduli by applying the algorithm described in Section 3.3
+to a combined dataset consisting of the keys in our TLS
+and SSH scans and the EFF SSL Observatory data. Run-
+ning the algorithm on the combined datasets allowed us
+to factor more keys than performing the computation sep-
+arately for each, since with a larger collection of inputs
+the algorithm has a larger factor base to use on each key.
+8

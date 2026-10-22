@@ -1,0 +1,557 @@
+A New Sieving Approach for Solving the HNP
+with One Bit of Nonce by Using Built-in Modulo
+Arithmetic
+Yao Sun and Shuai Chang
+State Key Laboratory of Information Security, Institute of Information Engineering,
+Chinese Academy of Sciences, Beijing, China.
+School of Cyber Security, University of Chinese Academy of Sciences, Beijing, China.
+Abstract. The Hidden Number Problem (HNP) has been extensively
+used in the side-channel attacks against (EC)DSA and Diﬃe-Hellman.
+The lattice approach is a primary method of solving the HNP. In EURO-
+CRYPT 2021, Albrecht and Heninger constructed a new lattice to solve
+the HNP, which converts the HNP to the SVP. After that, their approach
+became the state-of-the-art lattice method of solving the HNP. But Al-
+brecht and Heninger’s approach has a high failure rate for solving the
+HNP with one bit of nonce (1-bit HNP) because there are enormous vec-
+tors related to the modulusq shorter than the target vector in Albrecht
+and Heninger’s Lattice.
+To decrease the number of vectors that are shorter than the target vector
+and avoid the duplicated reduction, we introduce the modulo-q lattice, a
+residue class ring of the general lattice moduloq, whereqis the modulus
+of the HNP. We present a new sieving algorithm to search for the shortest
+vectors in the modulo-q lattice. Our algorithm uses built-in moduloq
+arithmetic and many optimization techniques. As a result, we can solve
+a general 1-bit HNP (q = 2120) within 5 days and solve a general 1-bit
+HNP (q= 2128) within 17 days.
+Keywords: HiddenNumberProblem(HNP) · lattice· sievingalgorithm
+· modulo arithmetic
+1 Introduction
+The Hidden Number ProblemThe Hidden Number Problem (HNP) was ex-
+tensively used in the side-channel attacks against (EC)DSA and Diﬃe-Hellman.
+In [15], the adversaries are supposed to know some signiﬁcant bits of random
+multiples of a secret integer modulo some known integer. This secret integer can
+be constrained by a set of integer-linear modulo equations.
+Since the creative works of Bleichenbacher [13] and Howgrave-Graham and
+Smart [27], side-channel information about (EC)DSA nonces have been exten-
+sively used by solving the Hidden Number Problem, including [42,34,9,46,50,
+47,40,51,28]. The former approach deploys a combinatorial algorithm that can
+becastas avariantofthe BKWalgorithm,[14,4,30,23]. Thelatestimprovement
+is [10], which recovers a key from less than one bit of the nonce by Bleichen-
+bacher’s algorithm. Recently, the authors in [35] found the ﬁrst practical attack
+scenario that was able to use Boneh and Venkatesan’s [15] original application
+of the HNP to prime-ﬁeld Diﬃe-Hellman key exchange.
+The other eﬃcient way of solving for the secret integer is based on lattice
+reduction. The Hidden Number Problem can be reformulated as a lattice and
+resolved by solving the Closest Vector Problem, also known as Bounded Distance
+Decoding [42]. This conversion takes advantage of the fact that the unknown
+parts of the random multiples of a secret integer are relatively smaller than the
+modulus number. Thus, it suﬃces to ﬁnd a relatively small solution to a set of
+integer-linear modulo equations. In CVP, one must ﬁnd a uniquely closest vector
+in the lattice to some given point.
+The work in [7] provided a more eﬀective way of solving the HNP by breaking
+the “lattice barrier” using a predicate. Albrecht and Heninger considered the
+expected squared norms of the target vectors instead of the upper bounds, and
+they also converted the HNP to the SVP by constructing a new lattice. Thus,
+with the help of eﬃcient lattice reduction tools, e.g., [6,19], they solve many
+HNPs which were considered infeasible previously. We will show more details
+about Albrecht and Heninger’s method in Sec. 2.3.
+Lattice algorithms Lattice reduction algorithms [33,48,49,21,39], are still
+the primary tools for solving the HNP practically. The eﬃciency of lattice re-
+duction algorithms determines the magnitude of the HNP that can be solved.
+Lattice reduction algorithms also have numerous other applications in cryptanal-
+ysis, including factoring RSA keys with partial information about the secret key
+via Coppersmith’s method [16,41], the (side-channel) analysis of lattice-based
+schemes [36,8,26,5,17].
+Given a lattice, two kinds of lattice algorithms are used to resolve the SVP.
+Enumeration Enumerationapproaches,including[44,29,20,49,24,22,38,3],search
+for vectors whose lengths are bounded by some given valueR via lattice-vector
+enumeration. Speciﬁcally, enumeration algorithms are based on the fact that any
+vector in the lattice can be rewritten with respect to the Gram-Schmidt basis.
+Lattice-vector enumeration uses a depth-ﬁrst tree search through a tree to ﬁnd
+out all available vectors whose lengths are not longer thanR, so the “pruning”
+strategy is the primary way to speed up enumeration algorithms.
+Sieving Sieving approaches, including [31,1,43,37,12,32,11,25,18,6,19], take
+a list of vectors in the lattice as input and search for integer combinations of
+these vectors that are short. Sieves that considerk vectors at a time are called
+k-sieves. Speciﬁcally, given two vectorsu and v in a lattice Lwith u ̸= ±v,
+2-sieves consider the integer combinations of the formu ±v. As the size of the
+list in the sieving algorithm is often very large (e.g.,>220), it is too expensive
+to consider all pairs of points in the list. Researchers tend to select some of the
+vectors in the list and put them into buckets. Next, only pairs of vectors in the
+2
+same bucket are considered in practical computations, which saves much more
+time than checking all pairs in the list. Thus, the techniques of bucketing play
+an important role in the sieving approaches.
+1-bit HNP We call the HNP with only one bit of nonce the 1-bit HNP. Some
+theoretical analyses on 1-bit HNP were done in [2]. In [10], Aranha et al. recov-
+ered a key from less than one bit of the nonce by Bleichenbacher’s algorithm.
+This method relies on a search for heavy Fourier coeﬃcients. “However, those
+heavy Fourier coeﬃcients only reveal the secret key in an HNP instance where
+the most signiﬁcant bits of nonces are constant (say identically zero)” [50]. Be-
+sides, compared with the lattice approach, Aranha et al.’s method requires a
+large number of nonces, e.g., at least220, while the lattice approach only needs
+a few nonces.
+At present, there are no eﬀective lattice approaches that can solve the 1-
+bit HNP. Albrecht and Heninger’s method is the state-of-the-art lattice method
+of solving the HNP, but their method fails to solve the 1-bit HNP. We believe
+the main reason is that there are a vast number of vectors shorter than the
+target vector in the lattice they constructed. Here the target vector is a vector
+constructedbyAlbrechtandHeninger’smethod,andtheHNPwillbesolvedonce
+the target vector is found in the lattice. Givenm nonces of the 1-bit HNP with
+the modulusq = 2128, we can construct the lattice by Albrecht and Heninger’s
+method and calculate the value obtained by the Gaussian heuristic and the
+expected squared lengths of target vectors. The data are shown in Fig. 1. The
+target vector is supposed to be the shortest ifmis 170, where the value obtained
+by the Gaussian heuristic becomes larger than the expected squared length of
+the target vector. Unfortunately, the target vector will not be the shortest in
+Albrecht and Heninger’s lattice, no matter how many nonces are used. This is
+because there is a special kind of vectors, sayqi = (0 ,...,q,..., 0), existing
+in Albrecht and Heninger’s lattice, whereq is the modulus of the HNP. For
+convenience, we call the vectorsqi’s and∑ti ·qi as q-vectors, where ti’s are
+integers. Ifm is 170, there should be
+(169
+3
+)
+·23 +
+(169
+2
+)
+·22 +
+(169
+1
+)
+·2 = 6379074
+q-vectors shorter than the expected squared length of the target vector, which
+makes the target vector very diﬃcult to be found.
+Main idea and contributionOur key observation is thatif there are only a
+few vectors, e.g., no more than104, that are shorter than the target vector, the
+target vector will be found by lattice algorithms with a high success rate. Thus, to
+solve 1-bit HNP by lattice approach, we need to decrease the number of vectors
+that are shorter than the target vector. Hence, theq-vectors should be removed
+ﬁrst of all.
+The introduction ofqi to the lattice is to simulate the “moduloq” operation
+in the HNP, such that general lattice tools, e.g., [6,19], developed for general
+lattices can be used to search for shortest vectors over integers. We realized that
+if we could develop a sieving algorithm with built-in moduloq operation, then
+3
+130 140 150 160 170 180 190
+m
+256.0
+256.5
+257.0
+257.5
+258.0
+log2(.)
+gh2(L(B))
+E(∥s∥2)
+∥qi∥2
+Fig. 1.Albrecht and Heninger’s method of solving 1-bit HNP (q= 2128).
+qi’s are no longer needed. Hence, the number of vectors that are shorter than
+the target vector will decrease signiﬁcantly.
+Therefore, to use the built-in moduloq operation, we introduce the modulo-
+q lattice, which is a residue class ring of the general lattice modulo the model
+generated byqi’s. We designed a sieving algorithm to search for short vectors
+in the modulo-q lattice, including an eﬃcient bucketing method in the modulo-
+q lattice. All appeared integers in this algorithm are treated by the moduloq
+operation automatically. This algorithm has been implemented by C++/CUDA.
+As a result, we can solve a general 1-bit HNP (q= 2120) within 5 days and solve
+a general 1-bit HNP (q= 2128) within 17 days.
+Relations to Albrecht and Heninger’s work [7] and Aranha et al.’s
+work [10] Our work is improved based on Albrecht and Heninger’s work. We
+ﬁrst construct Albrecht and Heninger’s lattice in our approach and then convert
+it from the general lattice to the modulo-qlattice. Albrecht and Heninger’s target
+vector also lies in the corresponding modulo-q lattice. We develop a new sieving
+algorithm to search for the target vector in the modulo-qlattice. Compared with
+Albrecht and Heninger’s method, our approach has two advantages for solving
+the 1-bit HNP.
+– q-vectors become zero vectors in the modulo-q lattice, so the number of
+vectors that are shorter than the target vector decreases, which enables us
+to ﬁnd the target vector easier.
+– The vectors in the modulo-q lattice are all residue class of integer vectors,
+such that many distinct vectors in the general lattice become the same in
+the modulo-q lattice. That is, the sieving algorithm in modulo-q lattice only
+4
+needs to perform reduction to a vectorv and can avoid all reduction to the
+vectors v + ∑ti ·qi, which saves much time to ﬁnd the target vector.
+Compared with Aranha et al.’s work, which is based on Bleichenbacher’s
+algorithm, our lattice approach only needs a few nonces. Speciﬁcally, Aranha et
+al.’s method requires more than220 nonces to solve the 1-bit HNP withq >2100,
+while less than210 nonces are enough for our approach.
+Open Source CodeThe codes of the algorithms reported in this work will be
+released at GitHub publicly once this paper is published somewhere.
+Outline We introduce some preliminaries on the lattice, the HNP, and Albrecht
+and Heninger’s work to solve the HNP in Sec. 2. We give the deﬁnition of the
+module-q lattice and the sieving algorithm in Sec. 3. Experiments come in Sec.
+4, and we conclude this paper in Sec. 5.
+2 Preliminaries
+2.1 Lattice
+Let Zbe the ring of integers, andq ∈Z be a modulus. ThenZq = Z/(qZ) is
+the residue class ring ofZmodulo q. In this paper, we also regard elements in
+Zq as integers if no confusions occur, so we haveZq ⊂Z.
+In this work, all vectors are denoted by bold lowercase letters, and matrices
+are denoted by bold capital letters. A latticeLis a discrete subgroup ofRd,
+where Ris the rational number ﬁeld, andd is the dimension of the vectors.
+When the rows b0,..., bd−1 of a matrix B are linearly independent over the
+ﬁeld R, we regardB as the basis of the latticeL(B) = {∑vi ·bi |vi ∈Z}. That
+is, row representations for matrices are used in this paper.
+The Gram-Schmidt orthogonalization of B is B∗ = ( b∗
+0,..., b∗
+d−1), where
+the Gram-Schmidt vector b∗
+i is πi(bi) and πi : Rd →span(b0,..., bi−1) for
+i= 0,...,d −1. Thenb∗
+0 = b0 andb∗
+i = bi−∑i−1
+j=0 µi,j ·b∗
+j fori= 1,...,d −1 and
+µi,j =
+⟨bi,b∗
+j ⟩
+⟨b∗
+j ,b∗
+j ⟩. Thelength of a vectorv is the Euclidean norm ofv, denoted by
+∥v∥. Thevolumeof a latticeL(B) is Vol(L(B)) = ∏
+i ∥b∗
+i ∥, that is an invariant
+of the lattice. The ﬁrst minimum of a latticeLis the length of the shortest non-
+zero vector, denoted byλ1(L). For simpliﬁcation, we useVol(B) = Vol(L(B))
+and λ1(B) = λ1(L(B)) in this work.
+The Gaussian heuristic predicts that the number|L∩B| of lattice points
+inside a measurable body B ⊂ Rn is approximately equal to Vol(B)/Vol(L).
+Applied to Euclideand-balls, it leads to the following prediction of the length of
+the shortest non-zero vector in a lattice.
+Deﬁnition 1. We denote bygh(L) the expected ﬁrst minimum of a latticeL
+according to the Gaussian heuristic. For a full rank latticeL⊂R d, it is given
+5
+by:
+gh(L) ≈
+√
+d
+2πe ·Vol(L)1/d.
+One of the most critical problems on lattices is to ﬁnd the shortest vector in
+a lattice.
+Deﬁnition 2 (Shortest Vector Problem (SVP)).Given a lattice basisB,
+ﬁnd the shortest non-zero vector inL(B).
+In this work, we frequently meet a special kind of vectors inZd. Letq ∈Z
+be a modulus, and we denoteqi = (0 ,...,q,..., 0) ∈Z d which is a one-hot
+vector with theith coeﬃcient being q. We call the vectorsqi’s and∑d−1
+i=0 ti ·qi
+as q-vectors if no confusions occur, whereti ∈Z for 0 ≤i<d .
+2.2 The Hidden Number Problem
+To show our approach, we ﬁrst give a mathematical deﬁnition of the Hidden
+Number Problem (HNP), which was proposed in [15]. The Hidden Number Prob-
+lem can be regarded as 1-dimensional LWE [45]. The notations in the following
+deﬁnition will be used throughout this paper.
+Deﬁnition 3 (the Hidden Number Problem (HNP)).Let q be a modulus
+with 2n−1 <q ≤2n, andx be a secret integer inZq = Z/(qZ) = {0,...,q −1}.
+Assume there arem pairs of(αi,βi) ∈Z2
+q , such that
+βi + ki = αi ·x mod q, (1)
+where 0 ≤ki <2l for 0 ≤i<m , andl is an integer smaller thann. In case that
+(αi,βi)’s are known andki’s,x are unknown, ﬁnd an integerx′∈Zq to make
+Eq. (1) hold for all0 ≤i<m .
+Generally, to ensure the foundx′ is just the secret integerx, the constraint
+m>n is required in the HNP. For convenience, we call the pair(αi,βi) ∈Z2
+q in
+the above deﬁnition asnonce datain the rest of this paper.
+By saying1-bit HNPin this work, we mean the Hidden Number Problem
+with l = n−1 in Def. 3. That is, in 1-bit HNP, only one (most signiﬁcant) bit
+of nonce is known.
+2.3 Solving the HNP by Lattice Approach
+One important improvement on solving the Hidden Number Problem by lattice
+is given in [7]. In that work, Albrecht and Heninger constructed a lattice in
+the following way to convert the HNP in Def. 3 to the SVP in the lattice. Let
+˜βi = βi + 2l−1 and k′
+i = ki −2l−1, then Eq. (1) becomes
+βi + ki = ˜βi + k′
+i = αi ·x mod q. (2)
+6
+Note that0 ≤ki <2l, thus−2l−1 ≤k′
+i <2l−1 holds.
+Assume α0 and q are coprime1, then there exists a numberα−1
+0 , such that
+α−1
+0 ·α0 = 1 mod q. Thus, we can getα−1
+0 ·( ˜β0 + k′
+0) = x mod q, which can be
+used to eliminatex in the other equations. Finally, the following equations are
+obtained:
+β′
+i + k′
+i = α′
+i ·k′
+0 mod q, (3)
+where β′
+i = ˜βi −αi ·α−1
+0 ·˜β0 and α′
+i = αi ·α−1
+0 for 0 <i<m .
+Denote w= 2l−1, Albrecht and Heninger constructed an(m+1)-dimensional
+lattice L(B), which is generated by
+B =
+
+
+q 0 0 ··· 0 0 0
+0 q 0 ··· 0 0 0
+... ...
+0 0 0 ··· q 0 0
+α′
+1 α′
+2 α′
+3 ··· α′
+m−1 1 0
+β′
+1 β′
+2 β′
+3 ··· β′
+m−1 0 w
+
+
+. (4)
+The target vector iss = (−k′
+1,−k′
+2,..., −k′
+m−1,−k′
+0,w), where−w≤k′
+i <w for
+0 ≤i<m . So the length ofs is bounded by(m+ 1) ·w2.
+Clearly, the target vectors is in L(B), because of Eq. (3). Conversely, if
+a vector v = ( v0,...,v m−1,w) ∈L(B) is found such that−w < vi ≤w for
+0 ≤i < m, then letk′
+0 = −vm−1, we can recover an integerx′ by the equation
+α−1
+0 ·( ˜β0 + k′
+0) = x′mod q, whereα0 and ˜β0 are already known. It is not hard
+to verify thatx′ could make Eq. (1) hold for0 ≤i<m , since−w <vi ≤w. If
+m> log2(q), we should haves = v.
+If the length of the target vectors is not large, it can be found by lattice
+algorithms with a high success rate [7]. The vector s is supposed to be the
+shortest inL(B) when the dimension ofL(B) is large enough. According to the
+Gaussian heuristic, the shortest vector in the lattice should have the length of
+gh(L(B)) ≈
+√
+m+ 1
+2πe ·Vol(L(B))1/(m+1) =
+√
+m+ 1
+2πe ·(nm−1 ·w)1/(m+1). (5)
+Instead of using the upper bound (m+ 1) ·w2 of s, Albrecht and Heninger
+considered theexpected squared lengthof s, i.e.
+E
+[
+∥s∥2]
+= E
+[
+(
+m−1∑
+i=0
+k′2
+i ) + w2
+]
+= m·w2/3 + m/6 + w2. (6)
+Albrecht and Heninger observed that the squared lengths of target vectors are
+close to the expected squared length, and if∥s∥<gh(L(B)), the vectors is the
+shortest vector inL(B) with high probability. Besides, their method in [7] also
+works for∥s∥≥ gh(L(B)), but we found in our experiments that the success rate
+1 This condition is not hard to meet, since there arem αi’s.
+7
+of Albrecht and Heninger’s method drops quickly when∥s∥becomes far away
+from gh(L(B)).
+Assumption1([7,18]) When a 2-sieve algorithm terminates, it outputs a database
+L containing all vectors with norm≤
+√
+4/3 ·gh(L).
+Theorem 1 ([7]).Let L ⊂ Rd be a lattice containing a vectorv such that
+∥v∥≤ R=
+√
+4/3 ·gh(L). Under Assumption 1, Algorithm 1 is expected to ﬁnd
+the minimalv satisfying f(v) = 1 in 20.292d+o(d) steps and(4/3)d/2+o(d) calls to
+f(·), wheref(·) is a function to check whetherv is the target vector.
+Since the target vector iss = (−k′
+1,−k′
+2,..., −k′
+m−1,−k′
+0,w), where −w ≤
+k′
+i < w for 0 ≤ i < m. Thus, in the following algorithm, f(v) = 1 only if
+v = (v0,...,v m,w) and −w<v i ≤w for 0 ≤i<m .
+Algorithm 1:Sieving with Predicate [7]
+Input: Lattice basisB = {b0,..., bd−1}; Predicatef(·).
+Output: v such that∥v∥≤
+√
+4/3 ·gh(L(B)) and f(v) = 1 or ⊥.
+1 begin
+2 r ←−⊥
+3 Run sieving algorithm onb0,..., bd−1 and denote output list asL
+4 for v in L do
+5 if f(v) = 1 and (r=⊥or ∥v∥<∥r∥) then
+6 r ←−v
+7 return r
+3 Modulo- q Lattice
+Given the numbermwhich is the number of pairs(αi,βi)’s, the expected squared
+length of the target vectors in Albrecht and Heninger’s lattice isE[∥s∥2] =
+m·w2/3 + m/6 + w2, where w = 2 l−1. Particularly, for 1-bit HNP, we have
+w= q/4. Note that
+– the squared length of±qi is q2 = 16 ·w2;
+– the squared length of±qi ±qj where i̸= j is 2 ·q2 = 32 ·w2;
+– the squared length of±qi ±qj ±qk where i̸= j ̸= k is 3 ·q2 = 48 ·w2;
+– ... .
+That is, if144 ≤m <192, then there are
+(m−1
+1
+)
+·2 +
+(m−1
+2
+)
+·22 +
+(m−1
+3
+)
+·23
+q-vectors shorter than the target vectors whose squared length isE[∥s∥2], which
+will make the target vector very diﬃcult to be found successfully.
+To remove theq-vectors from the lattice, we introduce the modulo-q lattice
+in Sec. 3.1. We show how to solve the HNP by the modulo-q lattice in 3.2. We
+present a sieving algorithm to search for the target vectors in Sec. 3.3. We discuss
+Albrecht and Heninger’s “breaking the ‘lattice barrier’ ” technique in Sec. 3.4.
+8
+3.1 The Deﬁnition of the Modulo-q Lattice
+In fact, the modulo-q lattice is a residue class ring of the general lattice modulo
+q, where q ∈ Zis a modulus. For simpliﬁcation, we use the operator[·]q to
+denote the moduloq operator in this paper.
+Deﬁnition 4. Let q∈Z be a modulus anda be an integer inZ. We denote
+[a]q = a mod q.
+Thus, we have[a]q ∈Zq = Z/(qZ). Similarly, letv = (v0,v1,...,v d−1) ∈Zd.
+Then [v]q is deﬁned as
+[v]q = ([v0]q,[v1]q,..., [vd−1]q) ∈Zd
+q .
+If no confusions occur, we always regard[a]q as an integer in{0,...,q −1}in
+this paper, i.e.Zq ⊂Z.
+Let q∈Z be a modulus anda,b,t ∈Z. It is easy to verify that
+[a]q + [b]q = [a+ b]q,[a]q −[b]q = [a−b]q,t ·[a]q = [t·a]q.
+Similarly, leta,b ∈Zd and t∈Z, we have
+[a]q + t·[b]q = [a + t·b]q.
+The major diﬀerence between the general lattice and the modulo-q lattice is
+the deﬁnition of the lengths of vectors. The motivation of the following deﬁnition
+is to ensure the target vector has the same length in both the general lattice and
+the modulo-q lattice.
+Deﬁnition 5. Let q ∈Z be a modulus, andv = (v0,v1,...,v d−1) ∈Zd. The
+length of the vector[v]q is deﬁned as
+∥[v]q∥=
+√ ∑
+[vi]q≤q/2
+([vi]q)2 +
+∑
+[vi]q>q/2
+(q−[vi]q)2. (7)
+Here [vi]q is an integer in{0,...,q −1}, and the operators “·” and “+” in Eq.
+(7) are conducted overZwithout moduloq.
+For example, letq= 16 and v = (−3,25,8,11,16). Then we have
+∥[v]q∥2 = (16 −[−3]16)2 + (16 −[25]16)2 + ([8]16)2 + (16 −[11]16)2 + ([16]16)2
+= 9 + 49 + 64 + 25 + 0
+= 147.
+Since q−[vi]q <[vi]q if [vi]q > q/2, we have∥[v]q∥≤∥ v∥. Besides, we also
+have ∥[v]q∥2 ≤d·(q/2)2 for allv ∈Zd.
+Deﬁnition 6 (Modulo-q lattice). Let q ∈Z be a modulus andB = {b0,... ,
+bd−1}⊂Z d. The modulo-q lattice generated byB is
+Lq(B) = {
+d−1∑
+i=0
+(vi ·[bi]q) |vi ∈Z}⊂Z d
+q . (8)
+The dimension of the modulo-q lattice Lq(B) is d.
+9
+Lattice vs. modulo-q lattice The modulo-q lattice Lq(B) is a residue class
+ring of L(B) modulo the model generated by {(q,0,..., 0), (0,q,..., 0), ... ,
+(0,0,...,q )}over Z. If we abuse the notation thatZq ⊂Z, we haveLq(B) ⊂
+L(B).
+As a result, letv ∈L(B) and qi = (0,...,q,..., 0), thenv and v + qi are
+distinct vectors inL(B), but [v]q = [v + qi]q in Lq(B). Besides, ∑ti ·[qi]q =
+(0,..., 0) ∈Lq(B) for allti ∈Z.
+Note that the number of distinct vectors in the modulo-q lattice is limited,
+because Lq(B) ⊂Zd
+q and |Zd
+q |= qd, while there are inﬁnite vectors inL(B).
+Since all vectors in the modulo-q lattice are inZd
+q instead of Rd, ﬂoat op-
+erations are not needed in the computations in the modulo-q lattice. Moreover,
+the orthogonal projection πi used in [18,6,19] as well as SubSieve algorithms
+cannot be applied to the modulo-q lattice. We need to develop a new algorithm
+for computing shortest vectors in the modulo-q lattice, which will be shown in
+Sec. 3.3. Before presenting the sieving algorithm, we show how to solve the HNP,
+including 1-bit HNP, by the modulo-q lattice.
+3.2 Resolving the HNP by the Modulo-q Lattice
+To solve the HNP, we ﬁrst use Albrecht and Heninger’s method to construct
+the lattice. And next, instead of ﬁnding short vectors in a general lattice, our
+approach searches for short vectors in the modulo-q lattice.
+Speciﬁcally, the basisB in Eq. (4) becomes:
+B =
+
+
+q 0 0 ··· 0 0 0
+0 q 0 ··· 0 0 0
+... ...
+0 0 0 ··· q 0 0
+α′
+1 α′
+2 α′
+3 ··· α′
+m−1 1 0
+β′
+1 β′
+2 β′
+3 ··· β′
+m−1 0 w
+
+
+[·]q
+=⇒
+
+
+0 0 0 ··· 0 0 0
+0 0 0 ··· 0 0 0
+... ...
+0 0 0 ··· 0 0 0
+[α′
+1]q [α′
+2]q [α′
+3]q ··· [α′
+m−1]q [1]q 0
+[β′
+1]q [β′
+2]q [β′
+3]q ··· [β′
+m−1]q 0 [ w]q
+
+
+,
+where w= 2l−1. The latticeL(B) generated byB becomes the modulo-q lattice
+Lq(B) generated by
+a = ([α′
+1]q,..., [α′
+m−1]q,[1]q,0) and b = ([β′
+1]q,..., [β′
+m−1]q,0,[w]q).
+Let s = (−k′
+1,−k′
+2,..., −k′
+m−1,−k′
+0,w) be the target vector inL(B) as dis-
+cussed in Sec. 2.3, where−w ≤k′
+i < wfor 0 ≤i < m. It is easy to verify that
+the vector
+[s]q = ([−k′
+1]q,..., [−k′
+m−1]q,[−k′
+0]q,[w]q)
+= −k′
+0 ·([α′
+1]q,..., [α′
+m−1]q,[1]q,0) + ([β′
+1]q,..., [β′
+m−1]q,0,[w]q)
+is in the modulo-q lattice Lq(B). So[s]q is the target vector we need to ﬁnd in
+the modulo-q lattice Lq(B). Moreover, we also have
+∥[s]q∥= ∥s∥.
+10
